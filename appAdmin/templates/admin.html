@@ -1,0 +1,158 @@
+<!-- job_create.html -->
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/admin.css' %}" />
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="admin-card">
+                    <!-- Admin Information -->
+                    <h2>ADMIN PANEL</h2>
+                    <p>{{user.first_name}} {{user.last_name}}</p>
+                    <p>{{user.email}}</p>
+                    {% if user.admin.is_admin %}
+                         <p>Current status: Admin</p>
+                    {% else %}
+                         <p>Current status: Staff</p>
+                    {% endif %}
+                    <br>
+                    <br>
+                    <!-- Small cards in a row -->
+                    <h3>Employee Details</h3>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="sub-card">
+                                <h5>Pharmacists</h5>
+                                <br>
+                                <p>{{ pharmacist_count }} total</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="sub-card">
+                                <h5>Technicians and Dispensers</h5>
+                                
+                                <p>{{ technician_count }} total</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="sub-card">
+                                <h5>Nurses and Anp Nurses</h5>
+                               
+                                <p>{{ nurse_count  }} total</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="sub-card">
+                                <h5>GP</h5>
+                                <br>
+                                <p>{{ gp_count }} total</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Button and Image Cards -->
+                    <br>
+                    <br>
+                    <h3>Admin Authorities</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth1.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>See All the Registered Locums here</h5>
+                                <a href="{% url 'seeLocum' %}" class="btn btn-primary">See Locums</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth2.jpg' %}"  class="card-img-top" alt="Card Image">
+                                <h5 >See All the Registered Employers Here</h5>
+                                <a href="{% url 'employersList' %}" class="btn btn-primary">See Employers</a>
+                               
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth3.jpg' %}"  class="card-img-top" alt="Card Image">
+                                
+                                <h5>See All The Staff Members</h5>
+                                <a href="{% url 'staffList' %}" class="btn btn-primary">See Staff</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth1.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>See Your Employers Request Here</h5>
+                                <a href="{% url 'employerRequests' %}" class="btn btn-primary">See Employers Request</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth2.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>See Appiled Job Request Here</h5>
+                                <a href="{% url 'job_applications' %}" class="btn btn-primary">See Job Requests</a>
+                            </div>
+                        </div>
+                        
+                        {% if perms.appAdmin.can_delete_locum %}
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth3.jpg' %}" class="card-img-top" alt="Card Image">
+                        
+                                <h5>See Your Locum Request Here</h5>
+                                <a href="{% url 'locumRequests' %}" class="btn btn-primary">See Locum Requests</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    
+                        {% if perms.appAdmin.can_register_employer %}
+                        
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth2.jpg' %}"  class="card-img-top" alt="Card Image">
+                                <h5 >Register Your Employers Here</h5>
+                                <a href="{% url 'registerEmployer' %}" class="btn btn-primary">Add Employer</a>
+                               
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if perms.appAdmin.can_register_staff %}
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth1.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>Register Your Staff Members here</h5>
+                                <a href="{% url 'registerStaff' %}" class="btn btn-primary">Register Staff</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth3.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>See your Calander here</h5>
+                                <br>
+                                <a href="{% url 'calander' %}" class="btn btn-primary">Admin Calander</a>
+                            </div>
+                        </div>
+                        {% if user.admin.is_admin %}
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth1.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>View System Logs</h5>
+                                <br>
+                                <a href="{% url 'system_logs' %}" class="btn btn-primary">System Logs</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

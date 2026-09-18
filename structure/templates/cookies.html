@@ -1,0 +1,33 @@
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}cookies policy Page{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/privacypolicy.css' %}" />
+{% endblock %}
+{% block content %}
+  <section class="section">
+    <div class="card">
+        <h1>Cookies Policy</h1>
+        <div class="bg-gray-100">
+            <div class="container mx-auto px-4 py-8">
+                <p class="mb-4">
+                    This Cookie Policy explains what cookies are and how we use them. You should read this policy to understand what cookies are, how we use them, the types of cookies we use i.e, the information we collect using cookies and how that information is used and how to control the cookie preferences.</p>
+                    
+              
+                <p class="mb-4">
+                    For further information on how we use, store and keep your personal data secure, see our Privacy Policy. You can at any time change or withdraw your consent from the Cookie Declaration on our website. Your consent applies to the following domains: https://locum-smart.co.uk</p>
+
+                <p class="mb-4">
+                   Cookies are small text files that are used to store small pieces of information. The cookies are stored on your device when the website is loaded on your browser. These cookies help us make the website function properly, make the website more secure, provide better user experience, and understand how the website performs and to analyse what works and where it needs improvement. They allow us to maintain user sessions and prevent any security threats. They do not collect or store any personal information. For example, these cookies allow you to log-in to your account and add products to your basket and checkout securely.</p>
+               
+            </div>
+        </div>
+    </div>
+  </section>
+
+
+
+
+{% endblock %}

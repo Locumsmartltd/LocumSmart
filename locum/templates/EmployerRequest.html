@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Employer Request — LocumSmart{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .page-hero { text-align: center; max-width: 780px; margin: 0 auto 40px; padding: 60px 24px 0; }
+  .rs .form-section { padding-top: 28px; padding-bottom: 4px; border-top: 1px solid var(--border); margin-top: 28px; }
+  .rs .form-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  .rs .form-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .rs .form-section-head .num { width: 32px; height: 32px; border-radius: 50%; background: var(--mint-light); color: var(--teal-darker); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+  .rs .form-section-head h3 { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+  .rs .form-section-head p { font-size: 13px; color: var(--grey); font-weight: 500; }
+  .rs .prefix-input { position: relative; }
+  .rs .prefix-input .prefix { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; font-weight: 700; color: var(--grey); }
+  .rs .prefix-input input { padding-left: 30px; }
+  .rs .pill-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .rs .pill-group input[type="radio"] { display: none; }
+  .rs .pill-group label { padding: 11px 20px; border: 1.5px solid var(--border); border-radius: 100px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--grey); background: white; margin: 0; }
+  .rs .pill-group input[type="radio"]:checked + label { background: var(--teal); color: white; border-color: var(--teal); }
+  .rs .role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .rs .role-check input { display: none; }
+  .rs .role-check label { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: var(--radius); background: white; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--charcoal); margin: 0; }
+  .rs .role-check input:checked + label { background: var(--mint-light); border-color: var(--teal); color: var(--teal-darker); }
+  .rs .terms-label { display: flex; align-items: flex-start; gap: 12px; background: var(--mint-light); border: 1px solid var(--mint); padding: 16px 20px; border-radius: 10px; font-size: 14px; color: var(--charcoal); font-weight: 500; cursor: pointer; }
+  .rs .terms-label a { color: var(--teal-darker); font-weight: 700; text-decoration: underline; }
+  .rs .discrete-date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .rs .discrete-date-row input[type="date"] { flex: 1; }
+  .rs .remove-date-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #e5484d; color: white; font-weight: 800; cursor: pointer; flex-shrink: 0; }
+  .rs .d-none { display: none !important; }
+  @media (max-width: 900px) { .rs .role-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .rs .role-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="background: linear-gradient(180deg, var(--mint-light) 0%, var(--bg-soft) 300px); padding: 40px 0 80px;">
+  <div class="container">
+    <div class="page-hero">
+      <div class="badge"><span class="dot"></span> Onboarding new pharmacy groups — Q3 2026</div>
+      <h1 style="font-size:38px;">Submit your <span class="accent">staffing requirement.</span></h1>
+      <p style="font-size:17px;color:var(--grey);">LocumSmart promotes your role to 10,000+ vetted UK locums. Our compliance team calls you within 1 business hour to confirm the details.</p>
+    </div>
+
+    <div class="form-shell">
+      <!-- BACKEND: preserve action="" method="post" and every field name below exactly (locum/views.py EmployerRequestView.post). -->
+      <form action="" method="post" id="employerForm" novalidate>
+        {% csrf_token %}
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">1</div><div><h3>Your details</h3><p>Who you are — so we can call you back within 1 business hour.</p></div></div>
+          <div class="form-grid">
+            <div class="field full"><label>Company / Pharmacy Name <span class="req">*</span></label><input type="text" name="company_name" required></div>
+            <div class="field"><label>Email <span class="req">*</span></label><input type="email" name="email" required></div>
+            <div class="field"><label>Post Code <span class="req">*</span></label><input type="text" name="post_code" required></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">2</div><div><h3>Employer information</h3><p>Fill this section only if you are not a registered employer with us.</p></div></div>
+          <div class="form-grid">
+            <div class="field"><label>First Name</label><input type="text" name="first_name"></div>
+            <div class="field"><label>Last Name</label><input type="text" name="last_name"></div>
+            <div class="field full"><label>Street Address</label><input type="text" name="street_address"></div>
+            <div class="field"><label>City</label><input type="text" name="city"></div>
+            <div class="field"><label>Manager Name</label><input type="text" name="manager_name"></div>
+            <div class="field full"><label>Telephone</label><input type="tel" name="telephone"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">3</div><div><h3>Requirements</h3><p>The role, dates and rate. The more detail, the faster we match.</p></div></div>
+          <div class="form-grid">
+            <div class="field"><label>Locum Rate / hr <span class="req">*</span></label><div class="prefix-input"><span class="prefix">£</span><input type="text" name="locum_rate" required></div></div>
+            <div class="field"><label>Expenses Offered</label><div class="prefix-input"><span class="prefix">£</span><input type="text" name="expenses_offered"></div></div>
+            <div class="field full">
+              <label>Date Selection Type</label>
+              <div class="pill-group">
+                <input type="radio" name="date_type" id="date-cont" value="continuous" checked><label for="date-cont">Continuous Dates</label>
+                <input type="radio" name="date_type" id="date-rand" value="discrete"><label for="date-rand">Random Dates</label>
+              </div>
+            </div>
+
+            <div class="field continuous-dates"><label>Start Date <span class="req">*</span></label><input type="date" name="start_date" id="startDateInput" required></div>
+            <div class="field continuous-dates"><label>End Date <span class="req">*</span></label><input type="date" name="end_date" id="endDateInput" required></div>
+
+            <div class="field full discrete-dates d-none">
+              <label>Selected Dates <span class="req">*</span></label>
+              <div id="discrete-dates-container">
+                <div class="discrete-date-row">
+                  <input type="date" name="discrete_dates[]">
+                  <button type="button" class="remove-date-btn">−</button>
+                </div>
+              </div>
+              <button type="button" id="add-date-btn" class="btn" style="margin-top:6px;">+ Add Date</button>
+              <p id="date-limit-message" class="d-none" style="font-size:13px;color:var(--grey);margin-top:6px;">Contact us to add more dates.</p>
+            </div>
+
+            <div class="field full"><label>Hours required per day <span class="req">*</span></label><input type="text" name="times_required" required></div>
+            <div class="field full">
+              <label>Locum Role Requirements <span class="req">*</span></label>
+              <div class="role-grid">
+                <div class="role-check"><input type="checkbox" name="pharmacist_required" value="1" id="r1"><label for="r1">Pharmacist</label></div>
+                <div class="role-check"><input type="checkbox" name="Technician_required" value="1" id="r2"><label for="r2">Technician</label></div>
+                <div class="role-check"><input type="checkbox" name="Dispenser_required" value="1" id="r3"><label for="r3">Dispenser</label></div>
+                <div class="role-check"><input type="checkbox" name="Nurse_required" value="1" id="r4"><label for="r4">Nurse</label></div>
+                <div class="role-check"><input type="checkbox" name="ANP_required" value="1" id="r5"><label for="r5">ANP Nurse</label></div>
+                <div class="role-check"><input type="checkbox" name="GP_required" value="1" id="r6"><label for="r6">GP</label></div>
+                <div class="role-check"><input type="checkbox" name="Optometrist_required" value="1" id="r7"><label for="r7">Optometrist</label></div>
+                <div class="role-check"><input type="checkbox" name="DO_required" value="1" id="r8"><label for="r8">Dispensing Optician</label></div>
+              </div>
+            </div>
+            <div class="field full"><label>Any other information</label><textarea name="any_other_information"></textarea></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <label class="terms-label">
+            <input type="checkbox" name="terms_required" value="1" id="agreeTerms" required style="width:20px;height:20px;accent-color:var(--teal);margin-top:2px;">
+            <span>I agree to LocumSmart's <a href="{% static 'Locumsmart Ltd Terms of Engagement.pdf' %}" target="_blank">terms and conditions</a>. <span class="req">*</span></span>
+          </label>
+        </div>
+
+        <button type="submit" name="submit" value="Submit Request" class="btn btn-primary" style="width:100%;margin-top:24px;padding:16px;font-size:16px;">Submit request →</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function () {
+    function updateRequiredAttributes() {
+      if ($('input[name="date_type"]:checked').val() === 'continuous') {
+        $('#startDateInput').attr('required', true);
+        $('#endDateInput').attr('required', true);
+        $('input[name="discrete_dates[]"]').attr('required', false);
+      } else {
+        $('#startDateInput').attr('required', false);
+        $('#endDateInput').attr('required', false);
+        $('input[name="discrete_dates[]"]').first().attr('required', true);
+      }
+    }
+
+    updateRequiredAttributes();
+
+    $('input[name="date_type"]').change(function () {
+      if ($(this).val() === 'continuous') {
+        $('.continuous-dates').removeClass('d-none');
+        $('.discrete-dates').addClass('d-none');
+      } else {
+        $('.continuous-dates').addClass('d-none');
+        $('.discrete-dates').removeClass('d-none');
+      }
+      updateRequiredAttributes();
+    });
+
+    let dateFieldCounter = 1;
+    const maxDateFields = 10;
+    const dateFieldContainer = $('#discrete-dates-container');
+    const addDateBtn = $('#add-date-btn');
+    const dateLimitMessage = $('#date-limit-message');
+
+    addDateBtn.click(function () {
+      if (dateFieldCounter < maxDateFields) {
+        dateFieldCounter++;
+        const newDateField = `
+          <div class="discrete-date-row">
+            <input type="date" name="discrete_dates[]">
+            <button type="button" class="remove-date-btn">−</button>
+          </div>
+        `;
+        dateFieldContainer.append(newDateField);
+        if (dateFieldCounter === maxDateFields) {
+          addDateBtn.addClass('d-none');
+          dateLimitMessage.removeClass('d-none');
+        }
+      }
+    });
+
+    $(document).on('click', '.remove-date-btn', function () {
+      $(this).closest('.discrete-date-row').remove();
+      dateFieldCounter--;
+      if (dateFieldCounter < maxDateFields) {
+        addDateBtn.removeClass('d-none');
+        dateLimitMessage.addClass('d-none');
+      }
+    });
+  });
+</script>
+{% endblock %}

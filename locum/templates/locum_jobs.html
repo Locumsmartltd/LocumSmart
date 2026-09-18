@@ -1,0 +1,44 @@
+<!-- locum_jobs.html -->
+
+{% extends "base.html" %}
+{% block title %}Locum Jobs{% endblock %}
+
+{% block content %}
+<section>
+    <div class="container">
+        <h2>Jobs Applied</h2>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Locum Rate</th>
+                        <th>Hours per Day</th>
+                        <th>Expense Covered</th>
+                        <th>Employer Name</th>
+                        <th>Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>{{ job.start_date }}</td>
+                        <td>{{ job.end_date }}</td>
+                        <td>{{ job.locum_rate }}</td>
+                        <td>{{ job.times_required }}</td>
+                        <td>{{ job.expenses_offered }}</td>
+                        <td>{{ job.employer.pharmacy_name }}</td>
+                        <td><a href="{% url 'generate_receipt_form' job.id %}" class="btn btn-primary">Generate</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">No jobs applied.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

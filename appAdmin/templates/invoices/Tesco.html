@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Invoice</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .invoice-table th {
+            background-color: #FFFF00;
+            /* Yellow background */
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .invoice-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="invoice">
+        <button class="no-print" onclick="downloadPDF()">Download PDF</button>
+        <h2>{{jobs.0.pharmacy_name}} Invoice</h2>
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Sl No.</th>
+                    <th>Date Worked</th>
+                    <th>Ref/Inv No</th>
+                    <th>GPHC Number</th>
+                    <th>Name of the Locum</th>
+                    <th>Supplier Name</th>
+                    <th>Store Number</th>
+                    <th>Total Hours</th>
+                    <th>Cost excluding VAT</th>
+                    <th>VAT @ 20%</th>
+                    <th>Gross Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                {% for date in job.days_list %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ date }}</td>
+                    <td>{{ invoice_number }}</td> <!-- Assuming job ID or another unique identifier -->
+                    <td>{{ job.locum.gphc_number }}</td>
+                    <td>{{ job.locum.first_name }} {{ job.locum.last_name }}</td>
+                    <td>Locumsmart Ltd.</td>
+                    <td> </td> <!-- Assuming a field or variable for store number -->
+                    <td>{{ job.times_required }}</td> <!-- Assuming you have a way to calculate total hours worked -->
+                    <td>£{{ job.per_day_price }}</td>
+                    <td> </td>
+                    <td>£{{ job.per_day_price }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function downloadPDF() {
+            const button = document.querySelector('.no-print');
+            button.style.display = 'none';  // Hide the button before generating PDF
+
+            const element = document.getElementById('invoice');
+            html2pdf().from(element).save('invoice.pdf').then(() => {
+                button.style.display = 'block';  // Show the button again after generating PDF
+            });
+        }
+    </script>
+</body>
+
+</html>

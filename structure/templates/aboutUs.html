@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}About LocumSmart — Built for Healthcare, Since 2020{% endblock %}
+{% block meta_description %}LocumSmart — UK healthcare recruitment built during the COVID-19 pandemic. 150+ Independent UK pharmacies, 10,000+ vetted staff, trusted by Tesco Pharmacy and Cohens Chemist.{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .story-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 60px; align-items: start; max-width: 1080px; margin: 0 auto; }
+  .rs .origin-card { border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--mint), var(--teal)); box-shadow: var(--shadow-md); padding: 32px; color: white; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; min-height: 320px; }
+  .rs .origin-card .origin-year { font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; opacity: .85; }
+  .rs .origin-card .origin-headline { font-size: 26px; font-weight: 800; line-height: 1.25; }
+  .rs .origin-card .origin-note { font-size: 14px; opacity: .9; line-height: 1.6; }
+  .rs .story-body p { color: var(--charcoal); font-size: 16.5px; margin-bottom: 18px; line-height: 1.7; }
+  .rs .story-body .signature { font-family: Georgia, serif; font-style: italic; font-size: 18px; color: var(--teal-darker); padding-top: 20px; border-top: 1px solid var(--border); }
+  .rs .hero-quote { font-size: 15px; font-style: italic; color: var(--charcoal); font-family: Georgia, serif; margin-bottom: 22px; padding-left: 16px; border-left: 3px solid var(--teal); max-width: 540px; }
+  .rs .timeline-wrap { position: relative; max-width: 900px; margin: 0 auto; padding-left: 40px; }
+  .rs .timeline-wrap::before { content: ''; position: absolute; left: 12px; top: 12px; bottom: 12px; width: 2px; background: linear-gradient(180deg, var(--teal), var(--mint)); }
+  .rs .tl-item { position: relative; margin-bottom: 40px; }
+  .rs .tl-item::before { content: ''; position: absolute; left: -40px; top: 6px; width: 26px; height: 26px; border-radius: 50%; background: white; border: 3px solid var(--teal); box-shadow: 0 0 0 4px var(--mint-light); }
+  .rs .tl-year { font-size: 13px; font-weight: 800; color: var(--teal-darker); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .rs .tl-item h4 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+  .rs .tl-item p { color: var(--grey); font-size: 15.5px; }
+  .rs .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .rs .team-grid .feature-card h3 { font-size: 17px; }
+  @media (max-width: 900px) { .rs .story-grid { grid-template-columns: 1fr; } .rs .origin-card { max-width: 320px; } .rs .team-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .rs .team-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="badge">🏥 About LocumSmart</div>
+      <h1>Built for healthcare. <span class="accent">Built when healthcare needed it most.</span></h1>
+      <p class="hero-sub">LocumSmart was founded in 2020, at the height of the COVID-19 pandemic, when UK community pharmacies faced unprecedented demand — vaccination programmes, surging patient numbers, and staff stretched thin. What began as vaccination-staff support has grown into a specialist healthcare recruitment agency, built on one principle: deliver the right healthcare professional, with the right skills, at the right time.</p>
+      <blockquote class="hero-quote">"We're not simply a recruitment agency. We're a healthcare staffing partner built around quality, communication and long-term relationships."</blockquote>
+      <div class="hero-cta">
+        <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book a call →</a>
+        <a href="#story" class="btn btn-secondary btn-lg">Read our story</a>
+      </div>
+      <div class="hero-trust">
+        <span><strong>150+</strong> Independent UK pharmacies</span>
+        <span class="divider">•</span>
+        <span><strong>10,000+</strong> vetted staff</span>
+        <span class="divider">•</span>
+        <span>Trusted by <strong>Tesco Pharmacy</strong> &amp; <strong>Cohens Chemist</strong></span>
+      </div>
+    </div>
+    <div class="hero-visual" style="display:flex;align-items:center;justify-content:center;">
+      <div class="origin-card">
+        <div>
+          <div class="origin-year">Est. 2020 · COVID-19 response</div>
+          <div class="origin-headline">Built by listening to healthcare providers — not by automating around them.</div>
+        </div>
+        <div class="origin-note">Today: 150+ independent pharmacies, national pharmacy groups, GP surgeries and private healthcare providers across the UK.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="story" style="background: var(--bg-soft);">
+  <div class="container">
+    <div class="story-grid">
+      <div class="origin-card" style="max-width:320px;">
+        <div>
+          <div class="origin-year">Our story</div>
+          <div class="origin-headline">Not built around technology. Built around listening.</div>
+        </div>
+        <div class="origin-note">Technology and AI now help us work faster — but great recruitment will always depend on people, experience and relationships.</div>
+      </div>
+      <div class="story-body">
+        <div class="section-tag">Our story</div>
+        <h2>LocumSmart wasn't built around technology. It was built by listening to healthcare providers.</h2>
+        <p>During the COVID-19 pandemic, pharmacies needed more than extra staff — they needed reliable healthcare professionals who could adapt quickly to changing services while maintaining exceptional patient care.</p>
+        <p>Our journey began by supporting pharmacies with trained vaccination staff, before expanding into pharmacist, pharmacy technician and dispenser recruitment across the UK. As community pharmacy services evolved — from vaccination programmes to Pharmacy First, permanent pharmacy recruitment, GP surgeries and wider healthcare services — our focus never changed: understand exactly what every client needs, vet every candidate carefully, and deliver a service that leaves no loose ends.</p>
+        <p>Today, our recruitment, compliance, operations and administrative teams work together so every healthcare provider receives candidates who are not only qualified, but genuinely suited to the role and the organisation.</p>
+        <p class="signature">— The LocumSmart team</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad">
+  <div class="container">
+    <div class="section-head center"><div class="section-tag">Our journey</div><h2>Six years. 150+ pharmacies. The UK's largest pharmacy chains.</h2></div>
+    <div class="timeline-wrap">
+      <div class="tl-item"><div class="tl-year">2020 · Year one</div><h4>First independent pharmacy signs on — and never leaves.</h4><p>Founded during the COVID-19 pandemic, supporting community pharmacies when they needed reliable staffing most. What began with one independent pharmacy has grown into long-term partnerships built on trust, quality and service.</p></div>
+      <div class="tl-item"><div class="tl-year">2021–2022</div><h4>Supporting pharmacies where recruitment was hardest.</h4><p>Our reputation grew across Devon, Cornwall, Scotland and other hard-to-recruit regions, where healthcare providers needed dependable staffing support they couldn't get elsewhere.</p></div>
+      <div class="tl-item"><div class="tl-year">2023</div><h4>Portfolio exceeds 5,000 vetted healthcare professionals.</h4><p>A growing candidate network meant faster response times, better workforce planning, and more staffing flexibility for clients across the UK.</p></div>
+      <div class="tl-item"><div class="tl-year">2024</div><h4>Growing partnerships with national pharmacy groups.</h4><p>Consistent quality and service strengthened our relationships with independent pharmacies while expanding our work with national pharmacy organisations.</p></div>
+      <div class="tl-item"><div class="tl-year">2025</div><h4>Supporting Tesco Pharmacy and expanding nationwide.</h4><p>A major milestone — our healthcare professional network passed 10,000+ vetted candidates across the UK.</p></div>
+      <div class="tl-item"><div class="tl-year">2026 · Today</div><h4>150+ independent pharmacies. National pharmacy groups. GP surgeries &amp; private healthcare.</h4><p>LocumSmart now supports independent pharmacies, national pharmacy groups including Tesco Pharmacy and Cohens Chemist, GP surgeries, primary care services and private healthcare providers across the UK.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" style="background: var(--bg-soft);">
+  <div class="container">
+    <div class="section-head center"><div class="section-tag">How we work</div><h2>Three things we don't compromise on.</h2></div>
+    <div class="problem-grid">
+      <div class="feature-card"><div class="feature-icon">✓</div><h3>Deliver what we promise</h3><p>Trust is built through consistency. When we commit to a shortlist or the right healthcare professional, we work relentlessly to deliver it — and keep you informed the whole way.</p></div>
+      <div class="feature-card"><div class="feature-icon">?</div><h3>Ask the questions that matter</h3><p>Every healthcare provider is different. We take the time to understand exactly what each client needs before introducing candidates — real conversations, not generic questionnaires.</p></div>
+      <div class="feature-card"><div class="feature-icon">★</div><h3>Quality before quantity</h3><p>We value your time. Rather than sending a stack of unsuitable CVs, we introduce candidates who genuinely meet the role — with quality, communication and long-term success in mind.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad">
+  <div class="container">
+    <div class="section-head center"><div class="section-tag">The team</div><h2>Specialist teams. One shared commitment.</h2></div>
+    <p style="text-align:center; max-width: 640px; margin: -32px auto 40px; color: var(--grey);">Behind every placement is a team of dedicated professionals delivering a seamless experience from enquiry through to placement.</p>
+    <div class="team-grid">
+      <div class="feature-card"><h3>Permanent Recruitment</h3><p>Helping healthcare professionals secure rewarding long-term careers, and employers find the right permanent talent.</p></div>
+      <div class="feature-card"><h3>Temporary Recruitment</h3><p>Fast, reliable locum and temporary staffing solutions for healthcare providers across the UK.</p></div>
+      <div class="feature-card"><h3>Compliance</h3><p>Ensuring every healthcare professional is fully vetted, compliant and ready to work with complete confidence.</p></div>
+      <div class="feature-card"><h3>Operations</h3><p>Client relationships and team management, keeping every placement running smoothly.</p></div>
+      <div class="feature-card"><h3>Administration</h3><p>Managing documentation, onboarding and day-to-day support to keep every stage organised.</p></div>
+      <div class="feature-card"><h3>Social Media &amp; Advertising</h3><p>Connecting healthcare professionals with new opportunities while growing the LocumSmart brand.</p></div>
+      <div class="feature-card"><h3>Clinical Screening (ACT)</h3><p>Every candidate for a permanent role is pre-screened by our experienced clinical screening staff before they reach you.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-band">
+  <div class="container">
+    <div class="stats-grid">
+      <div><div class="stat-num">10,000+</div><div class="stat-label">Vetted UK healthcare staff</div></div>
+      <div><div class="stat-num">150+</div><div class="stat-label">Independent pharmacy clients</div></div>
+      <div><div class="stat-num">2020</div><div class="stat-label">Founded during COVID-19</div></div>
+      <div><div class="stat-num">6 yrs</div><div class="stat-label">Serving UK healthcare</div></div>
+      <div><div class="stat-num">2</div><div class="stat-label">Largest UK chains onboard</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="container">
+    <h2>Want to talk to the team?</h2>
+    <p>A 15-minute call. No commitment. Ask us anything about our process, our vetting, or whether we're the right fit for you.</p>
+    <div class="cta-buttons">
+      <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book a call →</a>
+      <a href="{% url 'contactus' %}" class="btn btn-secondary btn-lg">Contact us instead</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

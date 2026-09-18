@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}LocumSmart{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}LocumSmart — pharmacist-vetted locums & permanent staff for UK pharmacies, GP surgeries, medical centres and private hospitals.{% endblock %}" />
+
+  <link rel="shortcut icon" href="{% static 'images/favicon.JPG' %}" type="image/x-icon">
+
+  <!-- Google Fonts (Inter) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome (kept — the old templates use it) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!--
+    NOTE ON BOOTSTRAP:
+    We're NOT loading Bootstrap on redesigned public pages — the new design system doesn't use it.
+    If any authenticated / admin pages still need Bootstrap, load it inside the
+    extra_head block on those specific templates instead of here.
+  -->
+
+  <!-- New design system tokens + shared components -->
+  <link rel="stylesheet" href="{% static 'css/redesign-tokens.css' %}" />
+
+  <!-- Page-specific CSS slot -->
+  {% block page_css %}{% endblock %}
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="rs">
+
+  {% include 'components/navbar.html' %}
+
+  {% if messages %}
+    <div class="messages container" style="padding-top: 20px;">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% include 'components/footer.html' %}
+
+  <!-- Page-specific JS slot -->
+  {% block page_js %}{% endblock %}
+</body>
+</html>

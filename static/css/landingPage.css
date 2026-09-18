@@ -1,0 +1,597 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+  html, body, div, section {
+    margin: 0;
+    padding: 0;
+}
+.navbar-brand {
+  height: 53px; 
+  width: 356px;
+}
+.navbar-brand img{
+    max-height: 53px; 
+    max-width: 356px;
+}
+
+/* Testimonials Section */
+.testimonials-section {
+    background-image: url('../images/Landingpage3.jpg');
+    /* Background image */
+    background-size: cover;
+    background-position: center;
+    padding: 50px 0;
+    color: #333;
+}
+
+.testimonials-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    /* Enable wrapping for smaller screens */
+}
+
+.testimonials-heading {
+    flex: 1;
+    text-align: left;
+    padding: 20px;
+}
+
+.testimonials-heading h5 {
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #092d53;
+}
+
+.testimonials-heading h2 {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #092d53;
+}
+
+.testimonials-carousel {
+    flex: 1;
+    padding: 20px;
+    position: relative;
+    min-width: 300px;
+    /* Prevent too small columns on small devices */
+}
+
+.carousel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    height: auto;
+    /* Adjust height dynamically */
+    min-height: 200px;
+    /* Ensure a minimum height */
+}
+
+.testimonial-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 0;
+    position: absolute;
+}
+
+.testimonial-card.active {
+    opacity: 1;
+    position: relative;
+}
+
+.testimonial-card .quote-icon {
+    font-size: 2rem;
+    color: #ffcc00;
+    margin-bottom: 15px;
+}
+
+.testimonial-text {
+    font-size: 1rem;
+    /* Adjust font size for smaller devices */
+    font-style: italic;
+    margin-bottom: 15px;
+    color: #555;
+}
+
+.testimonial-name {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #007bff;
+}
+
+.testimonial-source {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 15px;
+}
+
+.testimonial-rating {
+    color: #ffd700;
+    font-size: 1.5rem;
+}
+
+.slider-indicators {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.slider-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.slider-indicator.active {
+    background: #ff6600;
+}
+
+/* Responsive Styles */
+@media (max-width: 991px) {
+    .testimonials-container {
+        flex-direction: column;
+        /* Stack elements vertically */
+        gap: 40px;
+    }
+
+    .testimonials-heading {
+        text-align: center;
+        padding: 0 10px;
+    }
+
+    .testimonials-heading h5 {
+        font-size: 1rem;
+    }
+
+    .testimonials-heading h2 {
+        font-size: 1.8rem;
+    }
+
+    .testimonials-carousel {
+        margin: 0 auto;
+        /* Center the carousel */
+        max-width: 100%;
+        /* Full width on smaller screens */
+    }
+
+    .testimonial-card {
+        padding: 20px;
+        /* Adjust padding for smaller screens */
+        max-width: 100%;
+        /* Full width for small devices */
+    }
+
+    .testimonial-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .testimonials-heading h2 {
+        font-size: 1.5rem;
+    }
+
+    .testimonials-heading h5 {
+        font-size: 0.9rem;
+    }
+
+    .testimonials-carousel {
+        padding: 0;
+    }
+
+    .testimonial-card {
+        padding: 15px;
+        /* Smaller padding for very small devices */
+    }
+
+    .testimonial-text {
+        font-size: 0.8rem;
+    }
+
+    .testimonial-rating {
+        font-size: 1.2rem;
+    }
+}
+
+
+/* Hero section styles */
+.hero-section {
+    background-image: url('../images/Landingpage1.jpg');
+    background-size: cover;
+    background-position: center top;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
+/* Banner styles */
+.banner {
+    background-color: rgba(0, 0, 0, 0.5); /* Transparent black background */
+    padding: 20px;
+    color: #ffffff; /* Text color */
+    border-radius: 10px;
+    margin: 10px 0;
+}
+
+
+/* Search card styles */
+.search-card {
+    background-color: rgba(255, 255, 255, 0.8); /* White background with opacity */
+    border-radius: 10px; /* Rounded corners */
+    min-height: 50%;
+    max-height: 80%;
+    margin: auto; /* Center the search bar horizontally */
+    width: 50%; /* Set maximum width */
+    min-width: 50%;
+    margin-top: 10%;
+}
+
+
+
+.form-control {
+    border-radius: 5px; /* Smaller rounded corners */
+    height: 35px; /* Adjust height of form controls */
+    font-size: 16px; /* Adjust font size */
+      
+}
+
+.btn-primary {
+    border-radius: 5px; /* Smaller rounded corners */
+    font-size: 14px; /* Adjust font size */
+}
+
+.card-body .md-3{
+    margin:0;
+    padding: 0;
+}
+/* Define custom animation keyframes */
+@keyframes moveInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes moveInLeft {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Apply animation to elements when they are in the viewport */
+.move-from-right {
+    animation: moveInRight 1s ease-out forwards;
+}
+
+.move-from-left {
+    animation: moveInLeft 1s ease-out forwards;
+}
+.information img {
+    max-width: 100%; /* Ensure image does not exceed container width */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 15px;
+}
+.information{
+    background-color: rgb(189, 250, 230);
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+.information .card {
+    margin-bottom: 20px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow effect */
+    margin-top: 20px;
+    height: fit-content; /* Ensure the card height adjusts to its content */
+    border-radius: 15px;
+    flex: 1;
+    height:50vh;
+}
+/* Ensure cards within the same row have equal height */
+.information .row {
+    display: flex;
+    flex-wrap: wrap;
+}
+.information .card-body {
+    padding: 20px; /* Add padding for content */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    
+}
+
+.information .card-img-top {
+    max-height: 300px; /* Adjust max height of the image */
+    object-fit: cover; /* Maintain aspect ratio */
+}
+.information .transparent-card {
+    background-color: transparent; /* Set background color to transparent */
+    border: none; /* Remove border */
+    box-shadow: none; /* Remove box shadow */
+    border-radius: none;
+    
+}
+
+.options{
+    padding: 50px 0;
+}
+
+.options .card {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    
+    background-color: rgb(165, 230, 208);
+    text-align: center;
+    height: auto;
+    margin: 10px;
+    margin-bottom: 30px;
+    width: fit-content;
+    border-radius: 15px;
+}
+
+.options .card-title {
+    font-weight: bold;
+}
+.options .card-text {
+    margin-bottom: 15px;
+}
+.options .card:hover {
+    transform: scale(1.05);
+}
+.options .btn-primary {
+    background-color: #17a2b8; /* Cyan color */
+    border-color: #17a2b8; /* Set border color to match background */
+    color: #fff; /* White text color */
+    border-radius: 5px; /* Rounded corners */
+    padding: 10px 20px; /* Add padding */
+    margin-top: auto;
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s; /* Add transition for smooth color change */
+}
+
+.options .btn-primary:hover {
+    background-color: #138496; /* Darker cyan color on hover */
+    border-color: #138496; /* Darker border color on hover */
+}
+
+.image-overlay {
+    position: relative;
+    height: 100vh; /* Adjust height as needed */
+    background-image: url('../images/Landingpage3.jpg');
+    background-size: cover;
+    background-position: center top;
+    color: #ffffff; /* Text color */
+    overflow: hidden; /* Ensure the blur effect is contained within the section */
+}
+
+.overlay-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 80%; /* Adjust width as needed */
+}
+
+.overlay-text h2 {
+    font-size: 40px; /* Adjust font size as needed */
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add shadow effect */
+}
+
+.image-overlay::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.1); /* Adjust the opacity as needed */
+    backdrop-filter: blur(8px); /* Add blur effect */
+}
+.clients-section {
+    padding: 50px 0; /* Adjust padding as needed */
+    text-align: center;
+}
+
+.clients-heading h2 {
+    font-size: 40px;
+    font-weight: bold;
+    margin-top: 30%;
+}
+
+.clients-heading p {
+    margin-bottom: 30px;
+}
+
+.client-logos img {
+    max-width: 125%;
+    height: auto;
+    padding: 10%;
+}
+.clients-section .row{
+    min-height: 60vh;
+    margin-top: 20px;
+}
+.client-logos .row img {
+    margin-bottom: 20px;
+  }
+.about-section {
+    padding: 50px 0;
+    background-color: rgb(189, 250, 230);
+}
+
+.about-section .card {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    background-color: #f8f9fa; /* Light gray background */
+    margin-bottom: 10px;
+    border-radius: 16px;
+    height:68vh;
+}
+
+.about-section h2 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.about-section p {
+    margin-bottom: 15px;
+}
+
+.about-section img {
+    
+    width: 100%;
+    height:68vh;
+    border-radius: 15px;
+}
+
+
+.contact-form {
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    text-align: center; /* Center align the content */
+    border-radius: 15px;
+}
+
+.contact-form h5 {
+    font-weight: bold;
+    font-size: 2em;
+    margin-bottom: 10px; /* Increase margin for spacing */
+    color: #333;
+}
+
+.contact-form .input-box {
+    position: relative;
+    margin-bottom: 10px; /* Increase margin between input boxes */
+}
+
+.contact-form input,
+.contact-form select {
+    width: 100%;
+    padding: 5px 10px;
+    font-size: 16px;
+    margin: 10px 0;
+    border: none;
+    border-bottom: 2px solid #333;
+    outline: none;
+    resize: none;
+}
+.contact-form select {
+    padding: 5px;
+    height: 36px;
+  
+}
+
+.contact-form span {
+    position: absolute;
+    left: 0;
+    padding: 8px;
+    font-size: 16px;
+    margin: 10px;
+    pointer-events: none;
+    transition: 0.5s;
+    color: #666;
+    margin-left: 17px;
+    
+}
+
+
+.contact-form input:focus ~ span,
+.contact-form select:focus ~ span {
+    color: #e91e63;
+    font-size: 12px;
+    transform: translateY(-20px);
+}
+
+.contact-form input[type="submit"] {
+    width: 100%;
+    background: #1db4a8;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    font-size: 18px;
+    border: 1px solid #1db4a8;
+    transition: 0.5s;
+}
+
+.contact-form input[type="submit"]:hover {
+    background: #fff;
+    color: #1db4a8;
+}
+
+@media (max-width: 991px) {
+    .contact-info {
+        margin-bottom: 40px;
+        width: 100%;
+    }
+    
+    .contact-form {
+        width: 100%;
+    }
+    .client-logos img {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+.custom {
+    position: relative;
+    margin-bottom: 0px; /* Reduce bottom margin to align elements closer */
+}
+
+.autocomplete-options {
+    position: absolute;
+    top: 100%; /* Position options container below the input */
+    left: 0;
+    z-index: 1000; /* Ensure the options appear above other content */
+    background-color: #fff;
+    border: 1px solid #b5bebe;
+    border-top: none; /* Hide top border to align with input */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-height: 200px; /* Limit height to prevent overflow */
+    overflow-y: auto; /* Enable vertical scrolling if needed */
+    color: #138496;
+    width: calc(100% - 30px); /* Adjust width to match input width */
+    margin-left: 15px; /* Add left margin to align with input */
+    margin-top: 0; /* Remove top margin */
+}
+
+.autocomplete-option {
+    padding: 2px 12px;
+    cursor: pointer;
+}
+
+.autocomplete-option:hover {
+    background-color: #f0f0f0;
+}

@@ -1,0 +1,36 @@
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000; 
+  }
+  
+  body {
+    background-color: #a7f0f0; /* Light Cyan background */
+    padding-top: 30px; /* Adjust as needed */
+    text-align: center; /* Center align all content */
+    box-sizing: border-box;
+
+
+
+    
+  }
+  h5{
+    margin:8px;
+  }
+  .card{
+    border-radius: 2px solid #1db4a8;
+    background-color: #dcf0f0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+  .locum-card {
+    border-radius: 15px; /* Rounded corners on top */
+    background-color: #ffffff; /* White background for card */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    padding: 10px;
+    margin: auto;
+    margin-bottom: 20px;
+     margin-top: 12vh;
+  }
+  

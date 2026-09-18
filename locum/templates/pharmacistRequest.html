@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pharmacist Registration — LocumSmart{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .reg-hero { text-align: center; padding: 60px 24px 30px; background: linear-gradient(180deg, var(--mint-light) 0%, transparent 100%); }
+  .rs .form-section { padding: 28px 0 4px; border-top: 1px solid var(--border); margin-top: 28px; }
+  .rs .form-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  .rs .form-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .rs .form-section-head .num { width: 32px; height: 32px; border-radius: 50%; background: var(--mint-light); color: var(--teal-darker); display: flex; align-items: center; justify-content: center; font-weight: 800; }
+  .rs .form-section-head h3 { font-size: 18px; font-weight: 800; }
+  .rs .terms-label { display: flex; align-items: flex-start; gap: 12px; background: var(--mint-light); border: 1px solid var(--mint); padding: 16px 20px; border-radius: 10px; font-size: 14px; color: var(--charcoal); font-weight: 500; cursor: pointer; margin-top: 10px; }
+  .rs .terms-label a { color: var(--teal-darker); font-weight: 700; text-decoration: underline; }
+  .rs .field.readonly input { background: var(--bg-soft); color: var(--grey); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="background: var(--bg-soft); padding: 40px 0 80px;">
+  <div class="container">
+    <div class="reg-hero">
+      <div class="badge"><span class="dot"></span> Registration · Pharmacist</div>
+      {% if locum %}
+        <h1 style="font-size:38px;">Update <span class="accent">Profile.</span></h1>
+      {% else %}
+        <h1 style="font-size:38px;">Pharmacist <span class="accent">Registration.</span></h1>
+        <p style="font-size:17px;color:var(--grey);">Fill this once. We'll match you to Pharmacist shifts across the UK.</p>
+      {% endif %}
+    </div>
+
+    <div class="form-shell">
+      <!-- BACKEND: preserve action, method="post" and every field name below exactly (locum/views.py pharmacistRegister / edit_locum). -->
+      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'pharmacistRegister' %}{% endif %}" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">1</div><h3>Personal Information</h3></div>
+          <div class="form-grid">
+            <div class="field full"><label>Title <span class="req">*</span></label><input type="text" name="title" value="{% if locum %}{{ locum.title }}{% endif %}" required></div>
+            <div class="field{% if locum %} readonly{% endif %}"><label>Forename <span class="req">*</span></label><input type="text" name="firstname" value="{% if locum %}{{ locum.firstname }}{% endif %}" {% if locum %}readonly{% endif %} required></div>
+            <div class="field{% if locum %} readonly{% endif %}"><label>Surname <span class="req">*</span></label><input type="text" name="lastname" value="{% if locum %}{{ locum.lastname }}{% endif %}" {% if locum %}readonly{% endif %} required></div>
+            <div class="field"><label>Date of Birth <span class="req">*</span></label><input type="date" name="date_of_birth" id="date_of_birth" value="{% if locum %}{{ locum.date_of_birth|date:"Y-m-d" }}{% endif %}" required></div>
+            <div class="field"><label>Email Address <span class="req">*</span></label><input type="email" name="email" value="{% if locum %}{{ locum.Email }}{% endif %}" required></div>
+            <div class="field"><label>Telephone <span class="req">*</span></label><input type="tel" name="telephone" value="{% if locum %}{{ locum.telephone }}{% endif %}" required></div>
+            {% if not locum %}
+            <div class="field">
+              <label>Gender <span class="req">*</span></label>
+              <select id="genderSelect" name="gender" required>
+                <option value="" disabled selected>Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">2</div><h3>Address</h3></div>
+          <div class="form-grid">
+            <div class="field"><label>City <span class="req">*</span></label><input type="text" name="county" value="{% if locum %}{{ locum.county }}{% endif %}" required></div>
+            <div class="field"><label>Nationality <span class="req">*</span></label><input type="text" name="nationality" value="{% if locum %}{{ locum.nationality }}{% endif %}" required></div>
+            <div class="field"><label>Post Code <span class="req">*</span></label><input type="text" name="post_code" value="{% if locum %}{{ locum.post_code }}{% endif %}" required></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">3</div><h3>Professional Credentials</h3></div>
+          <div class="form-grid">
+            <div class="field{% if locum %} readonly{% endif %}"><label>GPHC Number <span class="req">*</span></label><input type="text" name="gphc_number" value="{% if locum %}{{ locum.gphc_number }}{% endif %}" {% if locum %}readonly{% endif %} required></div>
+            <div class="field"><label>GPHC Number Expiry Date <span class="req">*</span></label><input type="date" name="gphc_number_expiry" id="gphc_number_expiry" value="{% if locum %}{{ locum.gphc_number_expiry|date:"Y-m-d" }}{% endif %}" required></div>
+            <div class="field"><label>Qualified Date <span class="req">*</span></label><input type="date" name="qualified_date" id="qualified_dateInput" value="{% if locum %}{{ locum.qualified_date|date:"Y-m-d" }}{% endif %}" required></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">4</div><h3>Documents</h3></div>
+          <div class="form-grid">
+            <div class="field"><label>Upload Passport <span class="req">*</span></label><input type="file" name="passport" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
+            <div class="field"><label>Passport Expiry Date <span class="req">*</span></label><input type="date" name="passport_expiry_date" id="passport_expiry_date" value="{% if locum and locum.passport_expiry_date %}{{ locum.passport_expiry_date|date:"Y-m-d" }}{% endif %}" required></div>
+            <div class="field"><label>Upload Visa/Residence Permit</label><input type="file" name="visa_residence_permit" accept="application/pdf,image/*"></div>
+            <div class="field"><label>Upload Insurance <span class="req">*</span></label><input type="file" name="insurance" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
+            <div class="field"><label>Insurance Expiry Date <span class="req">*</span></label><input type="date" name="insurance_expiry_date" id="insurance_expiry_date" value="{% if locum %}{{ locum.insurance_expiry_date|date:"Y-m-d" }}{% endif %}" required></div>
+            <div class="field"><label>Visa Expiry Date</label><input type="date" name="visa_expiry" id="visa_expiry" value="{% if locum %}{{ locum.visa_expiry|date:"Y-m-d" }}{% endif %}"></div>
+            <div class="field"><label>DBS Enhanced Disclosure <span class="req">*</span> <span class="hint">(less than 1 year)</span></label><input type="file" name="dbs_enhanced_disclosure" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
+            <div class="field"><label>DBS Update Service #</label><input type="text" name="dbs_service_number" value="{% if locum %}{{ locum.dbs_service_number }}{% endif %}"></div>
+            <div class="field"><label>Upload Safeguarding Level 2</label><input type="file" name="safeguarding_level2" accept="application/pdf,image/*"></div>
+            <div class="field"><label>Other Accreditations 1</label><input type="file" name="accreditations1" accept="application/pdf,image/*"></div>
+            <div class="field"><label>Other Accreditations 2</label><input type="file" name="accreditations2" accept="application/pdf,image/*"></div>
+            <div class="field"><label>Other Accreditations 3</label><input type="file" name="accreditations3" accept="application/pdf,image/*"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><div class="num">5</div><h3>References</h3></div>
+          <div class="form-grid">
+            <div class="field full">
+              <label>Can you provide a reference? <span class="req">*</span></label>
+              <select id="can_provide_references" name="can_provide_references" {% if locum %}disabled{% endif %} {% if not locum %}required{% endif %}>
+                <option value="" disabled {% if not locum %}selected{% endif %}></option>
+                <option value="yes" {% if locum and locum.can_provide_references %}selected{% endif %}>yes</option>
+                <option value="no" {% if locum and not locum.can_provide_references %}selected{% endif %}>no</option>
+              </select>
+              {% if locum %}
+              <input type="hidden" name="can_provide_references" value="{% if locum.can_provide_references %}yes{% else %}no{% endif %}">
+              {% endif %}
+            </div>
+
+            <div class="field full" id="references_section" style="display:{% if locum and locum.can_provide_references %}block{% else %}none{% endif %};">
+              <div class="form-grid">
+                <div class="field full"><h4>Recent Reference</h4></div>
+                <div class="field"><label>Branch Address</label><input type="text" name="recent_ref_branch_address" value="{% if locum %}{{ locum.recent_ref_branch_address }}{% endif %}"></div>
+                <div class="field"><label>Manager's Name</label><input type="text" name="recent_ref_manager_name" value="{% if locum %}{{ locum.recent_ref_manager_name }}{% endif %}"></div>
+                <div class="field"><label>Manager's Email</label><input type="email" name="recent_ref_manager_email" value="{% if locum %}{{ locum.recent_ref_manager_email }}{% endif %}"></div>
+                <div class="field"><label>Manager's Phone Number</label><input type="tel" name="recent_ref_manager_phone" value="{% if locum %}{{ locum.recent_ref_manager_phone }}{% endif %}"></div>
+                <div class="field"><label>When did you last work at this branch</label><input type="date" name="recent_ref_last_worked" value="{% if locum %}{{ locum.recent_ref_last_worked|date:'Y-m-d' }}{% endif %}"></div>
+                <div class="field full"><h4>Previous Reference</h4></div>
+                <div class="field"><label>Branch Address</label><input type="text" name="previous_ref_branch_address" value="{% if locum %}{{ locum.previous_ref_branch_address }}{% endif %}"></div>
+                <div class="field"><label>Manager's Name</label><input type="text" name="previous_ref_manager_name" value="{% if locum %}{{ locum.previous_ref_manager_name }}{% endif %}"></div>
+                <div class="field"><label>Manager's Email</label><input type="email" name="previous_ref_manager_email" value="{% if locum %}{{ locum.previous_ref_manager_email }}{% endif %}"></div>
+                <div class="field"><label>Manager's Phone Number</label><input type="tel" name="previous_ref_manager_phone" value="{% if locum %}{{ locum.previous_ref_manager_phone }}{% endif %}"></div>
+                <div class="field"><label>When did you last work at this branch</label><input type="date" name="previous_ref_last_worked" value="{% if locum %}{{ locum.previous_ref_last_worked|date:'Y-m-d' }}{% endif %}"></div>
+              </div>
+            </div>
+
+            <div class="field full" id="no_references_reason_section" style="display:{% if locum and not locum.can_provide_references %}block{% else %}none{% endif %};">
+              <label>Reason</label>
+              <textarea name="no_reference_reason" rows="3" placeholder="It's important for us to have your previous reference. If not, please state the reason below:">{% if locum %}{{ locum.no_reference_reason }}{% endif %}</textarea>
+            </div>
+          </div>
+        </div>
+
+        {% if not locum %}
+        <label class="terms-label">
+          <input type="checkbox" name="terms_required" value="1" id="terms_required" required style="width:20px;height:20px;accent-color:var(--teal);margin-top:2px;">
+          <span>I agree to LocumSmart's <a href="{% static 'TERMS AND CONDITIONS FOR PHARMACY STAFF.pdf' %}" target="_blank">terms and conditions</a>. <span class="req">*</span></span>
+        </label>
+        {% endif %}
+
+        <button type="submit" name="submit" value="Submit Request" class="btn btn-primary" style="width:100%;margin-top:24px;padding:16px;font-size:16px;">Submit request →</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(function() {
+    function toggleReferenceSections() {
+      var val = $('#can_provide_references').val();
+      if (val === 'yes') {
+        $('#references_section').show();
+        $('#no_references_reason_section').hide();
+        $('#references_section').find('input').attr('required', true);
+        $('[name="no_reference_reason"]').removeAttr('required');
+      } else if (val === 'no') {
+        $('#references_section').hide();
+        $('#no_references_reason_section').show();
+        $('#references_section').find('input').removeAttr('required');
+        $('[name="no_reference_reason"]').attr('required', true);
+      } else {
+        $('#references_section').hide();
+        $('#no_references_reason_section').hide();
+        $('#references_section').find('input').removeAttr('required');
+        $('[name="no_reference_reason"]').removeAttr('required');
+      }
+    }
+    $('#can_provide_references').on('change', toggleReferenceSections);
+    toggleReferenceSections();
+  });
+</script>
+{% endblock %}

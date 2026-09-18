@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}403 Page{% endblock %}
+
+{% block content %}
+
+  <div class="container mt-5">
+    
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="container text-center mt-5">
+                <h1 class="display-4">403 Forbidden</h1>
+                <p class="lead">You do not have permission to access this page.</p>
+                <a href="{% url 'login' %}" class="btn btn-primary">Go back to Login</a>
+                <br>
+                <br>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

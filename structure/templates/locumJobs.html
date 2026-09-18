@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Jobs — Permanent &amp; Locum UK Healthcare Roles | LocumSmart{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .page-hero { padding: 60px 0 30px; text-align: center; background: linear-gradient(180deg, var(--mint-light) 0%, transparent 100%); }
+  .rs .split-tabs { display: flex; gap: 8px; justify-content: center; padding: 20px 0; }
+  .rs .split-tab { padding: 10px 22px; border-radius: 100px; background: white; border: 1.5px solid var(--border); font-family: inherit; font-weight: 700; font-size: 14px; color: var(--grey); cursor: pointer; }
+  .rs .split-tab.active { background: var(--teal); color: white; border-color: var(--teal); }
+  .rs .search-bar { max-width: 900px; margin: 0 auto 40px; background: white; border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 10px; border: 1px solid var(--border); }
+  .rs .search-bar label { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; margin-left: 14px; }
+  .rs .search-bar input, .rs .search-bar select { border: none; background: transparent; padding: 8px 14px; font-family: inherit; font-size: 15px; font-weight: 600; }
+  .rs .search-bar input:focus, .rs .search-bar select:focus { outline: none; }
+  .rs .more-filters { max-width: 900px; margin: -24px auto 40px; background: white; border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border: 1px solid var(--border); }
+  .rs .more-filters label { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; margin-left: 14px; }
+  .rs .more-filters input { border: 1px solid var(--border); border-radius: 8px; background: var(--bg-soft); padding: 8px 14px; font-family: inherit; font-size: 15px; font-weight: 600; width: 100%; }
+  .rs .more-filters input:focus { outline: none; border-color: var(--teal); }
+  @media (max-width: 900px) { .rs .more-filters { grid-template-columns: 1fr 1fr; margin-top: 12px; } }
+  .rs .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1080px; margin: 0 auto 60px; }
+  .rs .roles-col h4 { font-size: 13px; font-weight: 800; color: var(--teal-darker); letter-spacing: 1.8px; text-transform: uppercase; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--mint); }
+  .rs .role-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rs .role-item { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--charcoal); transition: all .15s; }
+  .rs .role-item:hover { border-color: var(--teal); background: var(--mint-light); }
+  .rs .role-item .role-icon { width: 40px; height: 40px; border-radius: 10px; background: white; color: var(--teal-darker); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--mint); font-weight: 700; font-size: 13px; }
+  .rs .role-item .role-name { font-weight: 700; font-size: 15px; }
+  .rs .role-item .role-meta { font-size: 12px; color: var(--grey); }
+  @media (max-width: 900px) { .rs .search-bar { grid-template-columns: 1fr; } .rs .roles-grid { grid-template-columns: 1fr; } .rs .role-list { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <div class="badge"><span class="dot"></span> Live jobs across the UK — updated every hour</div>
+    <h1>Find your next role. <span class="accent">Permanent or locum.</span></h1>
+    <p style="font-size:18px;color:var(--grey);">Browse UK pharmacy and primary care jobs from vetted employers.</p>
+  </div>
+</section>
+
+<div class="container">
+  <div class="split-tabs">
+    <button class="split-tab active" data-type="all">All jobs</button>
+    <button class="split-tab" data-type="locum">Locum shifts</button>
+    <button class="split-tab" data-type="permanent">Permanent roles</button>
+  </div>
+
+  <!-- BACKEND: preserve method="GET" action="" and field names: locum, location, distance, pharmacy, start_date, end_date, min_rate, max_rate -->
+  <form class="search-bar" method="GET" action="" id="contact-form">
+    <div class="sf">
+      <label>Role</label>
+      <select id="locum" name="locum">
+        <option value="">All roles</option>
+        <option value="pharmacist">Pharmacist</option>
+        <option value="technician">Technician</option>
+        <option value="dispenser">Dispenser</option>
+        <option value="nurse">Nurse</option>
+        <option value="anp_nurse">ANP Nurse</option>
+        <option value="gp">GP</option>
+      </select>
+    </div>
+    <div class="sf">
+      <label>Location</label>
+      <input type="text" id="locationInput" name="location" placeholder="Town or postcode" />
+    </div>
+    <div class="sf">
+      <label>Distance</label>
+      <select name="distance">
+        <option value="">Any</option>
+        <option value="10">+10 miles</option>
+        <option value="25">+25 miles</option>
+        <option value="50">+50 miles</option>
+        <option value="100">+100 miles</option>
+      </select>
+    </div>
+    <div class="sf">
+      <label>Pharmacy type</label>
+      <select id="pharmacy" name="pharmacy">
+        <option value="">Any</option>
+        {% if user.admin and user.is_authenticated %}
+          {% for job in jobs %}
+            {% if job.approved %}
+              <option value="{{ job.pharmacy_name }}">{{ job.pharmacy_name }}</option>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">🔍 Search</button>
+  </form>
+
+  <div class="more-filters">
+    <div class="sf">
+      <label>Start date</label>
+      <input type="date" name="start_date" form="contact-form" />
+    </div>
+    <div class="sf">
+      <label>End date</label>
+      <input type="date" name="end_date" form="contact-form" />
+    </div>
+    <div class="sf">
+      <label>Min rate (£/hr)</label>
+      <input type="number" name="min_rate" form="contact-form" min="0" step="0.5" />
+    </div>
+    <div class="sf">
+      <label>Max rate (£/hr)</label>
+      <input type="number" name="max_rate" form="contact-form" min="0" step="0.5" />
+    </div>
+  </div>
+</div>
+
+<section class="pad">
+  <div class="container">
+    <div class="section-head center"><div class="section-tag">Browse by role</div><h2>Every role we staff.</h2></div>
+    <div class="roles-grid">
+      <div class="roles-col">
+        <h4>Pharmacy Roles</h4>
+        <div class="role-list">
+          <a href="?locum=pharmacist" class="role-item"><span class="role-icon">Rx</span><div><div class="role-name">Pharmacist</div><div class="role-meta">Locum &amp; permanent</div></div></a>
+          <a href="?locum=technician" class="role-item"><span class="role-icon">Tc</span><div><div class="role-name">Technician</div><div class="role-meta">MDS · NMS · dispensing</div></div></a>
+          <a href="?locum=dispenser" class="role-item"><span class="role-icon">Ds</span><div><div class="role-name">Dispenser</div><div class="role-meta">Trained &amp; vetted</div></div></a>
+          <a href="#" class="role-item"><span class="role-icon">AC</span><div><div class="role-name">ACT</div><div class="role-meta">Accuracy Checking Tech</div></div></a>
+        </div>
+      </div>
+      <div class="roles-col">
+        <h4>GP Surgery Roles</h4>
+        <div class="role-list">
+          <a href="?locum=gp" class="role-item"><span class="role-icon">GP</span><div><div class="role-name">GP</div><div class="role-meta">Salaried &amp; sessional</div></div></a>
+          <a href="?locum=nurse" class="role-item"><span class="role-icon">PN</span><div><div class="role-name">Practice Nurse</div><div class="role-meta">Vaccinations · reviews</div></div></a>
+          <a href="?locum=anp_nurse" class="role-item"><span class="role-icon">AN</span><div><div class="role-name">ANP Nurse</div><div class="role-meta">Advanced practitioners</div></div></a>
+          <a href="#" class="role-item"><span class="role-icon">RS</span><div><div class="role-name">Reception Staff</div><div class="role-meta">Care navigation trained</div></div></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BACKEND: job list loop below renders the jobs queryset from the view -->
+{% if jobs %}
+<section class="pad" style="background: var(--bg-soft);">
+  <div class="container">
+    <div class="section-head"><div class="section-tag">Results</div><h2>{{ jobs|length }} live shifts</h2></div>
+    <div style="display:grid; gap:14px;">
+      {% for job in jobs %}
+        {% if job.approved and not job.rejected %}
+        <a href="{% url 'check_login' job.id %}" class="feature-card" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;">
+          <div>
+            <h3 style="font-size:16px;">{{ job.pharmacy_name }} —
+              {% if job.pharmacist_required %}Pharmacist {% endif %}
+              {% if job.technician_required %}Technician {% endif %}
+              {% if job.dispenser_required %}Dispenser {% endif %}
+              {% if job.nurse_required %}Nurse {% endif %}
+              {% if job.anp_nurse_required %}ANP Nurse {% endif %}
+              {% if job.gp_required %}GP {% endif %}
+              {% if job.optometrist_required %}Optometrist {% endif %}
+              {% if job.do_required %}Dispensing Optician {% endif %}
+              — {{ job.county }}</h3>
+            <p style="font-size:13px;">{{ job.start_date|date:"D d M" }} · {{ job.times_required }} hrs/day</p>
+          </div>
+          <div style="text-align:right;"><strong style="color:var(--teal-darker);font-size:18px;">£{{ job.locum_rate }}/hr</strong></div>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="final-cta">
+  <div class="container">
+    <h2>Not seeing your role?</h2>
+    <p>Register anyway — we'll match you to shifts as they come in.</p>
+    <div class="cta-buttons">
+      <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Register — pick your role →</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+  document.querySelectorAll('.split-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.split-tab').forEach(t => t.classList.toggle('active', t === tab));
+      // BACKEND: real filter should submit form with a job_type parameter
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin - Testimonials{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/testimonials.css' %}" />
+{% endblock %}
+{% block content %}
+
+<section>
+    <div class="container">
+        <div class="testimonial-card">
+            <div class="container">
+                <h2>Testimonials Management</h2>
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Button to Add New Testimonial -->
+                <button id="add-testimonial-btn" class="btn btn-primary mb-3">Add New Testimonial</button>
+
+                <!-- Testimonials Table -->
+                <div class="table-responsive">
+                    {% if testimonials %}
+                    <table class="table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Source</th>
+                                <th>Rating</th>
+                                <th>Comment</th>
+                                <th>Edit</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for testimonial in testimonials %}
+                            <tr>
+                                <td>{{ testimonial.name }}</td>
+                                <td>{{ testimonial.source }}</td>
+                                <td>{{ testimonial.rating }}</td>
+                                <td>{{ testimonial.comment }}</td>
+                                <td>
+                                    <button class="btn btn-secondary edit-testimonial-btn"
+                                        data-id="{{ testimonial.id }}" data-name="{{ testimonial.name }}"
+                                        data-source="{{ testimonial.source }}" data-rating="{{ testimonial.rating }}"
+                                        data-comment="{{ testimonial.comment }}">Edit</button>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'delete_testimonial' testimonial.id %}"
+                                        style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger"
+                                            onclick="return confirm('Are you sure you want to delete this testimonial?');">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No testimonials found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testimonial Modal -->
+    <div id="testimonial-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="modal-title" class="modal-title">Add/Edit Testimonial</h3>
+            <form id="testimonial-form" method="post" action="{% url 'add_or_edit_testimonial' %}">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="testimonial-id">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="source">Source</label>
+                    <select class="form-control" id="source" name="source" required>
+                        <option value="Candidate">Candidate</option>
+                        <option value="Client">Client</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rating">Rating</label>
+                    <input type="number" class="form-control" id="rating" name="rating" min="1" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Comment</label>
+                    <textarea class="form-control" id="comment" name="comment" rows="4" required
+                        oninput="limitCharacters(this, 400)"></textarea>
+                    <small id="char-count" class="form-text text-muted">
+                        400 characters allowed
+                    </small>
+                </div>
+                <button type="submit" class="btn btn-primary modal-btn">Save</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("testimonial-modal");
+    const closeModal = document.querySelector(".close-modal");
+    const addButton = document.getElementById("add-testimonial-btn");
+    const editButtons = document.querySelectorAll(".edit-testimonial-btn");
+    const form = document.getElementById("testimonial-form");
+
+    // Open Add Modal
+    addButton.addEventListener("click", () => {
+        modal.style.display = "flex"; // Show the modal
+        document.getElementById("modal-title").textContent = "Add Testimonial";
+        form.reset();
+        document.getElementById("testimonial-id").value = ""; // Ensure no ID is passed for a new testimonial
+    });
+
+    // Open Edit Modal
+    editButtons.forEach((button) => {
+        button.addEventListener("click", (e) => {
+            modal.style.display = "flex"; // Show the modal
+            document.getElementById("modal-title").textContent = "Edit Testimonial";
+            document.getElementById("testimonial-id").value = button.dataset.id;
+            document.getElementById("name").value = button.dataset.name;
+            document.getElementById("source").value = button.dataset.source;
+            document.getElementById("rating").value = button.dataset.rating;
+            document.getElementById("comment").value = button.dataset.comment;
+        });
+    });
+
+    // Close Modal
+    closeModal.addEventListener("click", () => {
+        modal.style.display = "none"; // Hide the modal
+    });
+
+    // Close Modal on outside click
+    window.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            modal.style.display = "none"; // Hide the modal
+        }
+    });
+});
+    function limitCharacters(textarea, maxChars) {
+        const valueWithoutSpaces = textarea.value.replace(/\s/g, ""); // Remove all spaces
+        const charCount = valueWithoutSpaces.length;
+
+        const charCountElement = document.getElementById("char-count");
+        // charCountElement.textContent = `${charCount}/${maxChars} characters `;
+
+        // If character count exceeds maxChars, trim the text
+        if (charCount > maxChars) {
+            // Limit the text excluding spaces
+            let trimmedText = textarea.value
+                .split("")
+                .reduce((acc, char) => {
+                    if (acc.count >= maxChars) return acc;
+                    if (char !== " ") acc.count++;
+                    acc.result += char;
+                    return acc;
+                }, { count: 0, result: "" }).result;
+
+            textarea.value = trimmedText; // Update the textarea value
+            // charCountElement.textContent = `${maxChars}/${maxChars} characters `;
+        }
+    }
+
+</script>
+{% endblock %}

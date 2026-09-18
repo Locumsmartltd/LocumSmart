@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Generate Receipt{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/generate_receipt.css' %}" />
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="card card-container shadow-sm">
+            <h2>Enter Details</h2>
+            <form method="post" action="{% url 'generate_pdf_receipt' job.id %}">
+                {% csrf_token %}
+                <div class='row'>
+                    <div class="col-md-4">
+                        <label for="account_number" class="form-label">Account Number*</label>
+                        <input type="text" class="form-control" id="account_number" name="account_number" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="sort_code" class="form-label">Sort Code*</label>
+                        <input type="text" class="form-control" id="sort_code" name="sort_code" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="invoice_number" class="form-label">Invoice Number</label>
+                        <input type="text" class="form-control" id="invoice_number" name="invoice_number">
+                    </div>
+                </div>
+                <br>
+                <br>
+                <!-- Dynamic Inputs for Working Hours and Hours Worked -->
+                <div class="mt-4" id="date_inputs">
+                    <h3>Enter Working Hours and Hours Worked for Each Day</h3>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-4 download-btn d-block mx-auto">Download PDF</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+{% if job.discrete_dates %}
+<script>
+    var discreteDates = JSON.parse('{{ job.discrete_dates|safe|escapejs }}');
+</script>
+{% else %}
+<script>
+    var discreteDates = [];
+</script>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const startDate = new Date('{{ job.start_date }}');
+        let endDate = new Date('{{ job.end_date }}');
+
+        // Add 1 day to endDate to make it inclusive
+        endDate.setDate(endDate.getDate() + 1);
+
+        const dateInputsContainer = document.getElementById('date_inputs');
+
+        // If discreteDates is non-empty, use those dates; otherwise, use the date range
+        if (discreteDates.length > 0) {
+            discreteDates.forEach(function (dateString) {
+                addDateRow(dateString);
+            });
+        } else {
+            let currentDate = new Date(startDate); // Start from the startDate
+            currentDate.setDate(currentDate.getDate() + 1);
+            while (currentDate <= endDate) {
+                const formattedDate = currentDate.toISOString().slice(0, 10);
+                addDateRow(formattedDate);
+                // Move to the next day
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+
+        function addDateRow(date) {
+            const dateHeading = document.createElement('h4');
+            dateHeading.textContent = `Date: ${date}`;
+
+            const workingHoursLabel = document.createElement('label');
+            workingHoursLabel.setAttribute('for', `working_hours_${date}`);
+            workingHoursLabel.classList.add('form-label');
+            workingHoursLabel.textContent = 'Working Hours';
+
+            const workingHoursInput = document.createElement('input');
+            workingHoursInput.setAttribute('type', 'text');
+            workingHoursInput.classList.add('form-control');
+            workingHoursInput.setAttribute('id', `working_hours_${date}`);
+            workingHoursInput.setAttribute('name', `working_hours_${date}`);
+            workingHoursInput.setAttribute('required', '');
+
+            const hoursWorkedLabel = document.createElement('label');
+            hoursWorkedLabel.setAttribute('for', `hours_worked_${date}`);
+            hoursWorkedLabel.classList.add('form-label');
+            hoursWorkedLabel.textContent = 'Hours Worked';
+
+            const hoursWorkedInput = document.createElement('input');
+            hoursWorkedInput.setAttribute('type', 'number');
+            hoursWorkedInput.classList.add('form-control');
+            hoursWorkedInput.setAttribute('id', `hours_worked_${date}`);
+            hoursWorkedInput.setAttribute('name', `hours_worked_${date}`);
+            hoursWorkedInput.setAttribute('required', '');
+            hoursWorkedInput.setAttribute('min', '0');
+
+            const rowDiv = document.createElement('div');
+            rowDiv.classList.add('row', 'mb-3');
+
+            const dateColumn = document.createElement('div');
+            dateColumn.classList.add('col-md-12');
+            dateColumn.appendChild(dateHeading);
+            rowDiv.appendChild(dateColumn);
+
+            const workingHoursColumn = document.createElement('div');
+            workingHoursColumn.classList.add('col-md-6');
+            workingHoursColumn.appendChild(workingHoursLabel);
+            workingHoursColumn.appendChild(workingHoursInput);
+            rowDiv.appendChild(workingHoursColumn);
+
+            const hoursWorkedColumn = document.createElement('div');
+            hoursWorkedColumn.classList.add('col-md-6');
+            hoursWorkedColumn.appendChild(hoursWorkedLabel);
+            hoursWorkedColumn.appendChild(hoursWorkedInput);
+            rowDiv.appendChild(hoursWorkedColumn);
+
+            dateInputsContainer.appendChild(rowDiv);
+        }
+    });
+</script>
+
+{% endblock %}

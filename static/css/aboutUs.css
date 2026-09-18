@@ -1,0 +1,48 @@
+
+  /* Section Styles */
+  .section {
+    position: relative;
+    height: 150%;
+    background-image:url('../images/Landingpage1.jpg'); /* Replace 'background-image.jpg' with your image file */
+    background-size: cover;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    display: flex;
+   
+  }
+
+  /* Cards Styles */
+  .card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 4%;
+    width: 80%;
+    align-items: center;
+    margin: auto;
+  }
+
+  .card img {
+    height: auto;
+    width: 70%;
+    margin: 0 30px;
+  }
+
+  .card-content {
+    color: #333;
+    width: 100%;
+    
+  }
+
+  /* Text Styles */
+  h1 {
+    
+    margin-bottom: 10px;
+    
+  }
+
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+  }

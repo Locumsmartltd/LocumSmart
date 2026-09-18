@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Job Details{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/jobDetails.css' %}" />
+{% endblock %}
+{% block content %}
+
+<section class="job-details">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card shadow">
+                    <div class="card-body">
+                        {% if user.admin and user.is_authenticated %}
+                        <form method="post" id="job-details-form">
+                            {% csrf_token %}
+                            <h2 class="text-primary">
+                                <input type="text" class="form-control" name="pharmacy_name"
+                                    value="{{ job.pharmacy_name }}">
+                            </h2>
+                            <p><strong>Company Name:</strong> <input type="text" class="form-control"
+                                    name="company_name" value="{{ job.company_name }}"></p>
+                            <p><strong>Employer Name:</strong> {{ job.employer.first_name }} {{ job.employer.last_name}}
+                            </p>
+                            <p><strong>Employer Email:</strong> {{ job.email }}</p>
+                            <p><strong>Employer Telephone:</strong> {{ job.telephone }}</p>
+                            <p><strong>City:</strong> <input type="text" class="form-control" name="county"
+                                    value="{{ job.county }}"></p>
+                            <p><strong>Post Code:</strong> <input type="text" class="form-control" name="post_code"
+                                    value="{{ job.post_code }}"></p>
+                            <p><strong>Locum Rate:</strong> £<input type="number" class="form-control" name="locum_rate"
+                                    step="0.01" value="{{ job.locum_rate }}"></p>
+                            <p><strong>Expenses Offered:</strong> £<input type="number" class="form-control"
+                                    name="expenses_offered" step="0.01" value="{{ job.expenses_offered }}"></p>
+                            <p><strong>Hours per day:</strong> <input type="text" class="form-control"
+                                    name="times_required" value="{{ job.times_required }}"></p>
+                            <p><strong>Additional Information:</strong> <textarea class="form-control"
+                                    name="any_other_information">{{ job.any_other_information }}</textarea></p>
+
+                            <p><strong>Date Selection Type:</strong></p>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="date_type" id="continuous"
+                                    value="continuous" {% if not discrete_dates %}checked{% endif %}>
+                                <label class="form-check-label" for="continuous">Continuous Dates</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="date_type" id="discrete"
+                                    value="discrete" {% if discrete_dates %}checked{% endif %}>
+                                <label class="form-check-label" for="discrete">Random Dates</label>
+                            </div>
+
+                            <!-- Continuous Dates Inputs -->
+                            <div class="row continuous-dates {% if discrete_dates %}d-none{% endif %} my-3">
+                                <!-- Start Date -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="startDateInput">Start Date</label>
+                                        <input type="date" class="form-control" name="start_date" id="startDateInput"
+                                            value="{{ job.start_date|date:"Y-m-d" }}" {% if not discrete_dates %}required{% endif %}>
+                                    </div>
+                                </div>
+                                <!-- End Date -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="endDateInput">End Date</label>
+                                        <input type="date" class="form-control" name="end_date" id="endDateInput"
+                                            value="{{ job.end_date|date:"Y-m-d" }}" {% if not discrete_dates %}required{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Discrete Dates Inputs -->
+                            <div class="row discrete-dates {% if not discrete_dates %}d-none{% endif %} my-3">
+                                <div id="discrete-dates-container" class="col-md-6">
+                                    {% for date in discrete_dates %}
+                                    <div class="input-group mb-2">
+                                        <input type="date" class="form-control" name="discrete_dates[]"
+                                            value="{{ date|date:"Y-m-d" }}" required>
+                                        <button type="button" class="btn btn-danger remove-date-btn">-</button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-12 text-right">
+                                    <button type="button" id="add-date-btn" class="btn btn-secondary">+ Add
+                                        Date</button>
+                                </div>
+                                <div class="col-md-12 text-right d-none" id="date-limit-message">
+                                    <p class="text-muted">Contact to increase dates*</p>
+                                </div>
+                            </div>
+
+                            <p><strong>Locum Role Required:</strong></p>
+                            <div class="form-check d-flex flex-wrap justify-content-between">
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="pharmacist" name="locum_role"
+                                        value="pharmacist" {% if job.pharmacist_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="pharmacist">Pharmacist</label>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="technician" name="locum_role"
+                                        value="technician" {% if job.technician_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="technician">Technician</label>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="dispenser" name="locum_role"
+                                        value="dispenser" {% if job.dispenser_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="dispenser">Dispenser</label>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="nurse" name="locum_role"
+                                        value="nurse" {% if job.nurse_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="nurse">Nurse</label>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="anp_nurse" name="locum_role"
+                                        value="anp_nurse" {% if job.anp_nurse_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="anp_nurse">ANP Nurse</label>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="gp" name="locum_role" value="gp"
+                                        {% if job.gp_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="gp">GP</label>
+                                </div>
+                            </div>
+
+                            <input type="hidden" name="edit" value=true>
+                            <br>
+                            <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+                        </form>
+                        <br>
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-block">See Available Locums</button>
+                            <br>
+                        </form>
+                        {% else %}
+                        <h2 class="text-primary">Pharmacy</h2>
+                        <p><strong>City:</strong> {{ job.county }}</p>
+                        <p><strong>Post Code:</strong> <span id="post-code">{{ job.post_code }}</span></p>
+                        <p><strong>Locum Role Required:</strong>
+                            {% if job.pharmacist_required %} Pharmacist {% endif %}
+                            {% if job.technician_required %}, Technician {% endif %}
+                            {% if job.dispenser_required %}, Dispenser {% endif %}
+                            {% if job.nurse_required %}, Nurse {% endif %}
+                            {% if job.anp_nurse_required %}, ANP Nurse {% endif %}
+                            {% if job.gp_required %}, GP {% endif %}
+                        </p>
+                        <p><strong>Locum Rate:</strong> £{{ job.locum_rate }}/hr</p>
+                        <p><strong>Expenses Offered:</strong> £{{ job.expenses_offered }}</p>
+
+                        {% if discrete_dates %}
+                        <p><strong>Random Dates:</strong></p>
+                        <ul>
+                            {% for adate in discrete_dates %}
+                            <li>{{ adate }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p><strong>Start Date:</strong> {{ job.start_date|date:"d F Y" }}</p>
+                        <p><strong>End Date:</strong> {{ job.end_date|date:"d F Y" }}</p>
+                        {% endif %}
+
+                        <p><strong>Hours per day:</strong> {{ job.times_required }}</p>
+                        <p><strong>Additional Information:</strong> {{ job.any_other_information }}</p>
+
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <h2 class="text-primary">Additional Information</h2>
+                                <form id="additionalInfoForm" method="post">
+                                    {% csrf_token %}
+                                    <div class="form-group">
+                                        <label for="additional_info">Additional Information</label>
+                                        <textarea id="additional_info" name="additional_info" class="form-control" rows="4" placeholder="Add any information you want the employer to know (optional)"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-block">Apply</button>
+                                    <br>
+                                    <p>After you apply, you and the job employer will receive an email. If your
+                                        application gets approved, you will receive your contract email respectively.
+                                    </p>
+                                    <p style="text-align:center">Thank you</p>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+    $(document).ready(function () {
+        // Function to update required attributes based on date type
+        function updateRequiredAttributes() {
+            const dateType = $('input[name="date_type"]:checked').val();
+            if (dateType === 'continuous') {
+                $('#startDateInput').attr('required', true);
+                $('#endDateInput').attr('required', true);
+                $('input[name="discrete_dates[]"]').attr('required', false);
+            } else {
+                $('#startDateInput').attr('required', false);
+                $('#endDateInput').attr('required', false);
+                $('input[name="discrete_dates[]"]').first().attr('required', true);
+            }
+        }
+
+        // Initial load
+        updateRequiredAttributes();
+
+        // Toggle visibility of date inputs based on selected date type
+        $('input[name="date_type"]').change(function () {
+            if ($(this).val() === 'continuous') {
+                $('.continuous-dates').removeClass('d-none');
+                $('.discrete-dates').addClass('d-none');
+            } else {
+                $('.continuous-dates').addClass('d-none');
+                $('.discrete-dates').removeClass('d-none');
+            }
+            updateRequiredAttributes();
+        });
+
+        // Add new date field
+        let dateFieldCounter = parseInt("{{ discrete_dates|length }}") || 0;
+        const maxDateFields = 10;
+        const dateFieldContainer = $('#discrete-dates-container');
+        const addDateBtn = $('#add-date-btn');
+        const dateLimitMessage = $('#date-limit-message');
+
+        addDateBtn.click(function () {
+            if (dateFieldCounter < maxDateFields) {
+                dateFieldCounter++;
+                const newDateField = `
+                <div class="input-group mb-2">
+                    <input class="form-control" type="date" name="discrete_dates[]" required>
+                    <button type="button" class="btn btn-danger remove-date-btn">-</button>
+                </div>
+            `;
+                dateFieldContainer.append(newDateField);
+                if (dateFieldCounter === maxDateFields) {
+                    addDateBtn.addClass('d-none');
+                    dateLimitMessage.removeClass('d-none');
+                }
+            }
+        });
+
+        // Remove newly added date field
+        $(document).on('click', '.remove-date-btn', function () {
+            $(this).closest('.input-group').remove();
+            dateFieldCounter--;
+            // Ensure the add button and limit message visibility is managed correctly
+            if (dateFieldCounter < maxDateFields) {
+                addDateBtn.removeClass('d-none');
+                dateLimitMessage.addClass('d-none');
+            }
+        });
+
+        // Mask post code
+        var postCodeElement = document.getElementById('post-code');
+        if (postCodeElement) {
+            var postCode = postCodeElement.textContent.trim();
+            if (postCode.length > 3) {
+                var maskedPostCode = postCode.slice(0, 3) + '*'.repeat(postCode.length - 3);
+                postCodeElement.textContent = maskedPostCode;
+            }
+        }
+    });
+</script>
+
+
+{% endblock %}

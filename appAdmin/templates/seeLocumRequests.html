@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Locums{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="locum-card">
+            <div class="container">
+                <h2>Locum Requests</h2>
+                <form method="GET" action="">
+                    <div class="input-group rounded">
+                        <input type="search" class="form-control rounded" name="search"
+                            placeholder="Search by (User Type, City), User Type, Email, Firstname, or Last Name"
+                            aria-label="Search" aria-describedby="search-addon" />
+                        <button type="submit" class="input-group-text border-0" id="search-addon">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Locum Table -->
+                <div class="table-responsive">
+                    {% if locums %}
+                    <form id="bulk-action-form" method="post" action="#">
+                        {% csrf_token %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" />
+                                    </th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Telephone</th>
+                                    <th>Number</th>
+                                    <th>User Type</th>
+                                    <th>Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for locum in locums %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="select-locum" name="selected_locums"
+                                            value="{{ locum.id }}">
+                                    </td>
+                                    <td><a href="{% url 'locum_detail' locum.id %}">{{ locum.firstname }}
+                                            {{ locum.lastname }}</a></td>
+                                    <td>{{ locum.Email }}</td>
+                                    <td>{{ locum.telephone }}</td>
+                                    <td>{% if locum.gmc_number %}{{ locum.gmc_number }}
+                                        {% elif locum.gphc_number %}{{ locum.gphc_number }}
+                                        {% elif locum.nmc_number %}{{ locum.nmc_number }}
+                                        {% else %}N/A{% endif %}
+                                    </td>
+                                    <td>{{ locum.user_type }}</td>
+                                    <td>
+                                        <a href="{% url 'edit_locum' locum.id %}">Edit</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7">No New Locum Requests.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-primary" onclick="bulkAction('accept')">Accept
+                            Selected</button>
+                        <button type="button" class="btn btn-danger" onclick="bulkAction('delete')">Delete
+                            Selected</button>
+                    </form>
+                    {% else %}
+                    <p>No New Locum Requests.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Select/Deselect all checkboxes
+    function toggleSelectAll(source) {
+        const checkboxes = document.querySelectorAll('.select-locum');
+        checkboxes.forEach(checkbox => checkbox.checked = source.checked);
+    }
+
+    // Perform bulk action
+    function bulkAction(actionType) {
+        const form = document.getElementById("bulk-action-form");
+        const selected = document.querySelectorAll('.select-locum:checked');
+
+        if (selected.length === 0) {
+            alert("Please select at least one locum.");
+            return;
+        }
+
+        // Update form action based on the type
+        if (actionType === "accept") {
+            form.action = "{% url 'acceptLocum' %}";
+        } else if (actionType === "delete") {
+            form.action = "{% url 'deleteLocum' %}";
+        }
+
+        if (confirm(`Are you sure you want to ${actionType} the selected locum(s)?`)) {
+            form.submit();
+        }
+    }
+</script>
+
+{% endblock %}

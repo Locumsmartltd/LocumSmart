@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}System Logs{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container mt-4 mb-4">
+        <h2>System Logs</h2>
+        <p>Showing the latest {{ max_lines }} lines from each log file.</p>
+
+        <div class="card mb-4">
+            <div class="card-header"><strong>Info Log</strong></div>
+            <div class="card-body">
+                <p><strong>File:</strong> {{ logs.info.path }}</p>
+                <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 12px; border-radius: 4px;">{{ logs.info.content }}</pre>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><strong>Error Log</strong></div>
+            <div class="card-body">
+                <p><strong>File:</strong> {{ logs.error.path }}</p>
+                <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 12px; border-radius: 4px;">{{ logs.error.content }}</pre>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><strong>Security Log</strong></div>
+            <div class="card-body">
+                <p><strong>File:</strong> {{ logs.security.path }}</p>
+                <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 12px; border-radius: 4px;">{{ logs.security.content }}</pre>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><strong>Build Errors Log</strong></div>
+            <div class="card-body">
+                <p><strong>File:</strong> {{ logs.build_errors.path }}</p>
+                <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 12px; border-radius: 4px;">{{ logs.build_errors.content }}</pre>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

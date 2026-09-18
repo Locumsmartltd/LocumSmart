@@ -1,0 +1,72 @@
+<!-- job_create.html -->
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="locum-card">
+            <h2>Job Applications</h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Locum Name</th>
+                            <th>Pharmacy Name</th>
+                            <th>Company Name</th>
+                            <th>Locum Rate Per Hour</th>
+                            <th>Job Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Expenses Offered</th>
+                            <th>Date Applied</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for applied_job in applied_jobs %}
+                            <tr>
+                                <td><a href="{% url 'locum_detail' applied_job.locum.id %}">{{ applied_job.locum.first_name }} {{ applied_job.locum.last_name }}</a></td>
+                                <td>{{ applied_job.job.pharmacy_name }}</td>
+                                <td>{{ applied_job.job.company_name }}</td>
+                                <td>{{ applied_job.job.locum_rate }}</td>
+                                <td>{% if applied_job.job.discrete_dates %}Random Days{% else %}Continuous Days{% endif %}</td>
+                                <td>{{ applied_job.job.start_date }}</td>
+                                <td>{{ applied_job.job.end_date }}</td>
+                                <td>{{ applied_job.job.expenses_offered }}</td>
+                                <td>{{ applied_job.date }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'reject_job' applied_job.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">Reject</button>
+                                    </form>
+                                    <form method="post" action="{% url 'approveappliedjob' applied_job.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success" >Approve</button>
+                                    </form>
+                                    <form method="get" action="{% url 'job_details' applied_job.job_id %}">
+                                        <button type="submit" class="btn btn-success">Edit</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="9">No job applications found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+
+{% endblock %}

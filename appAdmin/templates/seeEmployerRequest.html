@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/seeEmployerReq.css' %}" />
+{% endblock %}
+{% block page_js %}
+<script src="{% static 'js/contactUs.js' %}"></script>
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="employer-card">
+                    <h2>Employer Requests</h2>
+                    <br>
+                    <br>
+                    <!-- List of Jobs -->
+                    {% if jobs %}
+                    <div class="row">
+                        {% for job in jobs %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ job.pharmacy_name }}</h5>
+                                    <form action="{% url 'employerRequests' %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="job_id" value="{{ job.id }}">
+                                        <div class="form-group">
+                                            <label for="name_{{ job.id }}">Employer Name:</label>
+                                            <input type="text" class="form-control" id="name_{{ job.id }}" name="name"
+                                                value="{{ job.name }}" required readonly>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="times_required_{{ job.id }}">Hours per day:</label>
+                                            <input type="text" class="form-control" id="times_required_{{ job.id }}"
+                                                name="times_required" value="{{ job.times_required }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="job_type_{{ job.id }}">Job Type:</label>
+                                            <input type="text" class="form-control" id="job_type_{{ job.id }}" name="job_type"
+                                                value="{% if job.discrete_dates %}Random Days{% else %}Continuous Days{% endif %}" readonly>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="start_date_{{ job.id }}">Start Date:</label>
+                                            <input type="date" class="form-control" id="start_date_{{ job.id }}"
+                                                name="start_date" value="{{ job.start_date|date:"Y-m-d" }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="end_date_{{ job.id }}">End Date:</label>
+                                            <input type="date" class="form-control" id="end_date_{{ job.id }}"
+                                                name="end_date" value="{{ job.end_date|date:"Y-m-d" }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="locum_rate_{{ job.id }}">Locum Rate:</label>
+                                            <input type="text" class="form-control" id="locum_rate_{{ job.id }}"
+                                                name="locum_rate" value="{{ job.locum_rate }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="any_other_information_{{ job.id }}">Additional Information:</label>
+                                            <textarea class="form-control" id="any_other_information_{{ job.id }}"
+                                                name="any_other_information"
+                                                required>{{ job.any_other_information }}</textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Update</button>
+                                    </form>
+                                    <!-- Approve and Disapprove Buttons -->
+                                    <form action="{% url 'approve_job' job.id %}" method="post">
+                                        {% csrf_token %}
+                                        <label for="agency_fee">Agency Fee in £:</label>
+                                        <input type="number" class="form-control" id="agency_fee" name="agency_fee"
+                                            required>
+                                        <label for="branch_no">Branch Number:</label>
+                                        <input type="text" class="form-control" id="branch_no" name="branch_no"
+                                            required>
+                                        <button type="submit" class="btn btn-success btn-approve">Approve</button>
+                                    </form>
+                                    <form action="{% url 'disapprove_job' job.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-disapprove">Disapprove</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% if forloop.counter|divisibleby:3 and not forloop.last %}
+                    </div>
+                    <div class="row">
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p>No jobs found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

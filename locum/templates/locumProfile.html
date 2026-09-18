@@ -1,0 +1,53 @@
+
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Locum{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/admin.css' %}" />
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="admin-card">
+                    <!-- Admin Information -->
+                    <h2>LOCUM PROFILE</h2>
+                    <p>{{user.locum.firstname}} {{user.locum.lastname}}</p>
+                    <p>{{user.email}}</p>
+                    <a href="{% url 'edit_locum' user.locum.id %}">Edit Profile</a>
+                    <br>
+                    <br>
+                   
+                    <div class="row">
+
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth1.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>See Your Calander here</h5>
+                                <br>
+                                <a href="{% url 'locum_calander' user.id %}" class="btn btn-primary">Calander</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth2.jpg' %}"  class="card-img-top" alt="Card Image">
+                                <h5 >Generate your receipts here</h5>
+                                <a href="{% url 'locum_jobs' user.id %}" class="btn btn-primary">Generate Receipt</a>
+    </div>
+                               
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                           
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

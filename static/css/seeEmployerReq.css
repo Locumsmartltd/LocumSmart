@@ -1,0 +1,62 @@
+
+
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000; 
+  }
+  
+  body {
+    background-color: #a7f0f0; /* Light Cyan background */
+    padding-top: 50px; /* Adjust as needed */
+    text-align: center; /* Center align all content */
+    
+  }
+  h5{
+    margin:8px;
+  }
+  .card{
+    border-radius: 2px solid #1db4a8;
+    background-color: #dcf0f0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+  .employer-card {
+    border-radius: 15px; /* Rounded corners on top */
+    background-color: #ffffff; /* White background for card */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    padding: 20px;
+    margin: auto;
+    margin-bottom: 20px;
+    margin-top: 70px;
+  }
+  
+  .btn-approve,
+.btn-disapprove {
+    width: 100%; /* Full width within the container */
+    margin-top: 10px; /* Top margin for spacing */
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Transition effect */
+    border-radius: 15px;
+    font-size: 13px;
+    
+}
+
+.btn-approve {
+    margin-right: 5px; /* Right margin between buttons */
+}
+
+.btn-disapprove {
+    margin-left: 5px; /* Left margin between buttons */
+}
+.btn-approve:hover {
+    background-color: white;
+    color: green;
+    border-color: green;
+}
+
+.btn-disapprove:hover {
+    background-color: white;
+    color: red;
+    border-color: red;
+}

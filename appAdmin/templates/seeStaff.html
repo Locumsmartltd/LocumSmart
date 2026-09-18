@@ -1,0 +1,96 @@
+<!-- job_create.html -->
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
+{% endblock %}
+{% block content %}
+<!-- locum_list.html -->
+<section>
+    <div class="container">
+        <div class="locum-card">
+            <div class="container">
+                <h2>Staff List</h2>
+                <form method="GET" action="">
+                    <div class="input-group rounded">
+                        <input type="search" class="form-control rounded" name="search" placeholder="Search by Email, Firstname or Lastname" aria-label="Search" aria-describedby="search-addon" value="{{ search_query }}">
+                        <button type="submit" class="input-group-text border-0" id="search-addon">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Staff Table -->
+                <div class="table-responsive">
+                    {% if staff_perms %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    {% if user.admin.is_admin %}
+                                    <th>Can Register Employer</th>
+                                    <th>Can Delete Locum</th>
+                                    <th>Can Register Staff</th>
+                                    {% endif %}
+
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for staff, perm_info in staff_perms %}
+                                    <tr>
+                                        <td>{{ staff.first_name }}</td>
+                                        <td>{{ staff.last_name }}</td>
+                                        <td>{{ staff.email }}</td>
+                                        {% if staff.admin.is_admin %}
+                                            <td>Admin</td>
+                                        {% else %}
+                                            <td>Staff</td>
+                                        {% endif %}
+                                        {% if user.admin.is_admin %}
+                                        {% for perm in perm_info %}
+                                            <td>
+                                                {% if perm %}
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="staff_id" value="{{ staff.id }}">
+                                                        <input type="hidden" name="permission_name" value="{% if forloop.counter0 == 0 %}can_register_employer{% elif forloop.counter0 == 1 %}can_delete_locum{% else %}can_register_staff{% endif %}">
+                                                        <input type="hidden" name="action" value="revoke_permission">
+                                                        <button type="submit" class="btn btn-danger">Revoke</button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="staff_id" value="{{ staff.id }}">
+                                                        <input type="hidden" name="permission_name" value="{% if forloop.counter0 == 0 %}can_register_employer{% elif forloop.counter0 == 1 %}can_delete_locum{% else %}can_register_staff{% endif %}">
+                                                        <input type="hidden" name="action" value="grant_permission">
+                                                        <button type="submit" class="btn btn-success">Grant</button>
+                                                    </form>
+                                                {% endif %}
+                                            </td>
+                                        {% endfor %}
+                                        {% endif %}
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7">No staff found.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No staff found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+{% endblock %}

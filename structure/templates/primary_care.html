@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Primary Care Staffing — GP Surgeries, Medical Centres &amp; Private Hospitals | LocumSmart{% endblock %}
+{% block meta_description %}Fill your GP surgery, medical centre or private hospital rota in under 2 weeks. GPs, ANP nurses, staff nurses, practice nurses, clinical pharmacists, reception staff — all pre-screened.{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="badge"><span class="dot"></span> Onboarding new GP surgeries &amp; medical centres — Q3 2026</div>
+      <h1>Staff your GP surgery, medical centre or private hospital — <span class="accent">without the agency runaround.</span></h1>
+      <p class="hero-sub">GPs, ANP nurses, staff nurses, practice nurses, clinical pharmacists and reception staff — pre-screened by our compliance and rated by the practices they've worked in.</p>
+      <div class="hero-cta">
+        <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book a 15-min call →</a>
+        <a href="{% url 'employerrequest' %}" class="btn btn-secondary btn-lg">Request cover now</a>
+      </div>
+      <div class="hero-trust">
+        <span><strong>Since 2020</strong></span>
+        <span class="divider">•</span>
+        <span><strong>10,000+</strong> vetted UK healthcare staff</span>
+        <span class="divider">•</span>
+        <span><strong>0</strong> clients lost to non-delivery</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card hero-card-1">
+        <div class="card-header"><div class="avatar">DR</div><div><div class="card-name">Dr. Rajesh N.</div><div class="card-role">Locum GP · Birmingham</div></div></div>
+        <div class="rating">★★★★★</div>
+        <div class="card-stats"><div class="card-stat"><strong>420</strong>Sessions</div><div class="card-stat"><strong>4.9</strong>Rating</div><div class="card-stat"><strong>EMIS</strong>System</div></div>
+      </div>
+      <div class="hero-card hero-card-2">
+        <div class="card-header"><div class="avatar a2">EJ</div><div><div class="card-name">Emily J.</div><div class="card-role">ANP Nurse</div></div></div>
+        <span class="status-tag">Independent prescriber ✓</span>
+        <div style="margin-top: 12px; font-size: 13px; color: var(--grey);">Available Mon–Wed. Acute triage confident.</div>
+      </div>
+      <div class="hero-card hero-card-3">
+        <div class="card-header"><div class="avatar a3">MO</div><div><div class="card-name">Maria O.</div><div class="card-role">Practice Nurse · London</div></div></div>
+        <span class="status-tag orange">Booked 3 months out</span>
+        <div style="margin-top: 12px; font-size: 13px; color: var(--grey);">"Flu &amp; travel jab lead. Diabetic reviews."</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="logos">
+  <div class="container">
+    <div class="logos-label">Trusted by UK GP surgeries, medical centres &amp; primary care groups</div>
+    <div class="logos-row">
+      <div class="client-logo">NHS GP Surgeries</div>
+      <div class="client-logo">Private Medical Centres</div>
+      <div class="client-logo">Independent Hospitals</div>
+      <div class="client-logo">Federated PCNs</div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" style="background: var(--bg-soft);">
+  <div class="container">
+    <div class="section-head center">
+      <div class="section-tag">The problem</div>
+      <h2>Primary care agencies still don't understand primary care.</h2>
+      <p class="section-sub">Most agencies staff pharmacies and GP surgeries with the same generic questionnaire. That's why the CVs never fit — and why your rota still has a gap.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card"><div class="problem-icon">⚠</div><h3>Locums who don't know EMIS or SystmOne</h3><p>They arrive Monday morning and can't log into the PMR. Whole clinic backs up. You lose the session.</p></div>
+      <div class="problem-card"><div class="problem-icon">🩺</div><h3>Nurses signed off on nothing</h3><p>An ANP with no travel jab sign-off, a practice nurse who's never done a diabetic review — because the agency didn't ask.</p></div>
+      <div class="problem-card"><div class="problem-icon">⏱</div><h3>Cancelled clinics = lost QOF</h3><p>Every unfilled session means missed enhanced service targets, DNAs, unhappy patients, stressed partners.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad">
+  <div class="container">
+    <div class="section-head"><div class="section-tag">Why primary care groups switch to us</div><h2>10,000+ compliant and pre-screened UK healthcare staff. Rated by you.</h2></div>
+    <div class="solution-grid">
+      <div class="feature-card"><div class="feature-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 15C15.87 15 19 11.87 19 8C19 4.13 15.87 1 12 1C8.13 1 5 4.13 5 8C5 11.87 8.13 15 12 15Z" stroke="currentColor" stroke-width="2"/><path d="M8.5 8L11 10.5L15.5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>Pre-screened by our Compliance</h3><p>Our compliance team has years of experience in primary-care recruitment. Not a chatbot.</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.09 8.26L21 9L15.5 13.14L17.18 20L12 16.77L6.82 20L8.5 13.14L3 9L9.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></div><h3>PMR-verified, sign-off checked</h3><p>We verify EMIS/SystmOne/Vision experience, PGD sign-offs, vaccination competencies, and independent prescribing status before a CV reaches you.</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/></svg></div><h3>Pre-booked cover months out</h3><p>PCN-wide rota planning. Regular faces your patients recognise.</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22Z" stroke="currentColor" stroke-width="2"/><path d="M15 9L11 13L9 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>No candidate you've already seen</h3><p>We don't recycle CVs across agencies. Every locum we send is fresh, quality-first.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad proof">
+  <div class="container">
+    <div class="section-head center">
+      <div class="section-tag">Proof, not promises</div>
+      <h2>By the time a CV reaches you, we've already asked what you'd have asked.</h2>
+      <p class="section-sub">These are the actual questions our compliance team puts to primary-care candidates.</p>
+    </div>
+    <div class="proof-card">
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="gp">GP</button>
+        <button class="role-tab" data-role="anp">ANP</button>
+        <button class="role-tab" data-role="pnurse">Practice Nurse</button>
+        <button class="role-tab" data-role="clinp">Clinical Pharmacist</button>
+        <button class="role-tab" data-role="reception">Reception</button>
+      </div>
+      <div class="role-panel active" data-panel="gp"><h4>Screening a GP</h4><p class="lead">GPs walking in need to be productive from consultation one:</p><div class="questions">
+        <div class="question"><span class="qtick">?</span><p>Comfortable with EMIS, SystmOne, or both?</p></div>
+        <div class="question"><span class="qtick">?</span><p>What's your average consultation length?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Are you comfortable with QOF and enhanced services?</p></div>
+        <div class="question"><span class="qtick">?</span><p>How do you handle a complex polypharmacy review?</p></div>
+      </div></div>
+      <div class="role-panel" data-panel="anp"><h4>Screening an ANP</h4><p class="lead">ANPs work at the top of their scope:</p><div class="questions">
+        <div class="question"><span class="qtick">?</span><p>Which acute presentations do you feel most confident triaging?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Are you an independent prescriber?</p></div>
+        <div class="question"><span class="qtick">?</span><p>How do you handle a patient outside your scope?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Talk me through your last on-call shift.</p></div>
+      </div></div>
+      <div class="role-panel" data-panel="pnurse"><h4>Screening a Practice Nurse</h4><p class="lead">Clinical and administrative breadth checked both:</p><div class="questions">
+        <div class="question"><span class="qtick">?</span><p>Which vaccination programmes are you signed off on — flu, travel, childhood?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Have you run diabetic reviews independently?</p></div>
+        <div class="question"><span class="qtick">?</span><p>What CQC standards have you worked under recently?</p></div>
+        <div class="question"><span class="qtick">?</span><p>How do you handle a needle-stick incident?</p></div>
+      </div></div>
+      <div class="role-panel" data-panel="clinp"><h4>Screening a Clinical Pharmacist</h4><p class="lead">Practice-based clinical pharmacists sit between surgery and pharmacy:</p><div class="questions">
+        <div class="question"><span class="qtick">?</span><p>Have you run structured medication reviews (SMRs)?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Are you an independent prescriber?</p></div>
+        <div class="question"><span class="qtick">?</span><p>How comfortable are you with polypharmacy in elderly patients?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Which PMR — EMIS, SystmOne — have you worked in?</p></div>
+      </div></div>
+      <div class="role-panel" data-panel="reception"><h4>Screening Reception</h4><p class="lead">Patient experience + data protection:</p><div class="questions">
+        <div class="question"><span class="qtick">?</span><p>Have you used care navigation before?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Which appointment systems — SystmOne, EMIS Web, Vision?</p></div>
+        <div class="question"><span class="qtick">?</span><p>How would you handle a distressed patient at the desk?</p></div>
+        <div class="question"><span class="qtick">?</span><p>Talk me through a data-protection scenario.</p></div>
+      </div></div>
+      <p class="proof-foot">Six years of listening to UK practice managers means we ask exactly what a practice manager would.</p>
+    </div>
+  </div>
+</section>
+
+<section class="stats-band">
+  <div class="container">
+    <div class="stats-grid">
+      <div><div class="stat-num">10,000+</div><div class="stat-label">Vetted UK healthcare staff</div></div>
+      <div><div class="stat-num">Since 2020</div><div class="stat-label">Serving primary care</div></div>
+      <div><div class="stat-num">6 yrs</div><div class="stat-label">Zero clients lost</div></div>
+      <div><div class="stat-num">&lt; 2 wks</div><div class="stat-label">Average time to fill</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="guarantee">
+  <div class="container guarantee-inner">
+    <div class="section-tag" style="color: var(--mint);">Our promise to you</div>
+    <h2>What we guarantee — in writing.</h2>
+    <div class="promises">
+      <div class="promise"><span class="promise-check">✓</span> No repeated questions.</div>
+      <div class="promise"><span class="promise-check">✓</span> No unwanted calls.</div>
+      <div class="promise"><span class="promise-check">✓</span> No candidate you've already seen.</div>
+      <div class="promise"><span class="promise-check">✓</span> If it's not a fit, we keep looking.</div>
+    </div>
+    <p class="signature">— Signed, the founder of LocumSmart</p>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="container">
+    <h2>Book a 15-minute call with the founder.</h2>
+    <p>No commitment. No pitch deck. He'll answer any question about how we work with GP surgeries and medical centres.</p>
+    <div class="cta-buttons">
+      <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book my 15-min call →</a>
+      <a href="{% url 'contactus' %}" class="btn btn-secondary btn-lg">Contact us</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+  document.querySelectorAll('.role-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const role = tab.dataset.role;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.role-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === role));
+    });
+  });
+</script>
+{% endblock %}

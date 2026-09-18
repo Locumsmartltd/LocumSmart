@@ -1,0 +1,26 @@
+body {
+   
+    background-color: rgb(146, 252, 216);
+   justify-content: center;
+    align-items: center;
+  
+}
+.card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 30px auto;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    width: 90%;
+  
+}
+.card h1 {
+    font-size: 35px;
+    color: #333;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+.card h2 {
+    margin-top: 30px;
+}

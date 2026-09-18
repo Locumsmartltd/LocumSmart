@@ -1,0 +1,72 @@
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000; 
+  }
+  
+  
+  
+  .section {
+    position: relative;
+    z-index: 3;
+    padding-top: 156px; /* Adjusted to accommodate the fixed navbar */
+  
+  }
+  
+  body {
+  
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-image: url('../images/contactUs.jpg');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  
+  padding-top: 60px;
+  
+  
+  }
+/* Custom CSS for job details page */
+
+.card {
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+}
+
+.card-title {
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+.job-details {
+    padding: 50px;
+}
+
+.negotiation {
+    padding: 50px 0;
+    background-color: #f8f9fa; /* Light gray background */
+}
+
+.apply-button {
+    background-color: #1db4a8; /* Turquoise */
+    color: #fff; /* White text */
+    border: none;
+}
+
+.apply-button:hover {
+    background-color: #fff; /* White background on hover */
+    color: #1db4a8; /* Turquoise text on hover */
+    border: 1px solid #1db4a8; /* Turquoise border on hover */
+}
+strong{color: #1db4a8; }
+
+@media (min-width: 768px) {
+    .card {
+        border-radius: 10px;
+    }
+}

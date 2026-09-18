@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login — LocumSmart{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .auth-wrap { min-height: 70vh; padding: 60px 0; background: linear-gradient(180deg, var(--mint-light) 0%, var(--bg-soft) 260px); }
+  .rs .auth-card { max-width: 460px; margin: 0 auto; background: white; border-radius: var(--radius-lg); padding: 40px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); }
+  .rs .card-head { text-align: center; margin-bottom: 26px; }
+  .rs .card-head .icon-big { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: white; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 24px; }
+  .rs .card-head h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .rs .card-head p { font-size: 14.5px; color: var(--grey); }
+  .rs .field-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .rs .field-label-row a { font-size: 12.5px; color: var(--teal); text-decoration: none; font-weight: 600; }
+  .rs .auth-foot { text-align: center; margin-top: 22px; font-size: 14px; color: var(--grey); }
+  .rs .auth-foot a { color: var(--teal); text-decoration: none; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="container">
+    <div class="page-hero" style="text-align:center; padding-bottom: 40px;">
+      <div class="badge">🔐 Sign in</div>
+      <h1 style="font-size:38px;">Log in to <span class="accent">LocumSmart.</span></h1>
+      <p style="color: var(--grey); font-size: 16px;">See shifts matched to your role, region and availability.</p>
+    </div>
+
+    <div class="auth-card">
+      <div class="card-head">
+        <div class="icon-big">👤</div>
+        <h2>Sign in</h2>
+        <p>Locums, employers and admin — one login for all.</p>
+      </div>
+
+      <!-- BACKEND: preserve action="" method="post" and existing field names: email, password, type, submit -->
+      <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="field" style="margin-bottom: 18px;">
+          <label>Email <span class="req">*</span></label>
+          <input type="email" id="email" name="email" required placeholder="you@example.com" />
+        </div>
+        <div class="field" style="margin-bottom: 18px;">
+          <div class="field-label-row"><label>Password <span class="req">*</span></label><a href="{% url 'fpEmail' %}">Forgot password?</a></div>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <div class="field" style="margin-bottom: 18px;">
+          <label>Account type <span class="req">*</span></label>
+          <select id="type" name="type" required>
+            <option value="" disabled selected>Select type</option>
+            <option value="Admin">Admin</option>
+            <option value="Staff">Staff</option>
+            <option value="Pharmacist">Pharmacist</option>
+            <option value="Technician">Technician</option>
+            <option value="Dispenser">Dispenser</option>
+            <option value="ANPNurse">ANP Nurse</option>
+            <option value="Nurse">Nurse</option>
+            <option value="GP">GP</option>
+          </select>
+        </div>
+        <button type="submit" name="submit" value="Login" class="btn btn-primary" style="width:100%; padding:14px;">Log in →</button>
+      </form>
+
+      <div class="auth-foot">
+        Not registered? <a href="{% url 'register' %}">Register — pick your role →</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+{% endblock %}

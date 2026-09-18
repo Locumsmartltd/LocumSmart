@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/locumDetails.css' %}" />
+{% endblock %}
+{% block content %}
+
+<section>
+    <div class="container">
+        <div class="locum-card">
+            <h2>Locum Details</h2>
+            <br>
+            <div class="row">
+                <div class="col-md-12">
+
+                    <!-- Personal Information -->
+                    <h3 class="card-title">Personal Information</h3>
+                    <p class="card-text"><strong>Name:</strong> {{ locum.firstname }} {{ locum.lastname }}</p>
+                    <p class="card-text"><strong>Email:</strong> {{ locum.Email }}</p>
+                    <p class="card-text"><strong>Telephone:</strong> {{ locum.telephone }}</p>
+                    <p class="card-text"><strong>Locum Type:</strong> {{ locum.user_type }}</p>
+                    <p class="card-text"><strong>Gender:</strong> {{ locum.gender }}</p>
+                    <p class="card-text"><strong>Date of Birth:</strong> {{ locum.date_of_birth }}</p>
+                    <p class="card-text"><strong>Nationality:</strong> {{ locum.nationality }}</p>
+                    <p class="card-text"><strong>Postal Code:</strong> {{ locum.post_code }}</p>
+                    <hr>
+
+                    <!-- Qualifications & Certificates -->
+                    <h3 class="card-title">Qualifications & Certificates</h3>
+                    {% if locum.smartcard_number %}
+                    <p class="card-text"><strong>Smartcard Number:</strong> {{ locum.smartcard_number }}</p>
+                    {% endif %}
+                    {% if locum.gmc_number %}
+                    <p class="card-text"><strong>GMC Number:</strong> {{ locum.gmc_number }}</p>
+                    {% endif %}
+                    {% if locum.gmc_certificate %}
+                    <p class="card-text"><strong>GMC Certificate:</strong> <a href="{% url 'admin_media' locum.gmc_certificate.name %}"
+                            target="_blank">View Certificate</a></p>
+                    {% endif %}
+                    {% if locum.gphc_number %}
+                    <p class="card-text"><strong class="{{ expiry_dates.gphc_number.css_class }}">GPHC Number:</strong>
+                        {{ locum.gphc_number }}</p>
+                    {% endif %}
+                    {% if locum.qualified_date %}
+                    <p class="card-text"><strong>Qualified Date:</strong> {{ locum.qualified_date }}</p>
+                    {% endif %}
+                    {% if locum.nmc_number %}
+                    <p class="card-text"><strong>NMC Number:</strong> {{ locum.nmc_number }}</p>
+                    {% endif %}
+                    {% if locum.nmc_certificate %}
+                    <p class="card-text"><strong>NMC Certificate:</strong> <a href="{% url 'admin_media' locum.nmc_certificate.name %}"
+                            target="_blank">View Certificate</a></p>
+                    {% endif %}
+                    <p class="card-text"><strong>Can Provide References:</strong> {% if locum.can_provide_references %}
+                        Yes {% else %} No {% endif %}</p>
+                    <hr>
+
+                    <!-- Documents -->
+                    <h3 class="card-title">Documents</h3>
+                    {% if locum.passport_copy %}
+                    <p class="card-text"><strong class="{{ expiry_dates.passport_copy.css_class }}">Passport
+                            Copy:</strong> <a href="{% url 'admin_media' locum.passport_copy.name %}" target="_blank">View Passport
+                            Copy</a></p>
+                    {% endif %}
+                    {% if locum.passport_expiry_date %}
+                    <p class="card-text"><strong class="{{ expiry_dates.passport_copy.css_class }}">Passport Expiry
+                            Date:</strong> {{ locum.passport_expiry_date }}</p>
+                    {% endif %}
+                    {% if locum.visa_residence_permit %}
+                    <p class="card-text"><strong class="{{ expiry_dates.visa_residence_permit.css_class }}">Visa or
+                            Residence Permit:</strong> <a href="{% url 'admin_media' locum.visa_residence_permit.name %}"
+                            target="_blank">View Visa/Permit</a></p>
+                    {% endif %}
+                    {% if locum.visa_expiry %}
+                    <p class="card-text"><strong class="{{ expiry_dates.visa_residence_permit.css_class }}">Visa Expiry
+                            Date:</strong> {{ locum.visa_expiry }}</p>
+                    {% endif %}
+                    {% if locum.dbs_enhanced_disclosure %}
+                    <p class="card-text"><strong>DBS Enhanced Disclosure:</strong> <a
+                            href="{% url 'admin_media' locum.dbs_enhanced_disclosure.name %}" target="_blank">View DBS Disclosure</a></p>
+                    {% endif %}
+                    {% if locum.dbs_service_number %}
+                    <p class="card-text"><strong>DBS Service Number:</strong> {{ locum.dbs_service_number }}</p>
+                    {% endif %}
+                    {% if locum.safeguarding_level2 %}
+                    <p class="card-text"><strong>Safeguarding Level 2:</strong> <a
+                            href="{% url 'admin_media' locum.safeguarding_level2.name %}" target="_blank">View Safeguarding Level 2</a></p>
+                    {% endif %}
+                    {% if locum.insurance %}
+                    <p class="card-text"><strong class="{{ expiry_dates.insurance.css_class }}">Insurance:</strong> <a
+                            href="{% url 'admin_media' locum.insurance.name %}" target="_blank">View Insurance</a></p>
+                    {% endif %}
+                    {% if locum.insurance_expiry_date %}
+                    <p class="card-text"><strong class="{{ expiry_dates.insurance.css_class }}">Insurance Expiry
+                            Date:</strong> {{ locum.insurance_expiry_date }}</p>
+                    {% endif %}
+                    {% if locum.qualification_certificate %}
+                    <p class="card-text"><strong>Qualification Certificate:</strong> <a
+                            href="{% url 'admin_media' locum.qualification_certificate.name %}" target="_blank">View Qualification
+                            Certificate</a></p>
+                    {% endif %}
+                    {% if locum.accreditations1 %}
+                    <p class="card-text"><strong>Accreditations 1:</strong> <a href="{% url 'admin_media' locum.accreditations1.name %}"
+                            target="_blank">Accreditation 1</a></p>
+                    {% endif %}
+                    {% if locum.accreditations2 %}
+                    <p class="card-text"><strong>Accreditations 2:</strong> <a href="{% url 'admin_media' locum.accreditations2.name %}"
+                            target="_blank">Accreditation 2</a></p>
+                    {% endif %}
+                    {% if locum.accreditations3 %}
+                    <p class="card-text"><strong>Accreditations 3:</strong> <a href="{% url 'admin_media' locum.accreditations3.name %}"
+                            target="_blank">Accreditation 3</a></p>
+                    {% endif %}
+                    {% if locum.accreditations4 %}
+                    <p class="card-text"><strong>Accreditations 4:</strong> <a href="{% url 'admin_media' locum.accreditations4.name %}"
+                            target="_blank">Accreditation 4</a></p>
+                    {% endif %}
+                    {% if locum.accreditations5 %}
+                    <p class="card-text"><strong>Accreditations 5:</strong> <a href="{% url 'admin_media' locum.accreditations5.name %}"
+                            target="_blank">Accreditation 5</a></p>
+                    {% endif %}
+                    {% if locum.accreditations6 %}
+                    <p class="card-text"><strong>Accreditations 6:</strong> <a href="{% url 'admin_media' locum.accreditations6.name %}"
+                            target="_blank">Accreditation 6</a></p>
+                    {% endif %}
+                    {% if locum.accreditations7 %}
+                    <p class="card-text"><strong>Accreditations 7:</strong> <a href="{% url 'admin_media' locum.accreditations7.name %}"
+                            target="_blank">Accreditation 7</a></p>
+                    {% endif %}
+                    {% if locum.accreditations8 %}
+                    <p class="card-text"><strong>Accreditations 8:</strong> <a href="{% url 'admin_media' locum.accreditations8.name %}"
+                            target="_blank">Accreditation 8</a></p>
+                    {% endif %}
+                    {% if locum.accreditations9 %}
+                    <p class="card-text"><strong>Accreditations 9:</strong> <a href="{% url 'admin_media' locum.accreditations9.name %}"
+                            target="_blank">Accreditation 9</a></p>
+                    {% endif %}
+                    {% if locum.accreditations10 %}
+                    <p class="card-text"><strong>Accreditations 10:</strong> <a href="{% url 'admin_media' locum.accreditations10.name %}"
+                            target="_blank">Accreditation 10</a></p>
+                    {% endif %}
+                    {% if locum.accreditations11 %}
+                    <p class="card-text"><strong>Accreditations 11:</strong> <a href="{% url 'admin_media' locum.accreditations11.name %}"
+                            target="_blank">Accreditation 11</a></p>
+                    {% endif %}
+                    {% if locum.accreditations12 %}
+                    <p class="card-text"><strong>Accreditations 12:</strong> <a href="{% url 'admin_media' locum.accreditations12.name %}"
+                            target="_blank">Accreditation 12</a></p>
+                    {% endif %}
+                    {% if locum.accreditations13 %}
+                    <p class="card-text"><strong>Accreditations 13:</strong> <a href="{% url 'admin_media' locum.accreditations13.name %}"
+                            target="_blank">Accreditation 13</a></p>
+                    {% endif %}
+                    {% if locum.accreditations14 %}
+                    <p class="card-text"><strong>Accreditations 14:</strong> <a href="{% url 'admin_media' locum.accreditations14.name %}"
+                            target="_blank">Accreditation 14</a></p>
+                    {% endif %}
+                    {% if locum.accreditations15 %}
+                    <p class="card-text"><strong>Accreditations 15:</strong> <a href="{% url 'admin_media' locum.accreditations15.name %}"
+                            target="_blank">Accreditation 15</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

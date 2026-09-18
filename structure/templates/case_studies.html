@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Case Studies — Real UK pharmacies, real outcomes | LocumSmart{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .page-hero { background: linear-gradient(135deg, var(--mint-light) 0%, #FFFFFF 60%); padding: 70px 0 60px; text-align: center; }
+  .rs .cases-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .rs .case-card { background: white; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+  .rs .case-thumb { aspect-ratio: 5/3; display: flex; align-items: center; justify-content: center; color: white; font-size: 42px; font-weight: 800; }
+  .rs .thumb-cohen { background: linear-gradient(135deg, var(--teal), var(--teal-darker)); }
+  .rs .thumb-tesco { background: linear-gradient(135deg, var(--blue), #4A6CB8); }
+  .rs .thumb-devon { background: linear-gradient(135deg, var(--mint), var(--teal)); }
+  .rs .thumb-cornwall { background: linear-gradient(135deg, #F59E0B, var(--coral)); }
+  .rs .thumb-scotland { background: linear-gradient(135deg, #6B7280, var(--charcoal)); }
+  .rs .thumb-london { background: linear-gradient(135deg, #8B5CF6, var(--blue)); }
+  .rs .case-body { padding: 28px; flex: 1; }
+  .rs .case-body h3 { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+  .rs .case-body p { color: var(--grey); font-size: 14.5px; }
+  .rs .case-meta .tag { padding: 3px 10px; background: var(--mint-light); color: var(--teal-darker); border-radius: 100px; font-size: 11px; font-weight: 700; }
+  @media (max-width: 900px) { .rs .cases-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .rs .cases-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div class="container" style="max-width: 780px;">
+    <div class="badge">💼 Real stories from real UK pharmacies</div>
+    <h1>Case studies that <span class="accent">explain the numbers.</span></h1>
+    <p class="hero-sub" style="margin: 0 auto;">150+ Independent UK pharmacies, 6 years, 0 clients lost — here's what that actually looks like in practice.</p>
+  </div>
+</section>
+
+<section class="pad" style="background: var(--bg-soft);">
+  <div class="container">
+    <div class="cases-grid">
+      <a href="#" class="case-card"><div class="case-thumb thumb-cohen">CC</div><div class="case-body"><div class="case-meta"><span class="tag">Chain</span></div><h3>Cohen Chemist: ad-hoc to preferred supplier in 18 months</h3><p>18 months of delivering the right candidate first time earned preferred-supplier status for permanent and temporary staff.</p></div></a>
+      <a href="#" class="case-card"><div class="case-thumb thumb-tesco">TP</div><div class="case-body"><div class="case-meta"><span class="tag">Chain · National</span></div><h3>Why Tesco Pharmacies pre-book LocumSmart months in advance</h3><p>Consistent shortlists and same-day cover made us the go-to for one of the UK's largest supermarket pharmacy chains.</p></div></a>
+      <a href="#" class="case-card"><div class="case-thumb thumb-devon">DP</div><div class="case-body"><div class="case-meta"><span class="tag">Independent · Devon</span></div><h3>Devon independent solves a 3-month locum shortage in 8 days</h3><p>Rural pharmacy had cycled through 4 agencies with no success. We shortlisted 3 vetted candidates within a week.</p></div></a>
+      <a href="#" class="case-card"><div class="case-thumb thumb-cornwall">CG</div><div class="case-body"><div class="case-meta"><span class="tag">Small chain · Cornwall</span></div><h3>Cornwall group pre-books locum cover through to year-end</h3><p>Rolling year-ahead cover pipeline. Same familiar faces. Zero last-minute panics.</p></div></a>
+      <a href="#" class="case-card"><div class="case-thumb thumb-scotland">SH</div><div class="case-body"><div class="case-meta"><span class="tag">Independent · Highland</span></div><h3>Highland pharmacy finds a permanent pharmacist after 14 months</h3><p>What no jobs board could deliver, our vetted portfolio placed in 6 weeks.</p></div></a>
+      <a href="#" class="case-card"><div class="case-thumb thumb-london">LG</div><div class="case-body"><div class="case-meta"><span class="tag">GP surgery · London</span></div><h3>South London GP surgery clears a 6-week waiting list</h3><p>Two ANP locums placed within 5 days. Waiting list from 6 weeks to 1.</p></div></a>
+    </div>
+    <p style="text-align:center; color: var(--grey-light); font-size: 12.5px; margin-top: 40px;">Case studies shown are demo placeholders — replace with real permissioned stories before launch.</p>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="container">
+    <h2>Want to be the next one?</h2>
+    <p>Book a 15-minute call with the founder. He'll tell you honestly whether we're the right fit — and if we are, we can start immediately.</p>
+    <div class="cta-buttons">
+      <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book a 15-min call →</a>
+      <a href="{% url 'contactus' %}" class="btn btn-secondary btn-lg">Contact us</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+venv/
+env/
+.venv/
+virtualenv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Django generated files
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+static_root/
+
+# User uploaded production files
+media/
+
+# Logs / runtime
+*.log
+*.pid
+tmp/
+passenger.log
+stderr.log
+stdout.log
+
+# Backups
+*.zip
+*.tar
+*.tar.gz
+*.sql
+*.dump
+*.bak
+*.old
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Migration/debug utilities
+debug_login.py
+installed_packages.py
+requirement(1).txt
+
+# wkhtmltopdf installers/packages
+wkhtmltox*
+*.rpm
+*.tar.xz
+
+# Potential production data export
+Data.json

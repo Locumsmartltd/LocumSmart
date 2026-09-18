@@ -1,0 +1,96 @@
+/* locumJobs.css */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000; 
+  }
+/* Set background color of the section to match button color */
+body {
+    background-color: #85d8d8;
+    padding-top: 20vh; /* Add padding for spacing */
+}
+
+.filter-container{
+    background-color: #bce7e7;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 15px;
+}
+/* Style for job cards */
+.card {
+    background-color: #fff; /* White background for cards */
+    border-radius: 10px;
+    border: #1db4a8;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.8); /* Shadow for cards */
+    overflow: hidden; /* Hide overflow content */
+    transition: transform 0.3s ease; /* Add smooth hover effect */
+}
+
+.card:hover {
+    transform: translateY(-5px); /* Lift card slightly on hover */
+}
+
+/* Style for card body */
+.card-body {
+    padding: 20px; /* Add padding inside card */
+}
+
+/* Style for card title */
+.card-title {
+    font-size: 1.5rem; /* Larger font size for title */
+    margin-bottom: 10px; /* Margin below title */
+}
+
+/* Style for card text */
+.card-text {
+    margin-bottom: 10px; /* Margin below each text line */
+}
+
+/* Style for View Details button */
+.btn-primary {
+    background-color: #1db4a8; /* Button color */
+    color: #fff; /* Text color */
+    border-color: #1db4a8; /* Border color */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; /* Add smooth transition */
+}
+
+.btn-primary:hover {
+    background-color: #fff; /* Change background color on hover */
+    color: #1db4a8; /* Change text color on hover */
+    border-color: #1db4a8; /* Change border color on hover */
+}
+label{
+    padding-top: 10px;
+}
+.custom {
+    position: relative;
+    margin-bottom: 0px; /* Reduce bottom margin to align elements closer */
+}
+
+.autocomplete-options {
+    position: absolute;
+    top: 100%; /* Position options container below the input */
+    left: 0;
+    z-index: 1000; /* Ensure the options appear above other content */
+    background-color: #fff;
+    border: 1px solid #b5bebe;
+    border-top: none; /* Hide top border to align with input */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-height: 200px; /* Limit height to prevent overflow */
+    overflow-y: auto; /* Enable vertical scrolling if needed */
+    color: #138496;
+    width: calc(100% - 30px); /* Adjust width to match input width */
+    margin-left: 15px; /* Add left margin to align with input */
+    margin-top: 0; /* Remove top margin */
+}
+
+.autocomplete-option {
+    padding: 2px 12px;
+    cursor: pointer;
+}
+
+.autocomplete-option:hover {
+    background-color: #f0f0f0;
+}

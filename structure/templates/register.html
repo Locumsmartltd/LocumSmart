@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register — Join LocumSmart | UK Pharmacy &amp; Primary Care Jobs{% endblock %}
+{% block meta_description %}Register as a Pharmacist, Technician, Dispenser, GP, Nurse or other UK healthcare professional. Get matched to vetted pharmacy and primary care shifts.{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .page-hero { background: linear-gradient(135deg, var(--mint-light) 0%, #FFFFFF 60%); padding: 70px 0 50px; text-align: center; position: relative; overflow: hidden; }
+  .rs .page-hero::before { content: ''; position: absolute; top: -120px; right: -120px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(179,229,219,.5) 0%, transparent 70%); border-radius: 50%; }
+  .rs .page-hero .container { position: relative; z-index: 1; max-width: 780px; }
+  .rs .page-sub { font-size: 18px; color: var(--grey); max-width: 620px; margin: 0 auto; }
+  .rs .trust-strip { display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 26px; font-size: 14px; color: var(--grey); }
+  .rs .trust-strip strong { color: var(--charcoal); font-weight: 700; }
+  .rs .roles-section { padding: 80px 0; background: var(--bg-soft); }
+  .rs .roles-block { max-width: 1080px; margin: 0 auto; }
+  .rs .roles-block + .roles-block { margin-top: 50px; }
+  .rs .block-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid var(--mint); }
+  .rs .block-head .icon-mini { width: 32px; height: 32px; border-radius: 8px; background: var(--teal); color: white; display: inline-flex; align-items: center; justify-content: center; }
+  .rs .block-head h2 { font-size: 22px; font-weight: 800; }
+  .rs .block-head p { color: var(--grey); font-size: 14px; margin-left: auto; }
+  .rs .role-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .rs .role-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 22px; text-decoration: none; color: var(--charcoal); transition: all .2s; display: flex; flex-direction: column; position: relative; }
+  .rs .role-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--teal); }
+  .rs .role-card .r-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: white; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .rs .role-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+  .rs .role-card p { font-size: 13.5px; color: var(--grey); margin-bottom: 16px; flex: 1; }
+  .rs .role-card .cta { font-size: 13.5px; font-weight: 700; color: var(--teal); padding-top: 12px; border-top: 1px solid var(--border); }
+  .rs .have-account { max-width: 780px; margin: 60px auto 0; background: linear-gradient(135deg, var(--teal-darker) 0%, var(--teal) 100%); color: white; border-radius: var(--radius-lg); padding: 30px 40px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .rs .have-account h3 { font-size: 18px; font-weight: 800; }
+  .rs .have-account p { font-size: 14px; opacity: .9; }
+  .rs .have-account .btn { background: white; color: var(--teal-darker); margin-left: auto; }
+  @media (max-width: 900px) { .rs .role-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .rs .role-grid { grid-template-columns: 1fr; } .rs .have-account { flex-direction: column; text-align: center; } .rs .have-account .btn { margin-left: 0; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <div class="badge"><span class="dot"></span> Free to register · 90 seconds</div>
+    <h1>Join <span class="accent">10,000+ vetted UK healthcare staff.</span></h1>
+    <p class="page-sub">Pick your role below. We'll take you to a short registration form so we can match you to shifts near you.</p>
+    <div class="trust-strip">
+      <span><strong>Weekly pay</strong>, no chasing</span><span>•</span>
+      <span><strong>Pre-booked</strong> shifts, months out</span><span>•</span>
+      <span><strong>Fair rates</strong> from real employers</span>
+    </div>
+  </div>
+</section>
+
+<section class="roles-section">
+  <div class="container">
+    <div class="roles-block">
+      <div class="block-head">
+        <span class="icon-mini">Rx</span><h2>Pharmacy Roles</h2>
+        <p>Community pharmacy, multiples &amp; independents across the UK</p>
+      </div>
+      <div class="role-grid">
+        <a href="{% url 'pharmacistRegister' %}" class="role-card"><div class="r-icon">Rx</div><h3>Pharmacist</h3><p>Locum or permanent. Community, chain and independent pharmacy roles.</p><span class="cta">Register as Pharmacist →</span></a>
+        <a href="{% url 'techRegistration' %}" class="role-card"><div class="r-icon">Tc</div><h3>Pharmacy Technician</h3><p>Dispensing, NMS, MDS trays, care-home cover.</p><span class="cta">Register as Technician →</span></a>
+        <a href="{% url 'techRegistration' %}" class="role-card"><div class="r-icon">Ds</div><h3>Dispenser</h3><p>Trained and vetted. Solo and paired shifts across the UK.</p><span class="cta">Register as Dispenser →</span></a>
+        <a href="#" class="role-card"><div class="r-icon">AC</div><h3>ACT</h3><p>Accuracy Checking Technician. Chain and multi-branch shifts.</p><span class="cta">Register as ACT →</span></a>
+      </div>
+    </div>
+    <div class="roles-block">
+      <div class="block-head">
+        <span class="icon-mini">✚</span><h2>Primary Care Roles</h2>
+        <p>GP surgeries, medical centres, PCNs and private hospitals</p>
+      </div>
+      <div class="role-grid">
+        <a href="{% url 'gpRegistration' %}" class="role-card"><div class="r-icon">GP</div><h3>GP</h3><p>Salaried, sessional and locum GP work — NHS and private surgeries.</p><span class="cta">Register as GP →</span></a>
+        <a href="{% url 'nurseRegistration' %}" class="role-card"><div class="r-icon">AN</div><h3>ANP Nurse</h3><p>Advanced Nurse Practitioner. Independent prescribers welcome.</p><span class="cta">Register as ANP →</span></a>
+        <a href="{% url 'nurseRegistration' %}" class="role-card"><div class="r-icon">PN</div><h3>Practice Nurse</h3><p>Vaccinations, chronic disease reviews, minor illness clinics.</p><span class="cta">Register as Practice Nurse →</span></a>
+        <a href="#" class="role-card"><div class="r-icon">SN</div><h3>Staff Nurse</h3><p>Ward, theatre and clinical staff nurse roles.</p><span class="cta">Register as Staff Nurse →</span></a>
+        <a href="#" class="role-card"><div class="r-icon">CP</div><h3>Clinical Pharmacist</h3><p>PCN and practice-based clinical pharmacist roles.</p><span class="cta">Register as Clinical Pharmacist →</span></a>
+        <a href="#" class="role-card"><div class="r-icon">RS</div><h3>Reception Staff</h3><p>Care navigation trained. SystmOne / EMIS familiarity a plus.</p><span class="cta">Register as Reception →</span></a>
+        <a href="#" class="role-card"><div class="r-icon">PA</div><h3>Practice Admin</h3><p>Medical secretary, coding, notes summarising.</p><span class="cta">Register as Admin →</span></a>
+        <a href="#" class="role-card"><div class="r-icon">HC</div><h3>Other Healthcare Staff</h3><p>HCAs, phlebotomists, care coordinators &amp; more.</p><span class="cta">Register your role →</span></a>
+      </div>
+    </div>
+
+    <div class="have-account">
+      <div>
+        <h3>Already have a LocumSmart account?</h3>
+        <p>Log in to see shifts matched to your role, region and availability.</p>
+      </div>
+      <a href="{% url 'login' %}" class="btn">Log in →</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

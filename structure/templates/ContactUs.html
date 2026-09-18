@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Contact — LocumSmart{% endblock %}
+{% block meta_description %}Get in touch with LocumSmart. Call, email, or send us a message. Usually replying within 1 business hour.{% endblock %}
+
+{% block page_css %}
+<style>
+  .rs .page-hero { padding: 60px 0 40px; text-align: center; }
+  .rs .page-sub { font-size: 18px; color: var(--grey); max-width: 620px; margin: 0 auto; }
+  .rs .contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; max-width: 1120px; margin: 0 auto; }
+  .rs .contact-info { background: white; border-radius: var(--radius-lg); padding: 40px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(15,107,102,.06); height: fit-content; }
+  .rs .contact-info h3 { font-size: 20px; font-weight: 800; margin-bottom: 24px; }
+  .rs .contact-block { margin-bottom: 26px; padding-bottom: 26px; border-bottom: 1px solid var(--border); }
+  .rs .contact-block:last-of-type { border: none; padding-bottom: 0; margin-bottom: 0; }
+  .rs .contact-block .label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--teal-darker); font-weight: 800; margin-bottom: 8px; }
+  .rs .contact-block .value { font-size: 16px; font-weight: 600; color: var(--charcoal); }
+  .rs .contact-block .value a { text-decoration: none; color: var(--charcoal); }
+  .rs .contact-block .hint { font-size: 13px; color: var(--grey); margin-top: 4px; }
+  .rs .form-card { background: white; border-radius: var(--radius-lg); padding: 40px; border: 1px solid var(--border); box-shadow: var(--shadow-md); }
+  .rs .form-card h3 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .rs .form-card .form-sub { color: var(--grey); font-size: 15px; margin-bottom: 26px; }
+  .rs .pill-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .rs .pill-group input[type="radio"] { display: none; }
+  .rs .pill-group label { padding: 11px 20px; border: 1.5px solid var(--border); border-radius: 100px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--grey); background: white; margin: 0; transition: all .15s; }
+  .rs .pill-group input[type="radio"]:checked + label { background: var(--teal); color: white; border-color: var(--teal); }
+  @media (max-width: 900px) { .rs .contact-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pad page-hero" style="background: linear-gradient(180deg, var(--mint-light) 0%, transparent 100%); padding-top: 60px; padding-bottom: 40px;">
+  <div class="container">
+    <div class="badge"><span class="dot"></span> Usually replying within 1 business hour</div>
+    <h1>One message. One human. <span class="accent">Usually within the hour.</span></h1>
+    <p class="page-sub">Every message reaches our team directly — no ticket queues, no chatbots. If it's urgent, call. Otherwise drop us a line below.</p>
+  </div>
+</section>
+
+<section style="padding-bottom: 80px;">
+  <div class="container">
+    <div class="contact-grid">
+      <div class="contact-info">
+        <h3>Get in touch</h3>
+        <div class="contact-block"><div class="label">☏ Call us</div><div class="value"><a href="tel:+442038905858">+44 20 3890 5858</a></div><div class="hint">Weekdays, 9am – 6pm UK</div></div>
+        <div class="contact-block"><div class="label">✆ Mobile / WhatsApp</div><div class="value"><a href="tel:+447534749465">+44 7534 749 465</a></div><div class="hint">Faster for urgent shift requests</div></div>
+        <div class="contact-block"><div class="label">✉ Email</div><div class="value"><a href="mailto:info@locum-smart.co.uk">info@locum-smart.co.uk</a></div><div class="hint">Replies within 1 business hour</div></div>
+        <div class="contact-block"><div class="label">◉ Office</div><div class="value">7 Woodland Way<br />London, CR4 2DZ</div><div class="hint">By appointment only</div></div>
+        <div class="contact-block"><div class="label">🕐 Business hours</div><div class="value" style="font-weight: 500; font-size: 14.5px;">Mon–Fri: 9am – 6pm<br />Sat: 10am – 2pm (WhatsApp)<br />Sun: closed</div></div>
+      </div>
+
+      <div class="form-card">
+        <h3>Send us a message</h3>
+        <p class="form-sub">We'll reply within 1 business hour.</p>
+
+        <!-- BACKEND: preserve action="" method="post" and the original field names: firstname, surname, email, phone, user-type, message, submit -->
+        <form action="" method="post" id="contact-form">
+          {% csrf_token %}
+          <div class="form-grid">
+            <div class="field"><label>First name <span class="req">*</span></label><input type="text" name="firstname" required></div>
+            <div class="field"><label>Surname <span class="req">*</span></label><input type="text" name="surname" required></div>
+            <div class="field"><label>Email <span class="req">*</span></label><input type="email" name="email" required></div>
+            <div class="field"><label>Phone <span class="req">*</span></label><input type="tel" name="phone" required></div>
+            <div class="field full">
+              <label>I'm a <span class="req">*</span></label>
+              <div class="pill-group">
+                <input type="radio" name="user-type" id="ut-emp" value="employer" required><label for="ut-emp">Employer</label>
+                <input type="radio" name="user-type" id="ut-job" value="jobseeker"><label for="ut-job">Job seeker</label>
+              </div>
+            </div>
+            <div class="field full"><label>Message <span class="req">*</span></label><textarea name="message" required></textarea></div>
+          </div>
+          <button type="submit" name="submit" value="Send" class="btn btn-primary" style="width:100%; margin-top:20px; padding:16px;">Send message →</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

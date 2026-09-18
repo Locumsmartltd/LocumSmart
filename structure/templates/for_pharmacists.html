@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Hire vetted locums &amp; permanent staff — LocumSmart for UK Pharmacies{% endblock %}
+{% block meta_description %}Fill your pharmacy vacancies in under 2 weeks. 10,000+ pre-screened UK healthcare staff. Trusted by Tesco Pharmacies and Cohen Chemist.{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="badge"><span class="dot"></span> Onboarding new pharmacy groups — Q3 2026</div>
+      <h1>Hire vetted locums and permanent staff — <span class="accent">without wading through 30 wrong CVs.</span></h1>
+      <p class="hero-sub">A 15-minute call with the founder. A vetted shortlist within 72 hours. A signed contract in under 2 weeks. That's how 150+ Independent UK pharmacies now hire.</p>
+      <div class="hero-cta">
+        <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book a 15-min call →</a>
+        <a href="{% url 'employerrequest' %}" class="btn btn-secondary btn-lg">Request a locum now</a>
+      </div>
+      <div class="hero-trust">
+        <span><strong>150+</strong> Independent UK pharmacies</span>
+        <span class="divider">•</span>
+        <span><strong>10,000+</strong> vetted staff</span>
+        <span class="divider">•</span>
+        <span><strong>0</strong> clients lost to non-delivery</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card hero-card-1"><div class="card-header"><div class="avatar">SK</div><div><div class="card-name">Dr. Sarah K.</div><div class="card-role">Locum Pharmacist · Devon</div></div></div><div class="rating">★★★★★</div><div class="card-stats"><div class="card-stat"><strong>187</strong>Shifts</div><div class="card-stat"><strong>4.9</strong>Rating</div><div class="card-stat"><strong>6y</strong>Exp.</div></div></div>
+      <div class="hero-card hero-card-2"><div class="card-header"><div class="avatar a2">JM</div><div><div class="card-name">James M.</div><div class="card-role">Pharmacy Technician</div></div></div><span class="status-tag">Pre-vetted ✓</span><div style="margin-top: 12px; font-size: 13px; color: var(--grey);">Pharmacy First trained. Available Sat–Sun.</div></div>
+      <div class="hero-card hero-card-3"><div class="card-header"><div class="avatar a3">PS</div><div><div class="card-name">Priya S.</div><div class="card-role">Practice Nurse · Cornwall</div></div></div><span class="status-tag orange">Booked to Dec 2026</span><div style="margin-top: 12px; font-size: 13px; color: var(--grey);">"Delivered every service target."</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="logos">
+  <div class="container">
+    <div class="logos-label">Trusted by UK pharmacies, multiples and GP surgeries</div>
+    <div class="logos-row">
+      <div class="client-logo">TESCO Pharmacy</div><div class="client-logo">Cohen Chemist</div>
+      <div class="client-logo">150+ Independent UK Pharmacies</div><div class="client-logo">GP Surgeries</div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" style="background: var(--bg-soft);">
+  <div class="container">
+    <div class="section-head center"><div class="section-tag">The problem</div><h2>Every unfilled shift costs you money. Every wrong CV costs you time.</h2></div>
+    <div class="problem-grid">
+      <div class="problem-card"><div class="problem-icon">⚠</div><h3>False candidates flood your inbox</h3><p>30 CVs land after every job post. 27 are wrong. The 3 that fit never call back.</p></div>
+      <div class="problem-card"><div class="problem-icon">🤖</div><h3>AI-filtered ≠ pharmacy-ready</h3><p>Other agencies use chatbot questionnaires — then forward the same candidates you rejected on Indeed.</p></div>
+      <div class="problem-card"><div class="problem-icon">⏱</div><h3>Meanwhile, the rota bleeds</h3><p>Every unfilled shift is lost Pharmacy First revenue, angry customers, stressed staff.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad">
+  <div class="container">
+    <div class="section-head"><div class="section-tag">Why pharmacies switch to us</div><h2>10,000+ compliant and pre-screened UK healthcare staff. Rated by You.</h2></div>
+    <div class="solution-grid">
+      <div class="feature-card"><div class="feature-icon">✓</div><h3>Pre-screened by our Compliance</h3><p>Our compliance team has years of experience in the district. Not a chatbot.</p></div>
+      <div class="feature-card"><div class="feature-icon">★</div><h3>Performance-rated by real pharmacies</h3><p>Every locum or permanent staff carries feedback and ratings from clients they've worked in.</p></div>
+      <div class="feature-card"><div class="feature-icon">📅</div><h3>Pre-booked cover months out</h3><p>London, Midlands, Lancashire, Devon &amp; Cornwall, Scotland — where staffing is hardest.</p></div>
+      <div class="feature-card"><div class="feature-icon">◉</div><h3>No candidate you've already seen</h3><p>We never send you a CV that's been rejected elsewhere. No public job board. Quality, first time.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-band">
+  <div class="container">
+    <div class="stats-grid">
+      <div><div class="stat-num">10,000+</div><div class="stat-label">Vetted UK healthcare staff</div></div>
+      <div><div class="stat-num">150+</div><div class="stat-label">Independent pharmacy clients</div></div>
+      <div><div class="stat-num">6 yrs</div><div class="stat-label">Zero clients lost</div></div>
+      <div><div class="stat-num">&lt; 2 wks</div><div class="stat-label">Average time to fill</div></div>
+      <div><div class="stat-num">2</div><div class="stat-label">Largest UK chain clients onboard</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="guarantee">
+  <div class="container guarantee-inner">
+    <div class="section-tag" style="color: var(--mint);">Our promise to you</div>
+    <h2>What we guarantee — in writing.</h2>
+    <div class="promises">
+      <div class="promise"><span class="promise-check">✓</span> No repeated questions.</div>
+      <div class="promise"><span class="promise-check">✓</span> No unwanted calls.</div>
+      <div class="promise"><span class="promise-check">✓</span> No candidate you've already seen.</div>
+      <div class="promise"><span class="promise-check">✓</span> If it's not a fit, we keep looking.</div>
+    </div>
+    <p class="signature">— Signed, the founder of LocumSmart</p>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="container">
+    <h2>Book a 15-minute call with the founder.</h2>
+    <p>No commitment. No pitch deck. He'll answer any question and, if you'd like, connect you with a current client for live feedback.</p>
+    <div class="cta-buttons">
+      <a href="{% url 'employerrequest' %}" class="btn btn-primary btn-lg">Book my 15-min call →</a>
+      <a href="{% url 'contactus' %}" class="btn btn-secondary btn-lg">Contact us</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

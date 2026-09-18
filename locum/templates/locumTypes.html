@@ -1,0 +1,69 @@
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Registration{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/landingPage.css' %}" />
+{% endblock %}
+{% block page_js %}
+<script src="{% static 'js/locumtypes.js' %}"></script>
+{% endblock %}
+{% block content %}
+<section class="options">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 " >
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="card-title">Pharmacist </h1>
+                        <h2 class="card-text"><div class="counter" data-target="{{ locum_count_pharmacist }}">0</div></h2>
+                        <h3 class="card-text">Registered</h3>
+                        <p class="card-text">Register and become part of our amazing team providing you with the security of work that suits you.</p>
+                        <a href="{% url 'pharmacistRegister' %}" class="btn btn-primary">Register Now</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="card-title">GP</h1>
+                        <h2 class="card-text"><div class="counter" data-target="{{ locum_count_gp }}">0</div></h2>
+                        <h3 class="card-text">Registered</h3>
+                        <p class="card-text">Vetted to work in the UK, we’ll provide details of locum staff that can give your business the best.</p>
+                        <a href="{% url 'gpRegistration' %}"class="btn btn-primary">Register Now</a>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <div class="row">
+            <div class="col-lg-6 " >
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="card-title">Nurses and <br>ANP Nurses</h1>
+                        <h2 class="card-text"><div class="counter" data-target="{{ locum_count_nurses }}">0</div></h2>
+                        <h3 class="card-text">Registered</h3>
+                        <p class="card-text">Register and become part of our amazing team providing you with the security of work that suits you.</p>
+                        <a href="{% url 'nurseRegistration' %}"  class="btn btn-primary">Register Now</a>
+                    </div>
+                </div>
+            </div>
+           
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="card-title">Technician and Dispenser  </h1>
+                        <h2 class="card-text"><div class="counter" data-target="{{ locum_count_technician }}">0</div></h2>
+                        <h3 class="card-text">Registered</h3>
+                        <p class="card-text">Vetted to work in the UK, we’ll provide details of locum staff that can give your business the best.</p>
+                        <a href="{% url 'techRegistration' %}" class="btn btn-primary">Register Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+{% endblock %}

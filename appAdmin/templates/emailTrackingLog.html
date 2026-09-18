@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Email Tracking Logs{% endblock %}
+{% block page_css %}
+{% include 'components/legacy_assets.html' %}
+<link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
+{% endblock %}
+{% block content %}
+<section>
+    <div class="container">
+        <div class="locum-card">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>To Email</th>
+                            <th>CC Email</th>
+                            <th>From Email</th>
+                            <th>Invoice Type</th>
+                            <th>Invoice No</th>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in email_logs %}
+                        <tr>
+                            <td>{{ log.to_email }}</td>
+                            <td>{{ log.cc_email }}</td>
+                            <td>{{ log.from_email }}</td>
+                            <td>{{ log.invoice_type }}</td>
+                            <td>{{ log.invoice_no }}</td>
+                            <td>{{ log.timestamp }}</td>
+                            <td>
+                                <form method="POST" action="{% url 'calander' %}" target="_blank">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="job_ids" value="{{ log.job_ids|join:',' }}">
+                                    <input type="hidden" name="pharmacy" value="{{ log.invoice_type }}">
+                                    <input type="hidden" name="invoice_no" value="{{ log.invoice_no }}">
+                                    <input type="hidden" name="branch_name" value="">
+                                    <input type="hidden" name="branch_name" value="">
+                                    <input type="hidden" name="date_time" value="{{ log.timestamp }}">
+                                    <input type="hidden" name="action" value="generate_invoice">
+                                    <button type="submit" class="btn btn-primary">Show Invoice</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8">No email logs found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
