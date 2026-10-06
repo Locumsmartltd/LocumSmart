@@ -5,6 +5,9 @@
 {% include 'components/legacy_assets.html' %}
 <link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
 {% endblock %}
+{% block page_js %}
+<script src="{% static 'js/adminListSearch.js' %}"></script>
+{% endblock %}
 {% block content %}
 <!-- locum_list.html -->
 
@@ -24,17 +27,25 @@
             {% endif %}
                 <form method="GET" action="">
                     <div class="input-group rounded">
-                        <input type="search" class="form-control rounded" name="search" placeholder="Search by Email, Firstname, Lastname, or Pharmacy" aria-label="Search" aria-describedby="search-addon" />
-                        <button type="submit" class="input-group-text border-0" id="search-addon">
+                        <input type="search" class="form-control rounded" name="search" placeholder="Search by Email, Firstname, Lastname, or Pharmacy" aria-label="Search" aria-describedby="search-addon"
+                            value="{{ search_query }}"
+                            autocomplete="off" list="admin-search-suggestions"
+                            data-admin-live-search />
+                        <datalist id="admin-search-suggestions"></datalist>
+                        <button type="submit" class="input-group-text border-0" id="search-addon" title="Search">
                             <i class="fas fa-search"></i>
                         </button>
+                        <a href="{{ request.path }}" class="input-group-text border-0 admin-search-clear"
+                            data-admin-search-clear title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </a>
                     </div>
                 </form>
 
                 <!-- Locum Table -->
                 <div class="table-responsive" style="overflow-x:auto;"> <!-- Wrap table in responsive container with horizontal scrolling -->
                     {% if employers %}
-                        <table class="table" style='width: 100%;max-width: 100%;'>
+                        <table class="table" style='width: 100%;max-width: 100%;' data-admin-search-table>
                             <thead>
                                 <tr>
                                     <th>First Name</th>

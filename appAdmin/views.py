@@ -494,7 +494,7 @@ class LocumListView(View):
                     Q(county__icontains=location_query)
                 )
 
-        context = {'locums': locums}
+        context = {'locums': locums, 'search_query': search_query}
         return render(request, self.template_name, context)
     
     
@@ -531,7 +531,7 @@ class LocumRequestsListView(View):
                     Q(county__icontains=location_query)
                 )
 
-        context = {'locums': locums}
+        context = {'locums': locums, 'search_query': search_query}
         return render(request, self.template_name, context)
 
 
@@ -551,7 +551,8 @@ class EmployerListView(View):
                 Q(username__icontains=search_query)
             )
         context = {
-            'employers': employers
+            'employers': employers,
+            'search_query': search_query,
         }
         return render(request, self.template_name, context)
 
@@ -650,8 +651,8 @@ class StaffListView(View):
 
         staff_perms = zip(staffs, perm_array)
         context = {
-            'staff_perms': staff_perms
-
+            'staff_perms': staff_perms,
+            'search_query': search_query,
         }
         return render(request, self.template_name, context)
 
@@ -917,6 +918,11 @@ class JobListView(ListView):
             queryset = queryset.order_by('-start_date' if sort_by == 'Latest' else 'start_date')
 
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
 
 
     def post(self, request, *args, **kwargs):
