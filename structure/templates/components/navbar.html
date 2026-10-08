@@ -11,7 +11,10 @@
         </span>
         <span class="logo-text">Locum<span>Smart</span></span>
       </a>
-      <div class="nav-links">
+      <button type="button" class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="navLinks">
         <a href="{% url 'for_pharmacists' %}"{% if request.resolver_match.url_name == 'for_pharmacists' %} class="active"{% endif %}>For Pharmacy</a>
         <a href="{% url 'primary_care' %}"{% if request.resolver_match.url_name == 'primary_care' %} class="active"{% endif %}>Primary Care</a>
         <a href="{% url 'register' %}"{% if request.resolver_match.url_name == 'register' %} class="active"{% endif %}>Register</a>
@@ -32,3 +35,48 @@
     </nav>
   </div>
 </header>
+
+<script>
+  (function () {
+    var toggle = document.getElementById('navToggle');
+    var links = document.getElementById('navLinks');
+    if (!toggle || !links) return;
+
+    function closeMenu() {
+      links.classList.remove('open');
+      toggle.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+    }
+
+    function openMenu() {
+      links.classList.add('open');
+      toggle.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', 'Close menu');
+    }
+
+    toggle.addEventListener('click', function () {
+      if (links.classList.contains('open')) closeMenu();
+      else openMenu();
+    });
+
+    links.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', closeMenu);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!links.classList.contains('open')) return;
+      if (links.contains(e.target) || toggle.contains(e.target)) return;
+      closeMenu();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeMenu();
+    });
+
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 900) closeMenu();
+    });
+  })();
+</script>

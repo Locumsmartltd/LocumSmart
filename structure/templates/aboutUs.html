@@ -6,14 +6,19 @@
 
 {% block page_css %}
 <style>
-  .rs .story-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 60px; align-items: start; max-width: 1080px; margin: 0 auto; }
+  .rs .about-hero { padding-bottom: 56px; }
+  .rs .story-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 60px; align-items: start; }
   .rs .origin-card { border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--mint), var(--teal)); box-shadow: var(--shadow-md); padding: 32px; color: white; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; min-height: 320px; }
+  .rs .about-hero .origin-card { min-height: 260px; }
   .rs .origin-card .origin-year { font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; opacity: .85; }
   .rs .origin-card .origin-headline { font-size: 26px; font-weight: 800; line-height: 1.25; }
   .rs .origin-card .origin-note { font-size: 14px; opacity: .9; line-height: 1.6; }
   .rs .story-body p { color: var(--charcoal); font-size: 16.5px; margin-bottom: 18px; line-height: 1.7; }
   .rs .story-body .signature { font-family: Georgia, serif; font-style: italic; font-size: 18px; color: var(--teal-darker); padding-top: 20px; border-top: 1px solid var(--border); }
-  .rs .hero-quote { font-size: 15px; font-style: italic; color: var(--charcoal); font-family: Georgia, serif; margin-bottom: 22px; padding-left: 16px; border-left: 3px solid var(--teal); max-width: 540px; }
+  .rs .hero-quote { font-size: 15px; font-style: italic; color: var(--charcoal); font-family: Georgia, serif; margin-bottom: 14px; padding-left: 16px; border-left: 3px solid var(--teal); max-width: 540px; }
+  .rs .journey-video { max-width: 900px; margin: -24px auto 64px; }
+  .rs .journey-video video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); background: #0b1418; }
+  .rs .journey-video figcaption { text-align: center; color: var(--grey); font-size: 15px; margin-top: 14px; }
   .rs .timeline-wrap { position: relative; max-width: 900px; margin: 0 auto; padding-left: 40px; }
   .rs .timeline-wrap::before { content: ''; position: absolute; left: 12px; top: 12px; bottom: 12px; width: 2px; background: linear-gradient(180deg, var(--teal), var(--mint)); }
   .rs .tl-item { position: relative; margin-bottom: 40px; }
@@ -21,15 +26,14 @@
   .rs .tl-year { font-size: 13px; font-weight: 800; color: var(--teal-darker); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
   .rs .tl-item h4 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
   .rs .tl-item p { color: var(--grey); font-size: 15.5px; }
-  .rs .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .rs .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
   .rs .team-grid .feature-card h3 { font-size: 17px; }
-  @media (max-width: 900px) { .rs .story-grid { grid-template-columns: 1fr; } .rs .origin-card { max-width: 320px; } .rs .team-grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 560px) { .rs .team-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .rs .story-grid { grid-template-columns: 1fr; } .rs .origin-card { max-width: 320px; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="hero">
+<section class="hero about-hero">
   <div class="container hero-grid">
     <div>
       <div class="badge">🏥 About LocumSmart</div>
@@ -85,6 +89,13 @@
 <section class="pad">
   <div class="container">
     <div class="section-head center"><div class="section-tag">Our journey</div><h2>Six years. 150+ pharmacies. The UK's largest pharmacy chains.</h2></div>
+    <figure class="journey-video">
+      <video controls playsinline preload="metadata" poster="{% static 'images/locumsmart-journey-poster.jpg' %}">
+        <source src="{% static 'videos/locumsmart-journey.mp4' %}" type="video/mp4">
+        Your browser does not support video playback.
+      </video>
+      <figcaption>From one pharmacy in Cornwall to healthcare providers across the UK.</figcaption>
+    </figure>
     <div class="timeline-wrap">
       <div class="tl-item"><div class="tl-year">2020 · Year one</div><h4>First independent pharmacy signs on — and never leaves.</h4><p>Founded during the COVID-19 pandemic, supporting community pharmacies when they needed reliable staffing most. What began with one independent pharmacy has grown into long-term partnerships built on trust, quality and service.</p></div>
       <div class="tl-item"><div class="tl-year">2021–2022</div><h4>Supporting pharmacies where recruitment was hardest.</h4><p>Our reputation grew across Devon, Cornwall, Scotland and other hard-to-recruit regions, where healthcare providers needed dependable staffing support they couldn't get elsewhere.</p></div>
@@ -112,13 +123,13 @@
     <div class="section-head center"><div class="section-tag">The team</div><h2>Specialist teams. One shared commitment.</h2></div>
     <p style="text-align:center; max-width: 640px; margin: -32px auto 40px; color: var(--grey);">Behind every placement is a team of dedicated professionals delivering a seamless experience from enquiry through to placement.</p>
     <div class="team-grid">
-      <div class="feature-card"><h3>Permanent Recruitment</h3><p>Helping healthcare professionals secure rewarding long-term careers, and employers find the right permanent talent.</p></div>
-      <div class="feature-card"><h3>Temporary Recruitment</h3><p>Fast, reliable locum and temporary staffing solutions for healthcare providers across the UK.</p></div>
-      <div class="feature-card"><h3>Compliance</h3><p>Ensuring every healthcare professional is fully vetted, compliant and ready to work with complete confidence.</p></div>
-      <div class="feature-card"><h3>Operations</h3><p>Client relationships and team management, keeping every placement running smoothly.</p></div>
-      <div class="feature-card"><h3>Administration</h3><p>Managing documentation, onboarding and day-to-day support to keep every stage organised.</p></div>
-      <div class="feature-card"><h3>Social Media &amp; Advertising</h3><p>Connecting healthcare professionals with new opportunities while growing the LocumSmart brand.</p></div>
-      <div class="feature-card"><h3>Clinical Screening (ACT)</h3><p>Every candidate for a permanent role is pre-screened by our experienced clinical screening staff before they reach you.</p></div>
+      <div class="feature-card"><h3>Permanent Recruitment</h3><p>Matching healthcare professionals with long-term career placements.</p></div>
+      <div class="feature-card"><h3>Temporary Recruitment</h3><p>Fast, reliable locum staffing across the UK.</p></div>
+      <div class="feature-card"><h3>Compliance</h3><p>Every professional fully vetted before they reach you.</p></div>
+      <div class="feature-card"><h3>Operations</h3><p>Client relationships, kept running smoothly day to day.</p></div>
+      <div class="feature-card"><h3>Administration</h3><p>Documentation and onboarding, handled and organised.</p></div>
+      <div class="feature-card"><h3>Social Media &amp; Advertising</h3><p>Connecting professionals with new opportunities.</p></div>
+      <div class="feature-card"><h3>Clinical Screening (ACT)</h3><p>Every permanent candidate clinically screened first.</p></div>
     </div>
   </div>
 </section>

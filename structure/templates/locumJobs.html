@@ -9,15 +9,16 @@
   .rs .split-tabs { display: flex; gap: 8px; justify-content: center; padding: 20px 0; }
   .rs .split-tab { padding: 10px 22px; border-radius: 100px; background: white; border: 1.5px solid var(--border); font-family: inherit; font-weight: 700; font-size: 14px; color: var(--grey); cursor: pointer; }
   .rs .split-tab.active { background: var(--teal); color: white; border-color: var(--teal); }
-  .rs .search-bar { max-width: 900px; margin: 0 auto 40px; background: white; border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 10px; border: 1px solid var(--border); }
-  .rs .search-bar label { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; margin-left: 14px; }
+  .rs .filter-card { max-width: 900px; margin: 0 auto 40px; background: white; border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); }
+  .rs .search-bar { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 10px; }
+  .rs .search-bar label, .rs .more-filters label { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; margin-left: 14px; }
   .rs .search-bar input, .rs .search-bar select { border: none; background: transparent; padding: 8px 14px; font-family: inherit; font-size: 15px; font-weight: 600; }
   .rs .search-bar input:focus, .rs .search-bar select:focus { outline: none; }
-  .rs .more-filters { max-width: 900px; margin: -24px auto 40px; background: white; border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border: 1px solid var(--border); }
-  .rs .more-filters label { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; margin-left: 14px; }
+  .rs .filter-divider { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: .5px; padding: 14px 14px 10px; margin-top: 6px; border-top: 1px solid var(--border); }
+  .rs .more-filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .rs .more-filters input { border: 1px solid var(--border); border-radius: 8px; background: var(--bg-soft); padding: 8px 14px; font-family: inherit; font-size: 15px; font-weight: 600; width: 100%; }
   .rs .more-filters input:focus { outline: none; border-color: var(--teal); }
-  @media (max-width: 900px) { .rs .more-filters { grid-template-columns: 1fr 1fr; margin-top: 12px; } }
+  @media (max-width: 900px) { .rs .more-filters { grid-template-columns: 1fr 1fr; } }
   .rs .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1080px; margin: 0 auto 60px; }
   .rs .roles-col h4 { font-size: 13px; font-weight: 800; color: var(--teal-darker); letter-spacing: 1.8px; text-transform: uppercase; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--mint); }
   .rs .role-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -47,6 +48,7 @@
   </div>
 
   <!-- BACKEND: preserve method="GET" action="" and field names: locum, location, distance, pharmacy, start_date, end_date, min_rate, max_rate -->
+  <div class="filter-card">
   <form class="search-bar" method="GET" action="" id="contact-form">
     <div class="sf">
       <label>Role</label>
@@ -87,9 +89,10 @@
         {% endif %}
       </select>
     </div>
-    <button type="submit" class="btn btn-primary">🔍 Search</button>
+    <button type="submit" class="btn btn-primary btn-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Search</span></button>
   </form>
 
+  <div class="filter-divider">More filters</div>
   <div class="more-filters">
     <div class="sf">
       <label>Start date</label>
@@ -107,6 +110,7 @@
       <label>Max rate (£/hr)</label>
       <input type="number" name="max_rate" form="contact-form" min="0" step="0.5" />
     </div>
+  </div>
   </div>
 </div>
 
