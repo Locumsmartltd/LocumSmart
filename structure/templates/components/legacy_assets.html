@@ -15,3 +15,16 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 <script src="https://cdn.rawgit.com/dubrox/Multiple-Dates-Picker-for-jQuery-UI/master/jquery-ui.multidatespicker.js"></script>
+<style>
+  /* Bootstrap 4's own :root palette (--teal, --blue, --red, etc.) uses the same
+     custom-property names as our redesign tokens and loads after them, silently
+     overriding our brand colors (e.g. Bootstrap's --teal: #20c997 vs ours: #1BA39C)
+     on every page that includes this bundle. Reassert our values so shared
+     components (navbar, buttons) keep the correct brand colors here too. */
+  :root {
+    --teal: #1BA39C; --teal-dark: #148982; --teal-darker: #0F6B66;
+    --mint: #B3E5DB; --mint-light: #E7F6F3;
+    --blue: #5B8FD8; --coral: #FF6B6B; --red: #E74C3C;
+    --charcoal: #2A2F36; --grey: #5A6472; --grey-light: #9AA3B0;
+  }
+</style>
