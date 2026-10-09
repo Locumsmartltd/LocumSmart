@@ -17,6 +17,7 @@ virtualenv/
 .env
 .env.*
 !.env.example
+local_settings.py
 
 # Django generated files
 db.sqlite3

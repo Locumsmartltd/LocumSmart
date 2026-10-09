@@ -5,6 +5,9 @@
 {% include 'components/legacy_assets.html' %}
 <link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
 {% endblock %}
+{% block page_js %}
+<script src="{% static 'js/adminListSearch.js' %}"></script>
+{% endblock %}
 {% block content %}
 <section>
     <div class="container">
@@ -15,10 +18,18 @@
                     <div class="input-group rounded">
                         <input type="search" class="form-control rounded" name="search"
                             placeholder="Search by (User Type, City), User Type, Email, Firstname, or Last Name"
-                            aria-label="Search" aria-describedby="search-addon" />
-                        <button type="submit" class="input-group-text border-0" id="search-addon">
+                            aria-label="Search" aria-describedby="search-addon"
+                            value="{{ search_query }}"
+                            autocomplete="off" list="admin-search-suggestions"
+                            data-admin-live-search />
+                        <datalist id="admin-search-suggestions"></datalist>
+                        <button type="submit" class="input-group-text border-0" id="search-addon" title="Search">
                             <i class="fas fa-search"></i>
                         </button>
+                        <a href="{{ request.path }}" class="input-group-text border-0 admin-search-clear"
+                            data-admin-search-clear title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </a>
                     </div>
                 </form>
 
@@ -27,7 +38,7 @@
                     {% if locums %}
                     <form id="bulk-action-form" method="post" action="#">
                         {% csrf_token %}
-                        <table class="table">
+                        <table class="table" data-admin-search-table>
                             <thead>
                                 <tr>
                                     <th>

@@ -33,4 +33,15 @@
     margin-bottom: 20px;
      margin-top: 12vh;
   }
+
+  .admin-search-clear {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .admin-search-clear:hover {
+    color: #721c24;
+    text-decoration: none;
+  }
   

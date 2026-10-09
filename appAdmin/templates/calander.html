@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Calendar{% endblock %}
+{% block page_js %}
+<script src="{% static 'js/adminListSearch.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <style>
@@ -24,9 +28,18 @@
         <!-- Search Filter -->
         <form method="GET" action="{% url 'calander' %}">
             <div class="input-group mb-3">
+                {% if request.GET.sort_by %}
+                <input type="hidden" name="sort_by" value="{{ request.GET.sort_by }}">
+                {% endif %}
                 <input type="text" class="form-control" name="search"
-                    placeholder="Search by Employer name, locum firstname, lastname, and type">
+                    placeholder="Search by Employer name, locum firstname, lastname, and type"
+                    value="{{ search_query }}"
+                    autocomplete="off" list="admin-search-suggestions"
+                    data-admin-live-search>
+                <datalist id="admin-search-suggestions"></datalist>
                 <button type="submit" class="btn btn-primary" id="search-btn">Search</button>
+                <a href="{% url 'calander' %}{% if request.GET.sort_by %}?sort_by={{ request.GET.sort_by }}{% endif %}"
+                    class="btn btn-secondary" data-admin-search-clear title="Clear search">Clear</a>
             </div>
         </form>
 
@@ -69,7 +82,7 @@
             <div>
                 <label for="sort_by">Sort by:</label>
                 <select id="sort_by" class="form-select"
-                    onchange="window.location.href = '{% url 'calander' %}?search={{ request.GET.search }}&sort_by=' + this.value">
+                    onchange="window.location.href = '{% url 'calander' %}?search={{ search_query }}&sort_by=' + this.value">
                     <option value="">-- Select --</option>
                     <option value="Earliest">Earliest</option>
                     <option value="Latest">Latest</option>
@@ -77,7 +90,7 @@
             </div>
         </div>
         <div class="table-responsive">
-            <table class="table" id="job-table">
+            <table class="table" id="job-table" data-admin-search-table>
                 <thead>
                     <tr>
                         <th>Select</th>
