@@ -90,6 +90,12 @@ html { scroll-behavior: smooth; }
 .rs .logos-label { text-align: center; font-size: 12.5px; color: var(--grey); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; margin-bottom: 24px; }
 .rs .logos-row { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 32px; }
 .rs .client-logo { font-weight: 700; font-size: 22px; color: var(--grey-light); letter-spacing: -.5px; opacity: .75; }
+@media (max-width: 700px) {
+  .rs .logos { padding: 28px 0; }
+  .rs .logos-label { font-size: 11.5px; line-height: 1.6; margin-bottom: 16px; }
+  .rs .logos-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
+  .rs .client-logo { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 15px; line-height: 1.3; letter-spacing: -.2px; color: var(--grey); opacity: 1; background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; }
+}
 
 /* --- Sections --- */
 .rs section.pad { padding: 100px 0; }
@@ -210,6 +216,12 @@ html { scroll-behavior: smooth; }
 .rs .footer-social a { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; color: white; margin-bottom: 0; }
 .rs .footer-social a:hover { background: var(--teal); }
 .rs .footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding-top: 24px; font-size: 13px; text-align: center; opacity: .65; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.rs .footer-bottom .nowrap { white-space: nowrap; }
+@media (max-width: 700px) {
+  .rs .footer-bottom { flex-direction: column; align-items: center; gap: 14px; line-height: 1.6; }
+  .rs .footer-contact { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .rs .footer-contact .sep { display: none; }
+}
 
 /* --- Responsive --- */
 @media (max-width: 1000px) { .rs .hero-grid { grid-template-columns: 1fr; gap: 40px; } .rs .hero-visual { height: 420px; } .rs .steps { grid-template-columns: 1fr 1fr 1fr; } }
