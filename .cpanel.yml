@@ -1,0 +1,7 @@
+
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/rsuwgghilww4/locumsmart-staging
+    - mkdir -p "$DEPLOYPATH"
+    - rsync -a --exclude='.git/' --exclude='.cpanel.yml' --exclude='LocumSmart/settings.py' --exclude='**/settings.py' --exclude='.env' --exclude='.env.*' --exclude='local_settings.py' --exclude='media/' --exclude='tmp/' --exclude='db.sqlite3' --exclude='Data.json' --exclude='*.zip' --exclude='*.log' --exclude='virtualenv/' ./ "$DEPLOYPATH/"
