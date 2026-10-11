@@ -1,7 +1,38 @@
-
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/rsuwgghilww4/locumsmart-staging
-    - mkdir -p "$DEPLOYPATH"
-    - rsync -a --exclude='.git/' --exclude='.cpanel.yml' --exclude='LocumSmart/settings.py' --exclude='**/settings.py' --exclude='.env' --exclude='.env.*' --exclude='local_settings.py' --exclude='media/' --exclude='tmp/' --exclude='db.sqlite3' --exclude='Data.json' --exclude='*.zip' --exclude='*.log' --exclude='virtualenv/' ./ "$DEPLOYPATH/"
+    - |
+      set -eu
+
+      DEPLOYPATH=/home/rsuwgghilww4/Locumsmart
+      PYTHON=/home/rsuwgghilww4/virtualenv/Locumsmart/3.10/bin/python
+
+      # Verify the production app exists before deployment
+      test -f "$DEPLOYPATH/manage.py"
+      test -f "$DEPLOYPATH/passenger_wsgi.py"
+      test -d "$DEPLOYPATH/tmp"
+
+      # Copy application files, preserving production data/configuration
+      /bin/rsync -a \
+        --exclude='.git/' \
+        --exclude='.cpanel.yml' \
+        --exclude='**/settings.py' \
+        --exclude='.env' \
+        --exclude='.env.*' \
+        --exclude='local_settings.py' \
+        --exclude='media/' \
+        --exclude='tmp/' \
+        --exclude='db.sqlite3' \
+        --exclude='db.sqlite3-journal' \
+        --exclude='Data.json' \
+        --exclude='*.zip' \
+        --exclude='*.log' \
+        --exclude='virtualenv/' \
+        --exclude='__pycache__/' \
+        ./ "$DEPLOYPATH/"
+
+      # Collect static assets using the production environment
+      "$PYTHON" "$DEPLOYPATH/manage.py" collectstatic --noinput
+
+      # Restart Passenger only after successful file copy and collectstatic
+      touch "$DEPLOYPATH/tmp/restart.txt"
