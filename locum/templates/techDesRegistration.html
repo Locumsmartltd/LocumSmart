@@ -31,7 +31,7 @@
 
     <div class="form-shell">
       <!-- BACKEND: preserve action, method="post" and every field name below exactly (locum/views.py techRegistration / edit_locum). -->
-      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'techRegistration' %}{% endif %}" method="post" enctype="multipart/form-data" novalidate>
+      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'techRegistration' %}{% endif %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
         <div class="form-section">

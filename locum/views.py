@@ -19,6 +19,41 @@ from django.utils.html import strip_tags
 import pandas as pd
 from django.core.mail import EmailMultiAlternatives
 from appAdmin.models import Admin
+import logging
+
+# 'django.*' loggers are written to the error log file configured in settings.LOGGING
+logger = logging.getLogger('django.registration')
+
+# Fields every registration form requires: (POST name, label shown to the user)
+COMMON_REGISTRATION_FIELDS = [
+    ('title', 'Title'),
+    ('firstname', 'Forename'),
+    ('lastname', 'Surname'),
+    ('date_of_birth', 'Date of Birth'),
+    ('email', 'Email Address'),
+    ('telephone', 'Telephone'),
+    ('county', 'City'),
+    ('nationality', 'Nationality'),
+    ('post_code', 'Post Code'),
+]
+
+
+def missing_registration_fields(request, required_fields, required_files):
+    # Labels of the required fields/uploads that were not submitted
+    missing = [label for name, label in required_fields
+               if not (request.POST.get(name) or '').strip()]
+    missing += [label for name, label in required_files
+                if name not in request.FILES]
+    return missing
+
+
+def send_registration_email(subject, message, from_email, to_email):
+    # The registration is already saved at this point, so a mail server problem
+    # must not turn it into a server error for the applicant.
+    try:
+        send_mail(subject, message, from_email, to_email, fail_silently=False)
+    except Exception:
+        logger.exception("Registration email '%s' to %s could not be sent", subject, to_email)
 
 # Create your views here.
 
@@ -521,6 +556,22 @@ class PharmacistRegisterView(View):
 
         visa_expiry = request.POST.get('visa_expiry')
         gphc_number_expiry = request.POST.get('gphc_number_expiry')
+
+        missing = missing_registration_fields(request, COMMON_REGISTRATION_FIELDS + [
+            ('gender', 'Gender'),
+            ('gphc_number', 'GPHC Number'),
+            ('gphc_number_expiry', 'GPHC Number Expiry Date'),
+            ('qualified_date', 'Qualified Date'),
+            ('passport_expiry_date', 'Passport Expiry Date'),
+            ('insurance_expiry_date', 'Insurance Expiry Date'),
+        ], [
+            ('passport', 'Passport'),
+            ('insurance', 'Insurance'),
+            ('dbs_enhanced_disclosure', 'DBS Enhanced Disclosure'),
+        ])
+        if missing:
+            messages.error(request, f"Please complete the required fields: {', '.join(missing)}")
+            return render(request, self.template_name)
         # Check if a user with the same email and user_type 'Pharmacist' already exists
         if Locum.objects.filter(email=email, user_type='Pharmacist').exists():
             messages.error(
@@ -631,8 +682,7 @@ Regards,
 """
 
         # Send Admin email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
         
         print(f"admin email sent")
         
@@ -671,8 +721,7 @@ General Practitioners | Doctors | Physician Associates | Pharmacists | Technicia
 """
 
         # Send email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
 
         print(f"locum email sent")
 
@@ -702,6 +751,16 @@ class GPRegisterView(View):
         gmc_number = request.POST.get('gmc_number')
         insurance_expiry_date = request.POST.get('insurance_expiry_date')
         gmc_expiry = request.POST.get('gmc_expiry', '')
+
+        missing = missing_registration_fields(request, COMMON_REGISTRATION_FIELDS + [
+            ('gmc_number', 'GMC Number'),
+            ('insurance_expiry_date', 'Insurance Expiry Date'),
+        ], [
+            ('insurance', 'Insurance'),
+        ])
+        if missing:
+            messages.error(request, f"Please complete the required fields: {', '.join(missing)}")
+            return render(request, self.template_name)
         # Check if a user with the same email and user_type 'Pharmacist' already exists
         if Locum.objects.filter(email=email, user_type='GP').exists():
             messages.error(
@@ -798,8 +857,7 @@ Regards,
 """
 
         # Send Admin email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
         
         # Format email content to send to Locum (to be)
         subject = "LocumSmart Ltd: GP Registeration Request Submitted"
@@ -834,8 +892,7 @@ General Practitioners | Doctors | Physician Associates | Pharmacists | Technicia
 **Phone**: +44 7534749465  
 """
         # Send email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
 
         messages.success(request, "GP Registeration Request Submitted!")
         return redirect('login')
@@ -866,6 +923,19 @@ class TechDesRegisterView(View):
         visa_expiry = request.POST.get('visa_expiry')
         can_provide_references = request.POST.get('can_provide_references')
         user_type = request.POST.get('type')
+
+        missing = missing_registration_fields(request, COMMON_REGISTRATION_FIELDS + [
+            ('gender', 'Gender'),
+            ('type', 'Role'),
+            ('qualified_date', 'Qualified Date'),
+            ('passport_expiry_date', 'Passport Expiry Date'),
+        ], [
+            ('passport', 'Passport'),
+            ('qualification_certificate', 'Qualification Certificate'),
+        ])
+        if missing:
+            messages.error(request, f"Please complete the required fields: {', '.join(missing)}")
+            return render(request, self.template_name)
         # Check if a user with the same email and user_type 'Pharmacist' already exists
         if Locum.objects.filter(email=email, user_type__in=['Technician', 'Dispenser']).exists():
             messages.error(
@@ -964,8 +1034,7 @@ Regards,
 """
 
         # Send Admin email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
         
         # Format email content to send to Locum (to be)
         subject = f"LocumSmart Ltd: {user_type} Registeration Request Submitted"
@@ -1001,8 +1070,7 @@ General Practitioners | Doctors | Physician Associates | Pharmacists | Technicia
 """
 
         # Send email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
         
         messages.success(request, f"{user_type} Registeration Request Submitted!")
         return redirect('login')
@@ -1031,6 +1099,18 @@ class NursesRegisterView(View):
         user_type = request.POST.get('type')
         dbs_service_number = request.POST.get('dbs_service_number', '')
         nmc_expiry = request.POST.get('nmc_expiry')
+
+        missing = missing_registration_fields(request, COMMON_REGISTRATION_FIELDS + [
+            ('gender', 'Gender'),
+            ('type', 'Role'),
+            ('nmc_number', 'NMC Number'),
+            ('nmc_expiry', 'NMC Expiry Date'),
+        ], [
+            ('nmc_certificate', 'NMC Certificate'),
+        ])
+        if missing:
+            messages.error(request, f"Please complete the required fields: {', '.join(missing)}")
+            return render(request, self.template_name)
 
         if Locum.objects.filter(email=email, user_type__in=['Nurse', 'ANPNurse']).exists():
             messages.error(
@@ -1125,8 +1205,7 @@ Regards,
 """
 
         # Send Admin email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
         
         # Format email content to send to Locum (to be)
         subject = f"LocumSmart Ltd: {user_type} Registeration Request Submitted"
@@ -1162,8 +1241,7 @@ General Practitioners | Doctors | Physician Associates | Pharmacists | Technicia
 """
 
         # Send email
-        send_mail(subject, contact_message, from_email,
-                  to_email, fail_silently=False)
+        send_registration_email(subject, contact_message, from_email, to_email)
         
         messages.success(request, f"{user_type} Registeration Request Submitted!")
         return redirect('login')
