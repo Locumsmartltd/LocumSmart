@@ -1311,7 +1311,6 @@ class LocumEditView(View):
             county = request.POST.get('county')
             post_code = request.POST.get('post_code')
             nationality = request.POST.get('nationality')
-            gphc_number = request.POST.get('gphc_number', '')
             qualified_date = request.POST.get('qualified_date')
             passport_expiry_date = request.POST.get('passport_expiry_date')
             visa_expiry = request.POST.get('visa_expiry')
@@ -1326,7 +1325,7 @@ class LocumEditView(View):
             locum.county = county
             locum.post_code = post_code
             locum.nationality = nationality
-            locum.gphc_number = gphc_number
+            # The technician/dispenser form has no GPhC field; leave any stored number untouched
             locum.qualified_date = qualified_date
             locum.passport_expiry_date = passport_expiry_date
             if visa_expiry:

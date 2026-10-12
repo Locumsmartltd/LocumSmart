@@ -31,7 +31,7 @@
 
     <div class="form-shell">
       <!-- BACKEND: preserve action, method="post" and every field name below exactly (locum/views.py techRegistration / edit_locum). -->
-      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'techRegistration' %}{% endif %}" method="post" enctype="multipart/form-data">
+      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'techRegistration' %}{% endif %}" method="post" enctype="multipart/form-data" novalidate data-validate-fields>
         {% csrf_token %}
 
         <div class="form-section">
@@ -69,7 +69,6 @@
         <div class="form-section">
           <div class="form-section-head"><div class="num">3</div><h3>Professional Credentials</h3></div>
           <div class="form-grid">
-            <div class="field{% if locum %} readonly{% endif %}"><label>GPHC Number</label><input type="text" name="gphc_number" value="{% if locum %}{{ locum.gphc_number }}{% endif %}" {% if locum %}readonly{% endif %}></div>
             <div class="field"><label>Qualified Date <span class="req">*</span></label><input type="date" name="qualified_date" id="qualified_dateInput" value="{% if locum %}{{ locum.qualified_date|date:"Y-m-d" }}{% endif %}" required></div>
             <div class="field"><label>Qualification Certificate <span class="req">*</span></label><input type="file" name="qualification_certificate" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
           </div>
@@ -157,6 +156,7 @@
 
 {% block page_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/registrationForm.js' %}?v=20261013"></script>
 <script>
   $(function() {
     function toggleReferenceSections() {

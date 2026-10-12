@@ -31,7 +31,7 @@
 
     <div class="form-shell">
       <!-- BACKEND: preserve action, method="post" and every field name below exactly (locum/views.py gpRegistration / edit_locum). -->
-      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'gpRegistration' %}{% endif %}" method="post" enctype="multipart/form-data">
+      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'gpRegistration' %}{% endif %}" method="post" enctype="multipart/form-data" novalidate data-validate-fields>
         {% csrf_token %}
 
         <div class="form-section">
@@ -135,6 +135,7 @@
 
 {% block page_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/registrationForm.js' %}?v=20261013"></script>
 <script>
   $(function() {
     function toggleReferenceSections() {

@@ -202,6 +202,23 @@ html { scroll-behavior: smooth; }
 .rs .field textarea { min-height: 100px; resize: vertical; }
 .rs .field select { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235A6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 18px; padding-right: 44px; }
 .rs .field .hint { font-size: 12.5px; color: var(--grey-light); margin-top: 6px; }
+/* Field-level validation (registrationForm.js): notification box above the field */
+.rs .field-error { background: #FDECEA; border: 1px solid #F5C2BC; color: #B42318; font-size: 13px; font-weight: 600; line-height: 1.4; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; }
+.rs .field [aria-invalid="true"] { border-color: var(--red); }
+/* Keep inputs in a row level with each other when only one of them shows a notification box */
+.rs form[data-validate-fields] .field { justify-content: flex-end; }
+/* --- Toast notifications (toast.js) --- */
+.rs .rs-toast-stack { position: fixed; top: 84px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.rs .rs-toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 12px; background: white; border: 1px solid var(--border); border-left: 4px solid var(--blue); border-radius: 12px; box-shadow: 0 12px 30px rgba(42,47,54,.16); padding: 14px 12px 14px 16px; font-size: 14px; font-weight: 600; line-height: 1.45; color: var(--charcoal); animation: rs-toast-in .25s ease-out; transition: opacity .25s, transform .25s; }
+.rs .rs-toast-success { border-left-color: var(--teal); }
+.rs .rs-toast-error { border-left-color: var(--red); }
+.rs .rs-toast-warning { border-left-color: #E6A23C; }
+.rs .rs-toast-text { flex: 1; overflow-wrap: anywhere; }
+.rs .rs-toast-close { flex: none; background: none; border: none; padding: 0 4px; font-size: 20px; line-height: 1; color: var(--grey-light); cursor: pointer; }
+.rs .rs-toast-close:hover { color: var(--charcoal); }
+.rs .rs-toast-hide { opacity: 0; transform: translateX(20px); }
+@keyframes rs-toast-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) { .rs .rs-toast-stack { top: 76px; right: 16px; } }
 
 /* --- Footer --- */
 .rs footer { background: var(--charcoal); color: rgba(255,255,255,.72); padding: 60px 0 30px; }

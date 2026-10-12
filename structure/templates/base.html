@@ -24,7 +24,7 @@
   -->
 
   <!-- New design system tokens + shared components -->
-  <link rel="stylesheet" href="{% static 'css/redesign-tokens.css' %}?v=20261009" />
+  <link rel="stylesheet" href="{% static 'css/redesign-tokens.css' %}?v=20261013" />
 
   <!-- Page-specific CSS slot -->
   {% block page_css %}{% endblock %}
@@ -35,19 +35,23 @@
 
   {% include 'components/navbar.html' %}
 
-  {% if messages %}
-    <div class="messages container" style="padding-top: 20px;">
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  <!-- Toast notifications: server messages, plus anything scripts add via window.rsToast() -->
+  <div class="rs-toast-stack" id="toastStack">
+    {% for message in messages %}
+      <div class="rs-toast rs-toast-{{ message.tags|default:'info' }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
+        <span class="rs-toast-text">{{ message }}</span>
+        <button type="button" class="rs-toast-close" aria-label="Dismiss">&times;</button>
+      </div>
+    {% endfor %}
+  </div>
 
   <main>
     {% block content %}{% endblock %}
   </main>
 
   {% include 'components/footer.html' %}
+
+  <script src="{% static 'js/toast.js' %}?v=20261013"></script>
 
   <!-- Page-specific JS slot -->
   {% block page_js %}{% endblock %}

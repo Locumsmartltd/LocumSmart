@@ -32,7 +32,7 @@
 
     <div class="form-shell">
       <!-- BACKEND: preserve action, method="post" and every field name below exactly (locum/views.py pharmacistRegister / edit_locum). -->
-      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'pharmacistRegister' %}{% endif %}" method="post" enctype="multipart/form-data">
+      <form action="{% if locum %}{% url 'edit_locum' locum.id %}{% else %}{% url 'pharmacistRegister' %}{% endif %}" method="post" enctype="multipart/form-data" novalidate data-validate-fields>
         {% csrf_token %}
 
         <div class="form-section">
@@ -82,9 +82,9 @@
             <div class="field"><label>Upload Passport <span class="req">*</span></label><input type="file" name="passport" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
             <div class="field"><label>Passport Expiry Date <span class="req">*</span></label><input type="date" name="passport_expiry_date" id="passport_expiry_date" value="{% if locum and locum.passport_expiry_date %}{{ locum.passport_expiry_date|date:"Y-m-d" }}{% endif %}" required></div>
             <div class="field"><label>Upload Visa/Residence Permit</label><input type="file" name="visa_residence_permit" accept="application/pdf,image/*"></div>
+            <div class="field"><label>Visa Expiry Date</label><input type="date" name="visa_expiry" id="visa_expiry" value="{% if locum %}{{ locum.visa_expiry|date:"Y-m-d" }}{% endif %}"></div>
             <div class="field"><label>Upload Insurance <span class="req">*</span></label><input type="file" name="insurance" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
             <div class="field"><label>Insurance Expiry Date <span class="req">*</span></label><input type="date" name="insurance_expiry_date" id="insurance_expiry_date" value="{% if locum %}{{ locum.insurance_expiry_date|date:"Y-m-d" }}{% endif %}" required></div>
-            <div class="field"><label>Visa Expiry Date</label><input type="date" name="visa_expiry" id="visa_expiry" value="{% if locum %}{{ locum.visa_expiry|date:"Y-m-d" }}{% endif %}"></div>
             <div class="field"><label>DBS Enhanced Disclosure <span class="req">*</span> <span class="hint">(less than 1 year)</span></label><input type="file" name="dbs_enhanced_disclosure" accept="application/pdf,image/*" {% if not locum %}required{% endif %}></div>
             <div class="field"><label>DBS Update Service #</label><input type="text" name="dbs_service_number" value="{% if locum %}{{ locum.dbs_service_number }}{% endif %}"></div>
             <div class="field"><label>Upload Safeguarding Level 2</label><input type="file" name="safeguarding_level2" accept="application/pdf,image/*"></div>
@@ -109,7 +109,7 @@
               {% endif %}
             </div>
 
-            <div class="field full" id="references_section" style="display:{% if locum and locum.can_provide_references %}block{% else %}none{% endif %};">
+            <div class="field full" id="references_section" {% if locum and locum.can_provide_references %}style="display:block;"{% else %}style="display:none;"{% endif %}>
               <div class="form-grid">
                 <div class="field full"><h4>Recent Reference</h4></div>
                 <div class="field"><label>Branch Address</label><input type="text" name="recent_ref_branch_address" value="{% if locum %}{{ locum.recent_ref_branch_address }}{% endif %}"></div>
@@ -126,7 +126,7 @@
               </div>
             </div>
 
-            <div class="field full" id="no_references_reason_section" style="display:{% if locum and not locum.can_provide_references %}block{% else %}none{% endif %};">
+            <div class="field full" id="no_references_reason_section" {% if locum and not locum.can_provide_references %}style="display:block;"{% else %}style="display:none;"{% endif %}>
               <label>Reason</label>
               <textarea name="no_reference_reason" rows="3" placeholder="It's important for us to have your previous reference. If not, please state the reason below:">{% if locum %}{{ locum.no_reference_reason }}{% endif %}</textarea>
             </div>
@@ -149,6 +149,7 @@
 
 {% block page_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/registrationForm.js' %}?v=20261013"></script>
 <script>
   $(function() {
     function toggleReferenceSections() {
