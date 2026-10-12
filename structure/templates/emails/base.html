@@ -1,0 +1,45 @@
+{% comment %}
+Shared layout for every email the site sends (see structure/emails.py).
+Email clients ignore stylesheets, so everything is table-based with inline styles.
+Blocks: preheader, heading, content.
+{% endcomment %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#F7FAFB; font-family:Arial, Helvetica, sans-serif; color:#2A2F36;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">{% block preheader %}{% endblock %}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7FAFB;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; background-color:#FFFFFF; border:1px solid #E4EAEE; border-radius:12px;">
+          <tr>
+            <td align="center" style="padding:28px 32px 20px; border-bottom:4px solid #1BA39C;">
+              <a href="{{ site_url }}" style="text-decoration:none;"><img src="{{ logo_url }}" alt="LocumSmart Ltd" width="220" style="display:block; width:220px; max-width:70%; height:auto; border:0;"></a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 32px 8px; font-size:15px; line-height:1.6; color:#2A2F36;">
+              <h1 style="margin:0 0 18px; font-size:22px; line-height:1.3; color:#0F6B66;">{% block heading %}{% endblock %}</h1>
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 32px 28px; font-size:15px; line-height:1.6; color:#2A2F36;">
+              <p style="margin:0;">Regards,<br><strong>Mustafa Amin</strong><br>LocumSmart Ltd</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px; background-color:#E7F6F3; border-top:1px solid #E4EAEE; border-radius:0 0 12px 12px; font-size:12.5px; line-height:1.6; color:#5A6472;" align="center">
+              Providing 8000+ Locums &amp; Permanent Staff across the UK<br>
+              General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals and Pharma | Staffing &amp; Recruiting<br>
+              <a href="mailto:info@locum-smart.co.uk" style="color:#0F6B66;">info@locum-smart.co.uk</a> | +44 7534749465
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

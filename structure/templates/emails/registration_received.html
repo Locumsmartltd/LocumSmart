@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+{% block preheader %}We have received your registration request and are reviewing it.{% endblock %}
+{% block heading %}Registration Request Received{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ firstname }} {{ lastname }},</p>
+<p style="margin:0 0 14px;">Thank you for submitting your registration request on LocumSmart. We have successfully received your details and are currently reviewing your application.</p>
+<p style="margin:0 0 4px;">Here is a summary of the information provided:</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 14px;">Our team will review your application promptly, and you will be notified once a decision has been made regarding the approval of your request.</p>
+<p style="margin:0 0 18px;">If you have any questions or require further assistance, please feel free to contact us at any time.</p>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{% block preheader %}Booking confirmed for {{ job.pharmacy_name }}.{% endblock %}
+{% block heading %}Booking Confirmation{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ job.employer.first_name }} {{ job.employer.last_name }},</p>
+<p style="margin:0 0 14px;">We are pleased to confirm the following locum booking for <strong>{{ job.pharmacy_name }}</strong>.</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 18px; padding:14px 16px; background-color:#FFF8E6; border-left:4px solid #E6A23C; border-radius:6px;"><strong>Please note:</strong> any cancellation within 72Hrs prior to the booking {{ job.locum.user_type }} may claim loss of earnings and our fees will still be payable.</p>
+{% endblock %}

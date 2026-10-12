@@ -24,7 +24,7 @@
   -->
 
   <!-- New design system tokens + shared components -->
-  <link rel="stylesheet" href="{% static 'css/redesign-tokens.css' %}?v=20261013" />
+  <link rel="stylesheet" href="{% static 'css/redesign-tokens.css' %}?v=20261015" />
 
   <!-- Page-specific CSS slot -->
   {% block page_css %}{% endblock %}
@@ -37,13 +37,21 @@
 
   <!-- Toast notifications: server messages, plus anything scripts add via window.rsToast() -->
   <div class="rs-toast-stack" id="toastStack">
-    {% for message in messages %}
-      <div class="rs-toast rs-toast-{{ message.tags|default:'info' }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
+    {% for message in messages %}{% if message.extra_tags != 'registered' and message.extra_tags != 'modal' %}
+      <div class="rs-toast rs-toast-{{ message.level_tag|default:'info' }}{% if message.extra_tags %} rs-toast-{{ message.extra_tags }}{% endif %}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
         <span class="rs-toast-text">{{ message }}</span>
         <button type="button" class="rs-toast-close" aria-label="Dismiss">&times;</button>
       </div>
-    {% endfor %}
+    {% endif %}{% endfor %}
   </div>
+  <!-- A completed registration is confirmed in a dialog (modal.js), then continues to the jobs page -->
+  {% for message in messages %}{% if message.extra_tags == 'registered' %}
+    <div id="registrationSuccess" data-message="{{ message }}" data-redirect="{% url 'locumjobs' %}" hidden></div>
+  {% endif %}{% endfor %}
+  <!-- Messages tagged 'modal' are shown as a pop-up dialog instead of a toast -->
+  {% for message in messages %}{% if message.extra_tags == 'modal' %}
+    <div class="rs-modal-message" data-type="{{ message.level_tag }}" data-title="{% block modal_title %}Please check and try again{% endblock %}" data-message="{{ message }}" hidden></div>
+  {% endif %}{% endfor %}
 
   <main>
     {% block content %}{% endblock %}
@@ -51,7 +59,8 @@
 
   {% include 'components/footer.html' %}
 
-  <script src="{% static 'js/toast.js' %}?v=20261013"></script>
+  <script src="{% static 'js/toast.js' %}?v=20261014"></script>
+  <script src="{% static 'js/modal.js' %}?v=20261014"></script>
 
   <!-- Page-specific JS slot -->
   {% block page_js %}{% endblock %}

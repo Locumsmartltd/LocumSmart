@@ -16,8 +16,8 @@
         var closeButton = toast.querySelector('.rs-toast-close');
         if (closeButton) closeButton.addEventListener('click', function () { dismiss(toast); });
 
-        // Errors stay until closed so they cannot be missed
-        if (toast.classList.contains('rs-toast-error')) return;
+        // Errors and sticky notices stay until closed so they cannot be missed
+        if (toast.classList.contains('rs-toast-error') || toast.classList.contains('rs-toast-sticky')) return;
 
         var timer = setTimeout(function () { dismiss(toast); }, AUTO_DISMISS_MS);
         toast.addEventListener('mouseenter', function () { clearTimeout(timer); });

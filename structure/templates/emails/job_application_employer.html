@@ -1,0 +1,14 @@
+{% extends "emails/base.html" %}
+{% comment %}"New Locum Request" alert for the employer. Not sent yet: awaiting the client's decision on whether employers should be emailed when a locum applies.{% endcomment %}
+{% block preheader %}A locum has requested your shift at {{ job.pharmacy_name }}.{% endblock %}
+{% block heading %}New Locum Request{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ job.employer.first_name }} {{ job.employer.last_name }},</p>
+<p style="margin:0 0 14px;">We have received the following request from a locum for your shift at <strong>{{ job.pharmacy_name }}</strong>.</p>
+{% if additional_info %}<p style="margin:0 0 14px;"><strong>Additional information from the locum:</strong> {{ additional_info }}</p>{% endif %}
+<p style="margin:0 0 4px;"><strong>Locum details</strong></p>
+{% include "emails/_details.html" with rows=locum_details %}
+<p style="margin:0 0 4px;"><strong>Job details</strong></p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 18px; padding:14px 16px; background-color:#E7F6F3; border-left:4px solid #1BA39C; border-radius:6px;"><strong>What happens next:</strong> our team will review this request and send you a booking confirmation once the locum is confirmed.</p>
+{% endblock %}

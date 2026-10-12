@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+{% block preheader %}We have received your request for {{ job.pharmacy_name }}.{% endblock %}
+{% block heading %}Employer Request Received{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ job.employer.first_name }} {{ job.employer.last_name }},</p>
+<p style="margin:0 0 4px;">Thank you for submitting your Employer Request. We have received the following details:</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 18px; padding:14px 16px; background-color:#FFF8E6; border-left:4px solid #E6A23C; border-radius:6px;"><strong>Please note:</strong> This is just a confirmation that we have received your request and our team will start working on it. Once we find someone, you will receive a booking confirmation email. Someone from our team will also contact you if the locum asking rate is higher than what you have requested.</p>
+<p style="margin:0 0 18px;">We appreciate your business and look forward to continuing to support your staffing needs.</p>
+{% endblock %}

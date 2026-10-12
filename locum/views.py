@@ -19,6 +19,9 @@ from django.utils.html import strip_tags
 import pandas as pd
 from django.core.mail import EmailMultiAlternatives
 from appAdmin.models import Admin
+from structure.passwords import SITE_URL
+from structure.emails import send_branded_email, send_approval_email
+from django.urls import reverse
 import logging
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
@@ -47,13 +50,34 @@ def missing_registration_fields(request, required_fields, required_files):
     return missing
 
 
-def send_registration_email(subject, message, from_email, to_email):
+def send_registration_emails(firstname, lastname, email, telephone, user_type):
+    # Tell the admin about the new request and confirm receipt to the applicant.
     # The registration is already saved at this point, so a mail server problem
     # must not turn it into a server error for the applicant.
-    try:
-        send_mail(subject, message, from_email, to_email, fail_silently=False)
-    except Exception:
-        logger.exception("Registration email '%s' to %s could not be sent", subject, to_email)
+    context = {
+        'firstname': firstname,
+        'lastname': lastname,
+        'user_type': user_type,
+        'requests_url': SITE_URL + reverse('locumRequests'),
+        'details': [('Name', f'{firstname} {lastname}'), ('Email', email),
+                    ('Phone', telephone), ('User Type', user_type)],
+    }
+    for template, subject, to_email in [
+        ('registration_admin', f'LocumSmart Ltd: New {user_type} Registration Request', settings.EMAIL_HOST_USER),
+        ('registration_received', f'LocumSmart Ltd: {user_type} Registration Request Submitted', email),
+    ]:
+        try:
+            send_branded_email(template, subject, [to_email], context)
+        except Exception:
+            logger.exception("Registration email '%s' to %s could not be sent", subject, to_email)
+
+
+def registration_submitted(request):
+    # Back to the (now empty) form, where base.html shows the 'Registered Successfully'
+    # dialog; closing it leads to the jobs page, which shows the awaiting-approval notice.
+    messages.success(request, 'Your registration request has been submitted.', extra_tags='registered')
+    request.session['awaiting_approval'] = True
+    return redirect(request.path)
 
 # Create your views here.
 
@@ -68,39 +92,9 @@ def sendEmailsToPharmacist(request):
         locum = Locum.objects.get(
             email=row['email'], user_type='Pharmacist')
         
-        # Prepare email content
-        subject = "LocumSmart Ltd: Your LocumSmart Account Has Been Approved"
-        html_message = f"""
-        <p>Dear {locum.firstname} {locum.lastname},</p>
-        <p>Your account has been approved on the LocumSmart website [www.locumsmart.co.uk].</p>
-        <p>For your reference, your login details are shared below:</p>
-        <ul>
-            <li>Email: {locum.Email}</li>
-            <li>Locum Type: {locum.user_type}</li>
-            <li>Please Set your new Password using the 
-                <a href="https://locumsmart.co.uk/setPassword/{locum.id}/">Password Set Link</a>
-            </li>
-        </ul>
-        <p>We now have our website made for locums to sign in and apply for the available shifts. 
-        Locums can also add their availability in the calendar once logged in and can generate invoice format via our website.</p>
-        <p>Best regards,<br>
-        Mustafa Amin<br>
-        LocumSmart Ltd</p>
-        <p>Providing 8000+ Locums & Permanent Staff across the UK</p>
-        <p>General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting</p>
-        <p>Email: info@locum-smart.co.uk<br>
-        Phone: +44 7534749465</p>
-        """
-        # Send email
+        # Send the approval / welcome email
         try:
-            email = EmailMultiAlternatives(
-                subject=subject,
-                body="Your account has been approved on LocumSmart.",  # Fallback plain text
-                from_email=settings.EMAIL_HOST_USER,
-                to=[locum.Email],
-            )
-            email.attach_alternative(html_message, "text/html")
-            email.send()
+            send_approval_email(locum)
             print(f"Successfully approved locums: {locum.Email} - {locum.id}")
         except Exception as e:
             print(f"Failed approval: {locum.Email} - {locum.id}")
@@ -116,39 +110,9 @@ def sendEmailsToTech(request):
         locum = Locum.objects.get(
             email=row['email'], user_type='Technician')
         
-        # Prepare email content
-        subject = "LocumSmart Ltd: Your LocumSmart Account Has Been Approved"
-        html_message = f"""
-        <p>Dear {locum.firstname} {locum.lastname},</p>
-        <p>Your account has been approved on the LocumSmart website [www.locumsmart.co.uk].</p>
-        <p>For your reference, your login details are shared below:</p>
-        <ul>
-            <li>Email: {locum.Email}</li>
-            <li>Locum Type: {locum.user_type}</li>
-            <li>Please Set your new Password using the 
-                <a href="https://locumsmart.co.uk/setPassword/{locum.id}/">Password Set Link</a>
-            </li>
-        </ul>
-        <p>We now have our website made for locums to sign in and apply for the available shifts. 
-        Locums can also add their availability in the calendar once logged in and can generate invoice format via our website.</p>
-        <p>Best regards,<br>
-        Mustafa Amin<br>
-        LocumSmart Ltd</p>
-        <p>Providing 8000+ Locums & Permanent Staff across the UK</p>
-        <p>General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting</p>
-        <p>Email: info@locum-smart.co.uk<br>
-        Phone: +44 7534749465</p>
-        """
-        # Send email
+        # Send the approval / welcome email
         try:
-            email = EmailMultiAlternatives(
-                subject=subject,
-                body="Your account has been approved on LocumSmart.",  # Fallback plain text
-                from_email=settings.EMAIL_HOST_USER,
-                to=[locum.Email],
-            )
-            email.attach_alternative(html_message, "text/html")
-            email.send()
+            send_approval_email(locum)
             print(f"Successfully approved locums: {locum.Email} - {locum.id}")
         except Exception as e:
             print(f"Failed approval: {locum.Email} - {locum.id}")
@@ -394,81 +358,38 @@ class EmployerRequestView(View):
             job.discrete_dates = discrete_dates_json
 
         # Email notification to the employer and admin
-        employer_email = job.employer.email
-        admin_email = settings.EMAIL_HOST_USER
-        recipient_list = [employer_email]
+        if job.discrete_dates:
+            date_rows = [('Selected Dates', ', '.join(
+                datetime.strptime(date, '%Y-%m-%d').strftime('%d-%m-%Y')
+                for date in json.loads(job.discrete_dates)))]
+        else:
+            date_rows = [('Start Date', datetime.strptime(job.start_date, '%Y-%m-%d').strftime('%d-%m-%Y')),
+                         ('End Date', datetime.strptime(job.end_date, '%Y-%m-%d').strftime('%d-%m-%Y'))]
+        request_rows = [
+            ('Pharmacy Name', job.pharmacy_name),
+            ('Location', job.county),
+            ('Post Code', job.post_code),
+            ('Locum Role Required', self.get_locum_roles(job)),
+        ]
         subject = 'LocumSmart Ltd: Employer Request Submitted'
 
-        # Determine the date information based on whether discrete dates exist
-        if job.discrete_dates:
-            discrete_dates = json.loads(job.discrete_dates)
-            date_info = f"<li><strong>Selected Dates:</strong> " + ', '.join(
-                [datetime.strptime(date, '%Y-%m-%d').strftime('%d-%m-%Y') for date in discrete_dates]) + "</li>"
-        else:
-            date_info = f"<li><strong>Start Date:</strong> {datetime.strptime(job.start_date, '%Y-%m-%d').strftime('%d-%m-%Y')}</li>" \
-                        f"<li><strong>End Date:</strong> {datetime.strptime(job.end_date, '%Y-%m-%d').strftime('%d-%m-%Y')}</li>"
-
-
-        html_content = f"""
-        <p>Dear {job.employer.first_name} {job.employer.last_name},</p>
-        
-        <p>Thank you for submitting your Employer Request. We have received the following details:</p>
-        
-        <p><strong>Request Details:</strong></p>
-        <ul>
-            <li><strong>Pharmacy Name:</strong> {job.pharmacy_name}</li>
-            <li><strong>Location:</strong> {job.county}</li>
-            <li><strong>Post Code:</strong> {job.post_code}</li>
-            <li><strong>Locum Role Required:</strong> {self.get_locum_roles(job)}</li>
-            <li><strong>Rate:</strong> £{job.locum_rate}/hr</li>
-            {date_info}
-        </ul>
-        
-        <p><strong>Please be aware of the following important points:</strong></p>
-        
-        <p><strong>This is just a confirmation that we have received your request and our team will start working on it. Once we find someone, you will receive a booking confirmation email. Someone from our team will also contact you if the locum asking rate is higher than what you have requested.</strong></p>
-        
-        <p>We appreciate your business and look forward to continuing to support your staffing needs.</p>
-        
-        <p>Best regards,<br>
-        Mustafa Amin<br>
-        LocumSmart Ltd<br>
-        Providing 8000+ Locums & Permanent Staff across the UK<br> 
-        General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting<br>
-        Email: info@locum-smart.co.uk<br>
-        Phone: +44 7534749465</p>
-        """
-
+        # A request entered by an admin on the employer's behalf is not confirmed to the employer
         admin = Admin.objects.filter(customuser_ptr_id=request.user.id).first()
-
         if not admin:
-            # Use your custom send_email function
-            send_mail(subject, strip_tags(html_content), admin_email, recipient_list, html_message=html_content)
-        
-        admin_html_content = f"""
-        <p>Dear Mustafa Amin,</p>
-        
-        <p>You have received the following Employer Request details:</p>
-        
-        <p><strong>Request Details:</strong></p>
-        <ul>
-            <li><strong>Pharmacy Name:</strong> {job.pharmacy_name}</li>
-            <li><strong>Location:</strong> {job.county}</li>
-            <li><strong>Post Code:</strong> {job.post_code}</li>
-            <li><strong>Locum Role Required:</strong> {self.get_locum_roles(job)}</li>
-            <li><strong>Rate:</strong> £{job.locum_rate:.0f}/hr</li>
-            {date_info}
-            <li><strong>Expenses Offered:</strong> £{job.expenses_offered:.0f}</li>
-            <li><strong>Time Required Per Day:</strong> {job.times_required} hrs</li>
-            <li><strong>Additional Information:</strong> {job.any_other_information if job.any_other_information.strip() else 'None'}</li>
-        </ul>
-        
-        Regards,
-        """
-        
-        # Send the email to the admin
-        send_mail(subject, strip_tags(admin_html_content), admin_email, [admin_email], html_message=admin_html_content)
-        
+            send_branded_email('employer_request_received', subject, [job.employer.email], {
+                'job': job,
+                'details': request_rows + [('Rate', f'£{job.locum_rate}/hr')] + date_rows,
+            })
+
+        send_branded_email('employer_request_admin', subject, [settings.EMAIL_HOST_USER], {
+            'job': job,
+            'requests_url': SITE_URL + reverse('employerRequests'),
+            'details': request_rows + [('Rate', f'£{job.locum_rate:.0f}/hr')] + date_rows + [
+                ('Expenses Offered', f'£{job.expenses_offered:.0f}'),
+                ('Time Required Per Day', f'{job.times_required} hrs'),
+                ('Additional Information', job.any_other_information.strip() or 'None'),
+            ],
+        })
 
         # Save the Job object
         job.save()
@@ -537,7 +458,7 @@ class PharmacistRegisterView(View):
     def post(self, request):
         # Extract form data from POST request
         title = request.POST.get('title')
-        password = 'hvzdhajksjnd456787654567'
+        password = None  # no usable password until the locum sets one from the approval email
         firstname = request.POST.get('firstname')
         lastname = request.POST.get('lastname')
         gender = request.POST.get('gender')
@@ -659,74 +580,9 @@ class PharmacistRegisterView(View):
 
         locum.save()
 
-        print(f"locum saved")
+        send_registration_emails(firstname, lastname, email, telephone, 'Pharmacist')
 
-        # Format email content
-        subject = "LocumSmart Ltd: Pharmacist Registration Information recieved"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [settings.EMAIL_HOST_USER]
-        contact_message = f"""
-Dear Mustafa Amin,
-
-The following Information is recieved from the Registration Request
-
-Name: {firstname} {lastname}
-Email: {email}
-Phone: {telephone}
-User Type: Pharmacist
-
-You can accept the locum requests from your admin portal.
-https://locumsmart.co.uk/appAdmin/locumRequests/
-
-Regards,
-"""
-
-        # Send Admin email
-        send_registration_email(subject, contact_message, from_email, to_email)
-        
-        print(f"admin email sent")
-        
-        
-        # Format email content to send to Locum (to be)
-        subject = "LocumSmart Ltd: Pharmacist Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [email]
-        contact_message = f"""
-Dear {firstname} {lastname},
-
-Thank you for submitting your registration request on LocumSmart. We have successfully received your details and are currently reviewing your application.
-
-Here is a summary of the information provided:
-- **Name**: {firstname} {lastname}
-- **Email**: {email}
-- **Phone**: {telephone}
-- **User Type**: Pharmacist
-
-Our team will review your application promptly, and you will be notified once a decision has been made regarding the approval of your request.
-
-If you have any questions or require further assistance, please feel free to contact us at any time.
-
-Best regards,  
-The LocumSmart Team  
-
----
-
-**LocumSmart Ltd**  
-Providing 8000+ Locums & Permanent Staff across the UK  
-
-General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting  
-
-**Email**: info@locum-smart.co.uk  
-**Phone**: +44 7534749465  
-"""
-
-        # Send email
-        send_registration_email(subject, contact_message, from_email, to_email)
-
-        print(f"locum email sent")
-
-        messages.success(request, "Pharmacist Registeration Request Submitted!")
-        return redirect('login')
+        return registration_submitted(request)
 
 
 class GPRegisterView(View):
@@ -738,7 +594,7 @@ class GPRegisterView(View):
     def post(self, request):
         # Extract form data from POST request
         title = request.POST.get('title')
-        password = 'password'
+        password = None  # no usable password until the locum sets one from the approval email
         firstname = request.POST.get('firstname')
         lastname = request.POST.get('lastname')
         date_of_birth = request.POST.get('date_of_birth')
@@ -837,65 +693,10 @@ class GPRegisterView(View):
                 setattr(locum, field_name, files_data[field_name])
 
         locum.save()
-        subject = "LocumSmart Ltd: Gp Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [settings.EMAIL_HOST_USER]
-        contact_message = f"""
-Dear Mustafa Amin,
 
-The following Information is recieved from the Registration Request
+        send_registration_emails(firstname, lastname, email, telephone, 'GP')
 
-Name: {firstname} {lastname}
-Email: {email}
-Phone: {telephone}
-User Type: GP
-
-You can accept the locum requests from your admin portal.
-https://locumsmart.co.uk/appAdmin/locumRequests/
-
-Regards,
-"""
-
-        # Send Admin email
-        send_registration_email(subject, contact_message, from_email, to_email)
-        
-        # Format email content to send to Locum (to be)
-        subject = "LocumSmart Ltd: GP Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [email]
-        contact_message = f"""
-Dear {firstname} {lastname},
-
-Thank you for submitting your registration request on LocumSmart. We have successfully received your details and are currently reviewing your application.
-
-Here is a summary of the information provided:
-- **Name**: {firstname} {lastname}
-- **Email**: {email}
-- **Phone**: {telephone}
-- **User Type**: GP
-
-Our team will review your application promptly, and you will be notified once a decision has been made regarding the approval of your request.
-
-If you have any questions or require further assistance, please feel free to contact us at any time.
-
-Best regards,  
-The LocumSmart Team  
-
----
-
-**LocumSmart Ltd**  
-Providing 8000+ Locums & Permanent Staff across the UK  
-
-General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting  
-
-**Email**: info@locum-smart.co.uk  
-**Phone**: +44 7534749465  
-"""
-        # Send email
-        send_registration_email(subject, contact_message, from_email, to_email)
-
-        messages.success(request, "GP Registeration Request Submitted!")
-        return redirect('login')
+        return registration_submitted(request)
 
 
 class TechDesRegisterView(View):
@@ -907,7 +708,7 @@ class TechDesRegisterView(View):
     def post(self, request):
         # Extract form data from POST request
         title = request.POST.get('title')
-        password = 'password'
+        password = None  # no usable password until the locum sets one from the approval email
         firstname = request.POST.get('firstname')
         lastname = request.POST.get('lastname')
         gender = request.POST.get('gender')
@@ -1014,66 +815,10 @@ class TechDesRegisterView(View):
             if field_name in files_data:
                 setattr(locum, field_name, files_data[field_name])
         locum.save()
-        subject = "LocumSmart Ltd: Tech/Des Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [settings.EMAIL_HOST_USER]
-        contact_message = f"""
-Dear Mustafa Amin,
 
-The following Information is recieved from the Registration Request
+        send_registration_emails(firstname, lastname, email, telephone, user_type)
 
-Name: {firstname} {lastname}
-Email: {email}
-Phone: {telephone}
-User Type: {user_type}
-
-You can accept the locum requests from your admin portal.
-https://locumsmart.co.uk/appAdmin/locumRequests/
-
-Regards,
-"""
-
-        # Send Admin email
-        send_registration_email(subject, contact_message, from_email, to_email)
-        
-        # Format email content to send to Locum (to be)
-        subject = f"LocumSmart Ltd: {user_type} Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [email]
-        contact_message = f"""
-Dear {firstname} {lastname},
-
-Thank you for submitting your registration request on LocumSmart. We have successfully received your details and are currently reviewing your application.
-
-Here is a summary of the information provided:
-- **Name**: {firstname} {lastname}
-- **Email**: {email}
-- **Phone**: {telephone}
-- **User Type**: {user_type}
-
-Our team will review your application promptly, and you will be notified once a decision has been made regarding the approval of your request.
-
-If you have any questions or require further assistance, please feel free to contact us at any time.
-
-Best regards,  
-The LocumSmart Team  
-
----
-
-**LocumSmart Ltd**  
-Providing 8000+ Locums & Permanent Staff across the UK  
-
-General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting  
-
-**Email**: info@locum-smart.co.uk  
-**Phone**: +44 7534749465  
-"""
-
-        # Send email
-        send_registration_email(subject, contact_message, from_email, to_email)
-        
-        messages.success(request, f"{user_type} Registeration Request Submitted!")
-        return redirect('login')
+        return registration_submitted(request)
 
 
 class NursesRegisterView(View):
@@ -1085,7 +830,7 @@ class NursesRegisterView(View):
     def post(self, request):
         # Extract form data from POST request
         title = request.POST.get('title')
-        password = 'password'
+        password = None  # no usable password until the locum sets one from the approval email
         firstname = request.POST.get('firstname')
         lastname = request.POST.get('lastname')
         gender = request.POST.get('gender')
@@ -1185,66 +930,10 @@ class NursesRegisterView(View):
             if field_name in files_data:
                 setattr(locum, field_name, files_data[field_name])
         locum.save()
-        subject = "LocumSmart Ltd: Nurse/ANPNurse Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [settings.EMAIL_HOST_USER]
-        contact_message = f"""
-Dear Mustafa Amin,
 
-The following Information is recieved from the Registration Request
+        send_registration_emails(firstname, lastname, email, telephone, user_type)
 
-Name: {firstname} {lastname}
-Email: {email}
-Phone: {telephone}
-User Type: {user_type}
-
-You can accept the locum requests from your admin portal.
-https://locumsmart.co.uk/appAdmin/locumRequests/
-
-Regards,
-"""
-
-        # Send Admin email
-        send_registration_email(subject, contact_message, from_email, to_email)
-        
-        # Format email content to send to Locum (to be)
-        subject = f"LocumSmart Ltd: {user_type} Registeration Request Submitted"
-        from_email = settings.EMAIL_HOST_USER  # Use the user's email as the sender
-        to_email = [email]
-        contact_message = f"""
-Dear {firstname} {lastname},
-
-Thank you for submitting your registration request on LocumSmart. We have successfully received your details and are currently reviewing your application.
-
-Here is a summary of the information provided:
-- **Name**: {firstname} {lastname}
-- **Email**: {email}
-- **Phone**: {telephone}
-- **User Type**: {user_type}
-
-Our team will review your application promptly, and you will be notified once a decision has been made regarding the approval of your request.
-
-If you have any questions or require further assistance, please feel free to contact us at any time.
-
-Best regards,  
-The LocumSmart Team  
-
----
-
-**LocumSmart Ltd**  
-Providing 8000+ Locums & Permanent Staff across the UK  
-
-General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting  
-
-**Email**: info@locum-smart.co.uk  
-**Phone**: +44 7534749465  
-"""
-
-        # Send email
-        send_registration_email(subject, contact_message, from_email, to_email)
-        
-        messages.success(request, f"{user_type} Registeration Request Submitted!")
-        return redirect('login')
+        return registration_submitted(request)
 
 
 class LocumProfile(View):

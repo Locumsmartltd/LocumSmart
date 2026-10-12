@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% block preheader %}Your LocumSmart account is approved. Set your password to get started.{% endblock %}
+{% block heading %}Welcome to LocumSmart, {{ locum.firstname }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ locum.firstname }} {{ locum.lastname }},</p>
+<p style="margin:0 0 14px;">Your registration has been <strong>approved</strong>. You can now sign in to the LocumSmart website and apply for available shifts.</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 4px;"><strong>Step 1: set your password</strong></p>
+{% include "emails/_button.html" with url=password_url label="Set your password" %}
+<p style="margin:0 0 14px; font-size:13px; color:#5A6472;">This link works once and expires after 3 days. If it has expired, use "Forgot password?" on the login page to get a new one.</p>
+<p style="margin:0 0 6px;"><strong>Next steps</strong></p>
+<ol style="margin:0 0 18px; padding-left:20px;">
+  <li style="margin-bottom:6px;"><a href="{{ site_url }}/login/" style="color:#0F6B66; font-weight:bold;">Log in</a> with your email and your locum type.</li>
+  <li style="margin-bottom:6px;"><a href="{{ site_url }}/locumjobs/" style="color:#0F6B66; font-weight:bold;">Browse and apply</a> for available shifts.</li>
+  <li style="margin-bottom:6px;">Add your availability to the calendar in your profile.</li>
+  <li>Generate your invoices from the website after each shift.</li>
+</ol>
+{% endblock %}

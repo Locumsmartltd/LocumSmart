@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{% block preheader %}You have been selected for a job. Apply now.{% endblock %}
+{% block heading %}Job Opportunity{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ locum.firstname }},</p>
+<p style="margin:0 0 4px;">You have been selected for a job. {{ job_dates_message }}</p>
+{% include "emails/_button.html" with url=job_url label="View and apply" %}
+<p style="margin:0 0 18px; font-size:13px; color:#5A6472;">You will be asked to log in before you can apply.</p>
+{% endblock %}

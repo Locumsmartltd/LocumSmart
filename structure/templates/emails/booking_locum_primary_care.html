@@ -1,0 +1,20 @@
+{% extends "emails/base.html" %}
+{% block preheader %}Your booking is confirmed. Please read through and confirm.{% endblock %}
+{% block heading %}Booking Confirmation{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ job.locum.firstname }},</p>
+<p style="margin:0 0 14px;">Please read through and "confirm" once you have received this email.</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 18px;">Please Make sure you arrive 10 min Prior to your timings just to settle down.</p>
+<p style="margin:0 0 8px;"><strong>Payment</strong></p>
+<p style="margin:0 0 14px;">Please note our normal Invoice Payment schedule is two to four weeks depending upon payments from the surgery itself.</p>
+<p style="margin:0 0 18px;">Please also note Locum should not discuss hourly Rates with any staff member at the surgery/practice and if offered any future bookings directly by the Surgery/Practice, LocumSmart Ltd must be informed immediately either via email or via text/Whatsapp messages to our coordinators. Any discussions related to payments should only be made with LocumSmart Ltd only.</p>
+<p style="margin:0 0 8px;"><strong>Terms of Engagement</strong></p>
+<p style="margin:0 0 6px; font-size:13px; font-weight:bold; color:#5A6472;">COMPLIANCE DOCUMENTS</p>
+<p style="margin:0 0 14px;">The Locum Doctors/Physician Associates/Practice Nurses will make a copy of all Compliance Documents available to the Practice and LocumSmart Ltd upon request and notify LocumSmart Ltd of any changes to any Compliance Documents.</p>
+<p style="margin:0 0 14px;">LocumSmart Ltd will request periodic checks on the Compliance Documents of the Locum Doctor/Physician Associate/Practice nurse every 12 months.</p>
+<p style="margin:0 0 14px;">Prior to the commencement of an Assignment, the Practice will confirm the accuracy of any information provided by the Locum to the Practice, including any Compliance Documents.</p>
+<p style="margin:0 0 18px;">If LocumSmart Ltd or the Practice becomes aware that any Locum Doctor/Physician Associate/Practice nurse no longer meets the minimum criteria or that Compliance Documents are outdated, that Party shall notify the other Party immediately.</p>
+<p style="margin:0 0 8px;"><strong>Cancellations</strong></p>
+<p style="margin:0 0 18px;">Once Assignment/Booking confirmation is sent to the Locum any cancellation within 72hrs of the booking confirmation Surgery may claim loss of earnings unless an emergency that can be verified. Also, any cancellation merely because Locum received a better offer elsewhere would not be considered professional and against business ethics and Surgery/Practice may consider filing a complaint with the registration body.</p>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% comment %}Label/value rows. Usage: {% include "emails/_details.html" with rows=details %} where rows is a list of (label, value).{% endcomment %}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0 20px; border:1px solid #E4EAEE; border-radius:8px;">
+  {% for label, value in rows %}
+  <tr>
+    <td width="40%" valign="top" style="padding:10px 14px; font-size:14px; font-weight:bold; color:#5A6472; background-color:#F7FAFB; border-bottom:1px solid #E4EAEE;">{{ label }}</td>
+    <td valign="top" style="padding:10px 14px; font-size:14px; color:#2A2F36; border-bottom:1px solid #E4EAEE;">{{ value|default:"N/A" }}</td>
+  </tr>
+  {% endfor %}
+</table>

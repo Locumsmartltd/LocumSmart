@@ -1,0 +1,14 @@
+{% extends "emails/base.html" %}
+{% block preheader %}Your booking at {{ job.pharmacy_name }} is confirmed.{% endblock %}
+{% block heading %}Booking Confirmation{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ job.locum.firstname }},</p>
+<p style="margin:0 0 14px;">Your booking at <strong>{{ job.pharmacy_name }}</strong> is confirmed. The details are below.</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 8px;"><strong>Terms</strong></p>
+<p style="margin:0 0 14px;">Please note any cancellation within 72Hrs prior to the booking {{ job.pharmacy_name }} may claim loss of earnings if not covered. Any cancellation just because Locum receives a better offer elsewhere would not be appreciated as once you confirm booking, we take the shift off from the list and ignore any other Locums interested in the same shift.</p>
+<p style="margin:0 0 14px;">As you are now registered with LocumSmart Ltd and booked with one of our clients, it is strongly advised if you are offered any further bookings from the Pharmacy directly you must inform our Coordinator and not book directly as per the terms agreed via the online website form.</p>
+<p style="margin:0 0 14px;">Please note (Sundays and Bank Holidays i.e., Christmas eve, New Year's eve, New Year's Day, and Christmas Day) will not be considered in the notice period. The 72 hrs. The period will be from Monday-Friday 9 am-5 pm and Saturday 9 am-3 pm the notice must be via email. For any further details, you can refer back to the Terms of Engagement agreed upon while registering with LocumSmart Ltd or you can request for us to send the hard copy.</p>
+<p style="margin:0 0 14px;">As of recent complaints and experience, unfortunately, we had to add the following to our booking confirmation email.</p>
+<p style="margin:0 0 18px;">We humbly request to our Locums that as Responsible Pharmacists we expect our Locums while on-premises to make sure they spent their time wisely making sure they complete all tasks that a Pharmacist is expected to do in a Pharmacy considering they are being paid for every hour they spend on premises.</p>
+{% endblock %}

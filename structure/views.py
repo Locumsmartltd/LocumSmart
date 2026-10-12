@@ -23,8 +23,10 @@ from django.utils.decorators import method_decorator
 from datetime import date, timedelta
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from structure.passwords import password_problems, SITE_URL
+from structure.emails import send_branded_email
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -155,10 +157,18 @@ class LoginpageView(LoginView):
 
         else:
             # Invalid locum_role provided
-            messages.error(request, 'Invalid user.')
+            messages.error(request, 'Invalid user.', extra_tags='modal')
             return redirect('login')
 
         if user is not None:
+            # Locum accounts cannot be used until an admin has approved them
+            if isinstance(user, Locum) and not user.is_accepted:
+                messages.error(request, 'Your registration is still awaiting approval. We will get in touch once it is approved.', extra_tags='modal')
+                return redirect('login')
+            # Approved, but no password chosen yet (accounts are created without one)
+            if not user.has_usable_password():
+                messages.error(request, 'Please set your password first, using the link in your approval email or "Forgot password?" below.', extra_tags='modal')
+                return redirect('login')
             # User authenticated successfully, log the user in
             if user.check_password(password):
 
@@ -174,11 +184,11 @@ class LoginpageView(LoginView):
                 # locum case is yet to be handled .Redirect to the home page or dashboard
                 return redirect('locumProfile')
             else:
-                messages.error(request, 'Wrong Password.')
+                messages.error(request, 'The password you entered is incorrect. Check it and try again, or use "Forgot password?" to set a new one.', extra_tags='modal')
                 return redirect('login')
         else:
             # Authentication failed
-            messages.error(request, 'Invalid email or type. Please try again.')
+            messages.error(request, 'Invalid email or type. Please try again.', extra_tags='modal')
             return redirect('login')
 
 
@@ -261,6 +271,13 @@ class LocumJobs(View):
                 print(nearby_cities)
                 # Filter jobs based on nearby cities
             jobs = [job for job in jobs if job.county.lower() in nearby_cities]
+
+        # Shown once, to someone who has just registered (set by the registration views)
+        if request.session.pop('awaiting_approval', False):
+            messages.success(
+                request,
+                'Registration received. We have received your request. Once approved, we will get in touch.',
+                extra_tags='sticky')
 
         context = {'jobs': jobs, 'cities': cities}
         return render(request, self.template_name, context)
@@ -347,112 +364,42 @@ class JobDetailsView(View):
             # Handle masking of post code (only first 3 digits visible)
             def mask_post_code(post_code):
                 return post_code[:3] + '****' if len(post_code) > 3 else post_code
-            
-            # Check if discrete dates exist and prepare the dates display
+
             if job.discrete_dates:
-                discrete_dates = json.loads(job.discrete_dates)
-                date_info = f"<strong>Selected Dates:</strong> " + ', '.join(
-                    [datetime.strptime(date, '%Y-%m-%d').strftime('%d %B %Y') for date in discrete_dates])
+                date_rows = [('Selected Dates', ', '.join(
+                    datetime.strptime(date, '%Y-%m-%d').strftime('%d %B %Y')
+                    for date in json.loads(job.discrete_dates)))]
             else:
-                date_info = f"<strong>Start Date:</strong> {job.start_date.strftime('%d %B %Y')}<br>" \
-                            f"<strong>End Date:</strong> {job.end_date.strftime('%d %B %Y')}"
-            
-            # Prepare the message with masked post code for non-admins
-            message = f"""
-            Dear {locum.first_name} {locum.last_name},<br/>
-            
-            Thank You for your interest in the following Position. We have received your request and someone from our team will be in touch with you.<br><br>
-            {f'<strong>Additional Information:</strong> {additional_info}<br><br>' if additional_info else ''}
-            
-            <strong>Locum Details:</strong><br>
-            - Name: {locum.first_name} {locum.last_name}<br>
-            - Email: {locum.email}<br>
-            - Locum Type: {locum.user_type}<br><br>
-            
-            <strong>Job Details:</strong><br>
-            - City/County: {job.county}<br>
-            - Post Code: {mask_post_code(job.post_code)}<br>
-            - Locum Rate: £{job.locum_rate}/hr<br>
-            - Expenses Offered: £{job.expenses_offered}<br>
-            {date_info}<br><br>
-            
-            Please review the application at your earliest convenience. 
-            <p>Best regards,<br>
-            Mustafa Amin<br>
-            LocumSmart Ltd<br>
-            Providing 8000+ Locums & Permanent Staff across the UK<br> 
-            General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting<br>
-            Email: info@locum-smart.co.uk<br>
-            Phone: +44 7534749465</p>
-            """
-            
-            # Prepare the message with post code for employer
-            message2 = f"""
-            Dear { job.employer.first_name} {job.employer.last_name},<br/>
+                date_rows = [('Start Date', job.start_date.strftime('%d %B %Y')),
+                             ('End Date', job.end_date.strftime('%d %B %Y'))]
+            offer_rows = [('Locum Rate', f'£{job.locum_rate}/hr'),
+                          ('Expenses Offered', f'£{job.expenses_offered}')] + date_rows
+            context = {
+                'job': job,
+                'locum': locum,
+                'additional_info': additional_info,
+                'locum_details': [('Name', f'{locum.first_name} {locum.last_name}'),
+                                  ('Email', locum.email), ('Locum Type', locum.user_type)],
+            }
 
-            We have received the following request from locum.<br><br>
-            {f'<strong>Additional Information from Locum:</strong> {additional_info}<br><br>' if additional_info else ''}
-            
-            <strong>Locum Details:</strong><br>
-            - Name: {locum.first_name} {locum.last_name}<br>
-            - Email: {locum.email}<br>
-            - Locum Type: {locum.user_type}<br><br>
-            
-            <strong>Job Details:</strong><br>
-            - City/County: {job.county}<br>
-            - Post Code: {mask_post_code(job.post_code)}<br>
-            - Locum Rate: £{job.locum_rate}/hr<br>
-            - Expenses Offered: £{job.expenses_offered}<br>
-            {date_info}<br><br>
-            
-            
-            <p>Best regards,<br>
-            Mustafa Amin<br>
-            LocumSmart Ltd<br>
-            Providing 8000+ Locums & Permanent Staff across the UK<br> 
-            General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting<br>
-            Email: info@locum-smart.co.uk<br>
-            Phone: +44 7534749465</p>
-            """
-            
-            # Convert message to plain text
-            # plain_message = strip_tags(message)
-            
-            # Send email to employer and locum
-            sender_email = settings.EMAIL_HOST_USER
-            recipient_list1 = [locum.email]
-            recipient_list2 = [employer_email]
-            
-            send_mail(subject, strip_tags(message), sender_email, recipient_list1, html_message=message)
-            # send_mail(subject, strip_tags(message2), sender_email, recipient_list2, html_message=message2)
+            # Confirmation to the locum, with the post code masked
+            send_branded_email('job_application_locum', subject, [locum.email], {
+                **context,
+                'jobs_url': SITE_URL + reverse('locumjobs'),
+                'details': [('City/County', job.county),
+                            ('Post Code', mask_post_code(job.post_code))] + offer_rows,
+            })
 
-            # Send the same message to admin with full unmasked post code
-            admin_message = f"""
-            Dear Mustafa Amin,<br><br>
-            {f'<strong>Additional Information from Locum:</strong> {additional_info}<br><br>' if additional_info else ''}
+            # The employer alert (emails/job_application_employer.html) is not sent yet:
+            # awaiting the client's decision on emailing employers when a locum applies.
 
-            <strong>Locum Details:</strong><br>
-            - Name: {locum.first_name} {locum.last_name}<br>
-            - Email: {locum.email}<br>
-            - Locum Type: {locum.user_type}<br><br>
-            
-            <strong>Job Details:</strong><br>
-            - Pharmacy Name: {job.pharmacy_name}<br>
-            - Company Name: {job.company_name}<br>
-            - City/County: {job.county}<br>
-            - Post Code: {job.post_code}<br>
-            - Locum Rate: £{job.locum_rate}/hr<br>
-            - Expenses Offered: £{job.expenses_offered}<br>
-            {date_info}<br><br>
-            
-            Best regards,
-            """
-            
-            # Convert admin message to plain text
-            # admin_plain_message = strip_tags(admin_message)
-            
-            # Send email to admin
-            send_mail(subject, strip_tags(admin_message), sender_email, [sender_email], html_message=admin_message)
+            # Admin copy, with the full post code
+            send_branded_email('job_application_admin', subject, [settings.EMAIL_HOST_USER], {
+                **context,
+                'applications_url': SITE_URL + reverse('job_applications'),
+                'details': [('Pharmacy Name', job.pharmacy_name), ('Company Name', job.company_name),
+                            ('City/County', job.county), ('Post Code', job.post_code)] + offer_rows,
+            })
 
             # Optionally, you can add further logic based on the application
 
@@ -562,65 +509,52 @@ def handler403(request, exception=None):
 
 
 class ForgotPasswordView(View):
+    # Set or reset a password. Reached only through an emailed link whose token
+    # identifies the account (see structure.passwords.password_setup_url).
     template_name = 'forgot_password.html'
 
+    def get_user(self, uidb64, token):
+        try:
+            user = CustomUser.objects.get(pk=force_str(urlsafe_base64_decode(uidb64)))
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return None
+        return user if default_token_generator.check_token(user, token) else None
+
+    def invalid_link(self, request):
+        messages.error(request, 'This password link is invalid or has expired. Enter your email to receive a new one.')
+        return redirect('fpEmail')
+
     def get(self, request, uidb64, token):
+        if self.get_user(uidb64, token) is None:
+            return self.invalid_link(request)
         return render(request, self.template_name)
 
     def post(self, request, uidb64, token):
-        # Extract form data from POST request
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        locum_role = request.POST.get('type')
+        user = self.get_user(uidb64, token)
+        if user is None:
+            return self.invalid_link(request)
 
-        if locum_role in ['Pharmacist', 'Dispenser', 'Technician', 'Nurse', 'ANPNurse', 'GP']:
-            # Check Locum table for the specified role
-            user = Locum.objects.filter(
-                email=email, user_type=locum_role).first()
-            if user:
-                user.password = make_password(password)
-                user.save()
-                messages.success(request, 'Password Updated.')
-                return redirect('login')
-            else:
-                messages.error(request, 'Invalid user.')
-                return redirect('forgot_password')
+        password = request.POST.get('password', '')
+        problems = password_problems(password)
+        if not problems and password != request.POST.get('confirm-password'):
+            problems = ['Both password fields must match']
+        if problems:
+            return render(request, self.template_name, {'password_problems': problems})
 
-        elif locum_role in ['Admin', 'Staff']:
-            # Check AppAdmin table for Admin or Staff role
-            user = Admin.objects.filter(email=email).first()
-            if user:
-                user.password = make_password(password)
-                user.save()
-                messages.success(request, 'Password Updated.')
-                return redirect('login')
-            else:
-                messages.error(request, 'Invalid user.')
-                return redirect('forgot_password')
-        else:
-            # Invalid locum_role provided
-            messages.error(request, 'Invalid user.')
-            return redirect('forgot_password')
-        
-        
+        user.set_password(password)
+        user.save(update_fields=['password'])
+        messages.success(request, 'Password updated. You can now log in.')
+        return redirect('login')
+
+
 class SetPasswordView(View):
-    template_name = 'set_password.html'
-
+    # Old emails linked to /setPassword/<locum id>/, which let anyone set that
+    # locum's password. Those links now only lead to requesting a fresh, secure one.
     def get(self, request, token):
-        return render(request, self.template_name)
+        messages.error(request, 'This password link is no longer valid. Enter your email to receive a new one.')
+        return redirect('fpEmail')
 
-    def post(self, request, token):
-        # Extract form data from POST request
-        password = request.POST.get('password')
-
-        user = Locum.objects.filter(id=token).first()
-        if user:
-            user.password = make_password(password)
-            user.save()
-            return redirect('login')
-        else:
-            messages.error(request, 'Invalid user.')
-            return redirect('forgot_password')
+    post = get
 
 
 class FPEmailView(View):
@@ -653,28 +587,9 @@ class FPEmailView(View):
             reset_password_url = reverse('forgot_password', kwargs={
                                          'uidb64': uid, 'token': token})
 
-            # Get the current domain
-            current_site = get_current_site(request)
-            domain = current_site.domain
-
-            # Construct the complete reset password URL
-            full_reset_password_url = request.build_absolute_uri(
-                reset_password_url)
-
-            # Render email template
-            email_subject = 'Password Reset'
-            email_template = 'password_reset_email.html'
-            context = {'reset_password_url': full_reset_password_url}
-            email_html_message = render_to_string(email_template, context)
-            email_plaintext_message = strip_tags(email_html_message)
-
             # Send email with the reset password link
-            sender_email = settings.EMAIL_HOST_USER
-            recipient_list = [user.email]
-            email = EmailMultiAlternatives(
-                email_subject, email_plaintext_message, sender_email, recipient_list)
-            email.attach_alternative(email_html_message, "text/html")
-            email.send()
+            send_branded_email('password_reset', 'Password Reset', [user.email],
+                               {'reset_password_url': request.build_absolute_uri(reset_password_url)})
 
             # Redirect to a page confirming that the reset link has been sent
             messages.success(request, 'Check your Email to reset.')

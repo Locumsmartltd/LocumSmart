@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+{% block preheader %}We have received your job application.{% endblock %}
+{% block heading %}Application Received{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ locum.first_name }} {{ locum.last_name }},</p>
+<p style="margin:0 0 14px;">Thank you for your interest in the following position. We have received your request and someone from our team will be in touch with you.</p>
+{% if additional_info %}<p style="margin:0 0 14px;"><strong>Additional information you provided:</strong> {{ additional_info }}</p>{% endif %}
+<p style="margin:0 0 4px;"><strong>Job details</strong></p>
+{% include "emails/_details.html" with rows=details %}
+{% include "emails/_button.html" with url=jobs_url label="Browse more jobs" %}
+{% endblock %}

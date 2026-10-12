@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+{% block preheader %}New {{ user_type }} registration request from {{ firstname }} {{ lastname }}.{% endblock %}
+{% block heading %}New Registration Request{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear Mustafa Amin,</p>
+<p style="margin:0 0 4px;">The following information has been received from a registration request:</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 4px;">You can accept the request from your admin portal.</p>
+{% include "emails/_button.html" with url=requests_url label="Review locum requests" %}
+{% endblock %}

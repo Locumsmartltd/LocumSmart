@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{% block preheader %}New employer request from {{ job.pharmacy_name }}.{% endblock %}
+{% block heading %}New Employer Request{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear Mustafa Amin,</p>
+<p style="margin:0 0 4px;">You have received the following Employer Request details:</p>
+{% include "emails/_details.html" with rows=details %}
+{% include "emails/_button.html" with url=requests_url label="Review employer requests" %}
+{% endblock %}

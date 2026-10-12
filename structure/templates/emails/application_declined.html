@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+{% block preheader %}An update on your application for {{ job.pharmacy_name }}.{% endblock %}
+{% block heading %}Job Application Declined{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear {{ locum.firstname }},</p>
+<p style="margin:0 0 14px;">We regret to inform you that your application for the locum position at <strong>{{ job.pharmacy_name }}</strong> has been declined.</p>
+{% include "emails/_details.html" with rows=details %}
+<p style="margin:0 0 4px;">We appreciate your interest in this role, and we encourage you to explore other opportunities available on our platform.</p>
+{% include "emails/_button.html" with url=jobs_url label="Browse other jobs" %}
+<p style="margin:0 0 18px;">If you have any questions, please do not hesitate to contact us.</p>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "emails/base.html" %}
+{% block preheader %}{{ locum.first_name }} {{ locum.last_name }} applied for {{ job.pharmacy_name }}.{% endblock %}
+{% block heading %}New Job Application{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;">Dear Mustafa Amin,</p>
+<p style="margin:0 0 14px;">A locum has applied for a job.</p>
+{% if additional_info %}<p style="margin:0 0 14px;"><strong>Additional information from the locum:</strong> {{ additional_info }}</p>{% endif %}
+<p style="margin:0 0 4px;"><strong>Locum details</strong></p>
+{% include "emails/_details.html" with rows=locum_details %}
+<p style="margin:0 0 4px;"><strong>Job details</strong></p>
+{% include "emails/_details.html" with rows=details %}
+{% include "emails/_button.html" with url=applications_url label="Review job applications" %}
+{% endblock %}

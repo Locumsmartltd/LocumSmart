@@ -12,6 +12,8 @@ from django.core.mail import send_mail, EmailMessage
 from appAdmin.models import *
 from structure.models import Testimonial
 from structure.decorators import admin_required
+from structure.passwords import SITE_URL
+from structure.emails import send_branded_email, send_approval_email
 from django.conf import settings
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -406,47 +408,9 @@ class AcceptLocum(View):
             locum.is_accepted = True
             locum.save()
 
-            # Prepare email content
-            subject = "LocumSmart Ltd: Your LocumSmart Account Has Been Approved"
-            html_message = f"""
-            <p>Dear {locum.firstname} {locum.lastname},</p>
-
-            <p>Your account has been approved on the LocumSmart website [www.locumsmart.co.uk].</p>
-
-            <p>For your reference, your login details are shared below:</p>
-            <ul>
-                <li>Email: {locum.Email}</li>
-                <li>Locum Type: {locum.user_type}</li>
-                <li>Please Set your new Password using the 
-                    <a href="https://locumsmart.co.uk/setPassword/{locum.id}/">Password Set Link</a>
-                </li>
-            </ul>
-
-            <p>We now have our website made for locums to sign in and apply for the available shifts. 
-            Locums can also add their availability in the calendar once logged in and can generate invoice format via our website.</p>
-
-            <p>Best regards,<br>
-            Mustafa Amin<br>
-            LocumSmart Ltd</p>
-
-            <p>Providing 8000+ Locums & Permanent Staff across the UK</p>
-
-            <p>General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians and Dispensers | Hospitals, and Pharma | Staffing & Recruiting</p>
-
-            <p>Email: info@locum-smart.co.uk<br>
-            Phone: +44 7534749465</p>
-            """
-
-            # Send email
+            # Send the approval / welcome email
             try:
-                email = EmailMultiAlternatives(
-                    subject=subject,
-                    body="Your account has been approved on LocumSmart.",  # Fallback plain text
-                    from_email=settings.EMAIL_HOST_USER,
-                    to=[locum.Email],
-                )
-                email.attach_alternative(html_message, "text/html")
-                email.send()
+                send_approval_email(locum)
                 approved_emails.append(locum.Email)
             except Exception as e:
                 failed_emails.append((locum.Email, str(e)))
@@ -706,148 +670,50 @@ def approveappliedjob(request, applied_job_id):
     job.save()
 
     if job.discrete_dates:
-        discrete_dates = json.loads(job.discrete_dates)
-        date_info = f"<strong>Discrete Dates:</strong> " + ', '.join(
-            [datetime.strptime(date, '%Y-%m-%d').strftime('%d-%m-%Y') for date in discrete_dates]) + "<br><br>"
+        date_rows = [('Discrete Dates', ', '.join(
+            datetime.strptime(date, '%Y-%m-%d').strftime('%d-%m-%Y')
+            for date in json.loads(job.discrete_dates)))]
     else:
-        date_info = f"<strong>Start Date:</strong> {job.start_date.strftime('%d-%m-%Y')}<br>" \
-                    f"<strong>End Date:</strong> {job.end_date.strftime('%d-%m-%Y')}<br><br>"
+        date_rows = [('Start Date', job.start_date.strftime('%d-%m-%Y')),
+                     ('End Date', job.end_date.strftime('%d-%m-%Y'))]
 
-
-    # First email to the employer
-    employer_email = job.employer.email
-    admin_email = settings.EMAIL_HOST_USER
-    recipient_list = [employer_email, admin_email]
-    
-    # Format the subject and message (normalize dash to ASCII hyphen for wider compatibility)
+    locum = job.locum
+    locum_name = f'{locum.firstname} {locum.lastname}'
+    booking_rows = [('Rate', f'£{job.locum_rate}/hr')] + date_rows + [
+        ('Time Required per day', f'{job.times_required} hrs'),
+        ('Address', job.county),
+        ('Post Code', job.post_code),
+        ('Additional Information', job.any_other_information),
+    ]
+    pharmacy_details = [('Locum Type', locum.user_type), ('Name', locum_name)]
+    if locum.user_type.lower() == 'pharmacist':
+        pharmacy_details.append(('GPhC', locum.gphc_number))
+    pharmacy_details += booking_rows
     subject = f"LocumSmart Ltd: Booking Confirmation - {datetime.now().strftime('%B')} - {job.pharmacy_name}"
-    message_html = f"""
-    <strong>Booking Confirmation</strong><br><br>
 
-    <strong>Locum Type:</strong> {job.locum.user_type}<br>
-    <strong>Name:</strong> {job.locum.firstname} {job.locum.lastname}<br>
-    <strong>Gphc:</strong> {'N/A' if job.locum.user_type.lower() != 'pharmacist' else job.locum.gphc_number or 'N/A'}<br><br>
-    <strong>Rate:</strong> £{job.locum_rate}/hr<br>
-    {date_info}
-    <strong>Time Required per day:</strong> {job.times_required} hrs<br>
-    <strong>Address:</strong> {job.county}<br><br>
-    <strong>Post Code:</strong> {job.post_code}<br><br>
-    <strong>Additional Information:</strong> {job.any_other_information}<br><br>
+    # Employer (copied to admin): the booking and the employer's cancellation terms
+    send_branded_email('booking_employer', subject, [job.employer.email, settings.EMAIL_HOST_USER],
+                       {'job': job, 'details': pharmacy_details})
 
-    <strong>Terms:</strong><br>
-    *Please note any cancellation within 72Hrs prior to the booking {job.pharmacy_name} may claim loss of earnings if not covered.<br>
-    Any cancellation just because Locum receives a better offer elsewhere would not be appreciated as once you confirm booking, we take the shift off from the list and ignore any other Locums interested in the same shift.<br><br>
-
-    As you are now registered with LocumSmart Ltd and booked with one of our clients, it is strongly advised if you are offered any further bookings from the Pharmacy directly you must inform our Coordinator and not book directly as per the terms agreed via the online website form.<br><br>
-
-    Please note (Sundays and Bank Holidays i.e., Christmas eve, New Year's eve, New Year's Day, and Christmas Day) will not be considered in the notice period. The 72 hrs. The period will be from Monday-Friday 9 am-5 pm and Saturday 9 am-3 pm the notice must be via email.  For any further details, you can refer back to the Terms of Engagement agreed upon while registering with LocumSmart Ltd or you can request for us to send the hard copy.<br><br>
-
-    As of recent complaints and experience, unfortunately, we had to add the following to our booking confirmation email.<br><br>
-
-    We humbly request to our Locums that as Responsible Pharmacists we expect our Locums while on-premises to make sure they spent their time wisely making sure they complete all tasks that a Pharmacist is expected to do in a Pharmacy considering they are being paid for every hour they spend on premises.*<br><br>
-
-    Regards,<br>
-    Mustafa Amin<br>
-    LocumSmart Ltd<br>
-    Providing 8000+ Locums & Permanent Staff across the UK<br>
-    | General Practitioners | Doctors l Physician Associates | Pharmacists | Technicians and Dispensers| Hospitals, and Pharma | Staffing & Recruiting |<br><br>
-
-    info@locum-smart.co.uk | +44 7534749465
-    """
-
-    # Send using EmailMultiAlternatives with explicit UTF-8 and HTML alternative
-    email_msg = EmailMultiAlternatives(
-        subject=subject,
-        body=strip_tags(message_html),
-        from_email=admin_email,
-        to=recipient_list,
-    )
-    email_msg.extra_headers = {"Content-Type": "text/plain; charset=utf-8"}
-    email_msg.attach_alternative(message_html, "text/html; charset=utf-8")
-    email_msg.encoding = "utf-8"
-    email_msg.send()
-
-    # Second email to the locum based on user_type
-    locum_email = applied_job.locum.email
-    recipient_list = [locum_email]
-
-    if job.locum.user_type.lower() in ['pharmacist', 'dispenser']:
-        # Email for Pharmacists and Dispensers
-        subject = f"LocumSmart Ltd: Booking Confirmation - {datetime.now().strftime('%B')} - {job.pharmacy_name}"
-        message_html = f"""
-        <strong>Booking Confirmation</strong><br><br>
-
-        <strong>Locum Type:</strong> {job.locum.user_type}<br>
-        <strong>Name:</strong> {job.locum.firstname} {job.locum.lastname}<br>
-        <strong>Gphc:</strong> {job.locum.gphc_number or 'N/A'}<br><br>
-        <strong>Rate:</strong> £{job.locum_rate}/hr<br>
-        {date_info}
-        <strong>Time Required per day:</strong> {job.times_required} hrs<br>
-        <strong>Address:</strong> {job.county}<br><br>
-        <strong>Post Code:</strong> {job.post_code}<br><br>
-        <strong>Additional Information:</strong> {job.any_other_information}<br><br>
-
-        <strong>*Please note any cancellation within 72Hrs prior to the booking {job.locum.user_type} may claim loss of earnings and our fees will still be payable.*</strong><br><br>
-
-        Regards,<br>
-        Mustafa Amin<br>
-        LocumSmart Ltd<br>
-        Providing 8000+ Locums & Permanent Staff across the UK<br>
-        | General Practitioners | Doctors l Physician Associates | Pharmacists | Technicians and Dispensers| Hospitals, and Pharma | Staffing & Recruiting |<br><br>
-
-        info@locum-smart.co.uk | +44 7534749465
-        """
+    # Locum: the booking and the locum's own terms, by type of work
+    if locum.user_type.lower() in ['pharmacist', 'technician', 'dispenser']:
+        send_branded_email('booking_locum_pharmacy', subject, [applied_job.locum.email],
+                           {'job': job, 'details': pharmacy_details})
     else:
-        # Email for other locum types
-        subject = "Booking Confirmation"
-        message_html = f"""
-        <strong>Dear {job.locum.firstname},</strong><br><br>
-
-        Please read through and "confirm" once you have received this email.<br><br>
-
-        <strong>Booking Confirmation</strong><br><br>
-
-        <strong>Name:</strong> {job.locum.firstname} {job.locum.lastname}<br>
-        <strong>Role:</strong> {job.locum.user_type}<br>
-        <strong>NMC pin:</strong> {job.locum.nmc_number or 'N/A'}<br>
-        <strong>Date:</strong> {job.start_date.strftime('%d-%m-%Y')}<br>
-        <strong>Rate:</strong> £{job.locum_rate}/hr<br>
-        <strong>Timings/Session:</strong> {job.times_required} hours per day<br>
-        <strong>Address:</strong> {job.county}<br><br>
-        <strong>Post Code:</strong> {job.post_code}<br><br>
-        <strong>Additional Information:</strong> {job.any_other_information}<br><br>
-        
-        Please Make sure you arrive 10 min Prior to your timings just to settle down.<br><br>
-
-        <strong>*Payment*</strong><br>
-        Please note our normal Invoice Payment schedule is two to four weeks depending upon payments from the surgery itself.<br>
-        Please also note Locum should not discuss hourly Rates with any staff member at the surgery/practice and if offered any future bookings directly by the Surgery/Practice, LocumSmart Ltd must be informed immediately either via email or via text/Whatsapp messages to our coordinators. Any discussions related to payments should only be made with LocumSmart Ltd only.<br><br>
-
-        <strong>*Terms of Engagement*</strong><br><br>
-
-        COMPLIANCE DOCUMENTS<br>
-        The Locum Doctors/Physician Associates/Practice Nurses will make a copy of all Compliance Documents available to the Practice and LocumSmart Ltd upon request and notify LocumSmart Ltd of any changes to any Compliance Documents.<br><br>
- 
-        LocumSmart Ltd will request periodic checks on the Compliance Documents of the Locum Doctor/Physician Associate/Practice nurse every 12 months.<br><br>
-
-        Prior to the commencement of an Assignment, the Practice will confirm the accuracy of any information provided by the Locum to the Practice, including any Compliance Documents.<br><br>
-        If LocumSmart Ltd or the Practice becomes aware that any Locum Doctor/Physician Associate/Practice nurse no longer meets the minimum criteria or that Compliance Documents are outdated, that Party shall notify the other Party immediately.<br><br>
-
-        <strong>*Cancellations:*</strong><br>
-        Once Assignment/Booking confirmation is sent to the Locum any cancellation within 72hrs of the booking confirmation Surgery may claim loss of earnings unless an emergency that can be verified. Also, any cancellation merely because Locum received a better offer elsewhere would not be considered professional and against business ethics and Surgery/Practice may consider filing a complaint with the registration body.
-        """
-
-    # Send the email to the locum with explicit UTF-8
-    email_msg = EmailMultiAlternatives(
-        subject=subject,
-        body=strip_tags(message_html),
-        from_email=admin_email,
-        to=recipient_list,
-    )
-    email_msg.extra_headers = {"Content-Type": "text/plain; charset=utf-8"}
-    email_msg.attach_alternative(message_html, "text/html; charset=utf-8")
-    email_msg.encoding = "utf-8"
-    email_msg.send()
+        send_branded_email('booking_locum_primary_care', 'Booking Confirmation', [applied_job.locum.email], {
+            'job': job,
+            'details': [
+                ('Name', locum_name),
+                ('Role', locum.user_type),
+                ('NMC pin', locum.nmc_number),
+                ('Date', job.start_date.strftime('%d-%m-%Y')),
+                ('Rate', f'£{job.locum_rate}/hr'),
+                ('Timings/Session', f'{job.times_required} hours per day'),
+                ('Address', job.county),
+                ('Post Code', job.post_code),
+                ('Additional Information', job.any_other_information),
+            ],
+        })
 
     return redirect('job_applications')
 
@@ -858,36 +724,21 @@ def reject_job(request, applied_job_id):
     applied_job.save()
 
     # Send rejection email to the locum
-    locum_email = applied_job.locum.email
-    admin_email = settings.EMAIL_HOST_USER
-    recipient_list = [locum_email]
-
-    subject = f"LocumSmart Ltd: Job Application Declined – {applied_job.job.pharmacy_name}"
-    message_html = f"""
-    <strong>Dear {applied_job.locum.firstname},</strong><br><br>
-
-    We regret to inform you that your application for the locum position at <strong>{applied_job.job.pharmacy_name}</strong> has been declined.<br><br>
-
-    <strong>Job Details:</strong><br>
-    <strong>Role:</strong> {applied_job.locum.user_type}<br>
-    <strong>Rate:</strong> £{applied_job.job.locum_rate}/hr<br>
-    <strong>Location:</strong> {applied_job.job.county}, {applied_job.job.post_code}<br><br>
-
-    We appreciate your interest in this role, and we encourage you to explore other opportunities available on our platform.<br><br>
-
-    If you have any questions, please do not hesitate to contact us.<br><br>
-
-    Regards,<br>
-    Mustafa Amin<br>
-    LocumSmart Ltd<br>
-    Providing 8000+ Locums & Permanent Staff across the UK<br>
-    | General Practitioners | Doctors | Physician Associates | Pharmacists | Technicians | Dispensers | Hospitals & Pharma | Staffing & Recruiting |<br><br>
-
-    info@locum-smart.co.uk | +44 7534749465
-    """
-
-    # Send rejection email
-    send_mail(subject, strip_tags(message_html), admin_email, recipient_list, html_message=message_html)
+    job = applied_job.job
+    send_branded_email(
+        'application_declined',
+        f"LocumSmart Ltd: Job Application Declined – {job.pharmacy_name}",
+        [applied_job.locum.email],
+        {
+            'job': job,
+            'locum': applied_job.locum,
+            'jobs_url': SITE_URL + reverse('locumjobs'),
+            'details': [
+                ('Role', applied_job.locum.user_type),
+                ('Rate', f'£{job.locum_rate}/hr'),
+                ('Location', f'{job.county}, {job.post_code}'),
+            ],
+        })
 
     # Redirect to job applications page
     return redirect('job_applications')
@@ -1422,21 +1273,11 @@ def send_email_to_locums(request, job_id):
         for locum_id in selected_locums:
             locum = Locum.objects.get(id=locum_id)
             if locum.Email not in sent_emails:
-                email_body = (
-                    f'Dear {locum.firstname},\n\n'
-                    f'You have been selected for a job. {job_dates_message}\n'
-                    f'Please apply here: {job_url}\n\n'
-                    f'Thank you,\n'
-                    f'The Team'
-                )
-
-                send_mail(
-                    'LocumSmart Ltd: Job Opportunity',
-                    email_body,
-                    settings.EMAIL_HOST_USER,  # From email
-                    [locum.Email],  # To email
-                    fail_silently=False,
-                )
+                send_branded_email('job_opportunity', 'LocumSmart Ltd: Job Opportunity', [locum.Email], {
+                    'locum': locum,
+                    'job_url': job_url,
+                    'job_dates_message': job_dates_message,
+                })
                 sent_emails.add(locum.Email)  # Add the email to the set after sending
 
         # Redirect to the job details page after sending the emails
