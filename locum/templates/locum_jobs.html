@@ -4,7 +4,7 @@
 {% load static %}
 {% block title %}My Jobs &amp; Invoices{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261015" />
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261017" />
 {% endblock %}
 
 {% block content %}
@@ -14,44 +14,175 @@
             <div>
                 <span class="section-tag">Locum</span>
                 <h1 class="dash-title">My Jobs &amp; Invoices</h1>
-                <p class="dash-sub">Generate an invoice for a job you have worked, then mark it as paid once the pharmacy has paid you.</p>
+                <p class="dash-sub">Track what each job earns after your expenses, generate invoices, and mark them as paid once the pharmacy has paid you.</p>
             </div>
             <div class="dash-head-actions">
                 <a href="{% url 'locumProfile' %}" class="btn btn-secondary">Back to Profile</a>
             </div>
         </div>
 
+        <!-- Financial summary for a chosen date range -->
         <div class="dash-card">
             <div class="dash-card-head">
-                <h2>Approved jobs</h2>
+                <div>
+                    <h2>Financial summary</h2>
+                    <p class="dash-card-note">
+                        {% if date_from or date_to %}
+                        Showing {% if date_from %}from {{ date_from|date:"d M Y" }}{% endif %}
+                        {% if date_to %}to {{ date_to|date:"d M Y" }}{% endif %}.
+                        {% else %}
+                        Showing all dates.
+                        {% endif %}
+                        Earnings count by job start date, expenses by expense date.
+                    </p>
+                </div>
+                <form method="get" action="{% url 'locum_jobs' user.id %}" class="dash-form dash-range">
+                    <div class="dash-field">
+                        <label for="range_from">From</label>
+                        <input type="date" class="dash-input" id="range_from" name="from" value="{{ date_from|date:'Y-m-d' }}">
+                    </div>
+                    <div class="dash-field">
+                        <label for="range_to">To</label>
+                        <input type="date" class="dash-input" id="range_to" name="to" value="{{ date_to|date:'Y-m-d' }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                    {% if date_from or date_to %}
+                    <a href="{% url 'locum_jobs' user.id %}" class="btn btn-secondary">Clear</a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="dash-stats">
+                <div class="dash-stat">
+                    <span>Total earnings</span>
+                    <strong>£{{ ledger.total_earnings }}</strong>
+                </div>
+                <div class="dash-stat">
+                    <span>Total expenses</span>
+                    <strong>£{{ ledger.total_expenses }}</strong>
+                </div>
+                <div class="dash-stat highlight">
+                    <span>Net profit</span>
+                    <strong>{% if ledger.net_profit < 0 %}-£{{ ledger.net_profit|cut:"-" }}{% else %}£{{ ledger.net_profit }}{% endif %}</strong>
+                </div>
+            </div>
+            {% if ledger.unavailable_jobs %}
+            <p class="dash-warning" role="status">
+                Total earnings leaves out {{ ledger.unavailable_jobs|length }} job{{ ledger.unavailable_jobs|length|pluralize }}
+                whose gross could not be calculated:
+                {% for job in ledger.unavailable_jobs %}{{ job.pharmacy_name }} ({{ job.start_date|date:"d M Y" }}){% if not forloop.last %}, {% endif %}{% endfor %}.
+                Ask LocumSmart to correct the hours per day on {{ ledger.unavailable_jobs|length|pluralize:"this job,these jobs" }}.
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <div>
+                    <h2>Approved jobs</h2>
+                    <p class="dash-card-note">Gross = hourly rate × hours per day × days. Net income = gross − your expenses for that job.</p>
+                </div>
             </div>
             <div class="dash-table-wrap">
                 <table class="dash-table">
                     <thead>
                         <tr>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Locum Rate</th>
-                            <th>Hours per Day</th>
-                            <th>Expense Covered</th>
-                            <th>Employer Name</th>
-                            <th>Invoice</th>
+                            <th>Dates</th>
+                            <th>Employer</th>
+                            <th>Rate × Hours × Days</th>
+                            <th>Expenses Offered</th>
+                            <th>Gross</th>
+                            <th>My Expenses</th>
+                            <th>Net Income</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for job in jobs %}
+                        {% for row in ledger.rows %}
                         <tr>
-                            <td data-label="Start Date">{{ job.start_date }}</td>
-                            <td data-label="End Date">{{ job.end_date }}</td>
-                            <td data-label="Locum Rate" class="num">£{{ job.locum_rate }}</td>
-                            <td data-label="Hours per Day" class="num">{{ job.times_required }}</td>
-                            <td data-label="Expense Covered" class="num">£{{ job.expenses_offered }}</td>
-                            <td data-label="Employer Name">{{ job.employer.pharmacy_name }}</td>
-                            <td data-label="Invoice"><a href="{% url 'generate_receipt_form' job.id %}" class="btn btn-primary btn-sm">Generate Invoice</a></td>
+                            <td data-label="Dates" class="num">{{ row.job.start_date|date:"d M Y" }}{% if row.job.end_date != row.job.start_date %} – {{ row.job.end_date|date:"d M Y" }}{% endif %}</td>
+                            <td data-label="Employer">{{ row.job.employer.pharmacy_name }}</td>
+                            <td data-label="Rate × Hours × Days" class="num">£{{ row.job.locum_rate }} × {{ row.job.times_required }} × {{ row.days|default_if_none:"—" }}</td>
+                            <td data-label="Expenses Offered" class="num">£{{ row.job.expenses_offered }}</td>
+                            <td data-label="Gross" class="num">
+                                {% if row.gross is None %}
+                                <span class="status-tag orange" title="{{ row.gross_reason }}">Unavailable</span>
+                                {% else %}£{{ row.gross }}{% endif %}
+                            </td>
+                            <td data-label="My Expenses" class="num">£{{ row.expenses }}</td>
+                            <td data-label="Net Income" class="num">
+                                {% if row.net is None %}<span class="muted" title="{{ row.gross_reason }}">—</span>
+                                {% elif row.net < 0 %}<strong>-£{{ row.net|cut:"-" }}</strong>
+                                {% else %}<strong>£{{ row.net }}</strong>{% endif %}
+                            </td>
+                            <td data-label="Actions">
+                                <div class="dash-actions">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-expense-open
+                                        data-action="{% url 'add_expense' row.job.id %}"
+                                        data-title="Add expense: {{ row.job.employer.pharmacy_name }}"
+                                        data-date="{{ row.job.start_date|date:'Y-m-d' }}">Add Expense</button>
+                                    <a href="{% url 'generate_receipt_form' row.job.id %}" class="btn btn-primary btn-sm">Invoice</a>
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr class="dash-empty">
-                            <td colspan="7">You have no approved jobs yet.</td>
+                            <td colspan="8">{% if date_from or date_to %}No approved jobs start in this date range.{% else %}You have no approved jobs yet.{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <div>
+                    <h2>My expenses</h2>
+                    <p class="dash-card-note">Out-of-pocket costs you have recorded, such as mileage, parking and tolls.</p>
+                </div>
+            </div>
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Job</th>
+                            <th>Type</th>
+                            <th>Note</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in ledger.expenses %}
+                        <tr>
+                            <td data-label="Date">{{ expense.expense_date|date:"d M Y" }}</td>
+                            <td data-label="Job">{{ expense.job.pharmacy_name }} <span class="muted">({{ expense.job.start_date|date:"d M Y" }})</span></td>
+                            <td data-label="Type">{{ expense.get_category_display }}</td>
+                            <td data-label="Note">{{ expense.note|default:"—" }}</td>
+                            <td data-label="Amount" class="num">£{{ expense.amount }}</td>
+                            <td data-label="Actions">
+                                <div class="dash-actions">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-expense-open
+                                        data-action="{% url 'edit_expense' expense.id %}"
+                                        data-title="Edit expense: {{ expense.job.pharmacy_name }}"
+                                        data-category="{{ expense.category }}"
+                                        data-amount="{{ expense.amount }}"
+                                        data-date="{{ expense.expense_date|date:'Y-m-d' }}"
+                                        data-note="{{ expense.note }}">Edit</button>
+                                    <form method="post" action="{% url 'delete_expense' expense.id %}"
+                                        onsubmit="return confirm('Delete this expense?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="from" value="{{ date_from|date:'Y-m-d' }}">
+                                        <input type="hidden" name="to" value="{{ date_to|date:'Y-m-d' }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="dash-empty">
+                            <td colspan="6">{% if date_from or date_to %}No expenses in this date range.{% else %}No expenses recorded yet. Use "Add Expense" on a job above.{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -115,4 +246,70 @@
         </div>
     </div>
 </section>
+
+<!-- Add / edit expense dialog (one form, pointed at the right URL when opened) -->
+<dialog class="dash-dialog" id="expense-dialog" aria-labelledby="expense-dialog-title">
+    <form method="post" id="expense-form">
+        {% csrf_token %}
+        <input type="hidden" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        <input type="hidden" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        <h2 id="expense-dialog-title">Add expense</h2>
+        <div class="dash-field">
+            <label for="expense_category">Type <span class="req">*</span></label>
+            <select class="dash-input" id="expense_category" name="category" required>
+                {% for value, label in expense_categories %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="dash-field">
+            <label for="expense_amount">Amount (£) <span class="req">*</span></label>
+            <input type="number" class="dash-input" id="expense_amount" name="amount" min="0.01" max="99999.99"
+                step="0.01" inputmode="decimal" placeholder="0.00" required>
+        </div>
+        <div class="dash-field">
+            <label for="expense_date">Date <span class="req">*</span></label>
+            <input type="date" class="dash-input" id="expense_date" name="expense_date" required>
+        </div>
+        <div class="dash-field">
+            <label for="expense_note">Note</label>
+            <input type="text" class="dash-input" id="expense_note" name="note" maxlength="255"
+                placeholder="e.g. 24 miles round trip">
+        </div>
+        <div class="dash-dialog-actions">
+            <button type="button" class="btn btn-secondary" data-expense-close>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var dialog = document.getElementById('expense-dialog');
+        var form = document.getElementById('expense-form');
+
+        document.querySelectorAll('[data-expense-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                form.action = button.dataset.action;
+                document.getElementById('expense-dialog-title').textContent = button.dataset.title;
+                document.getElementById('expense_category').value = button.dataset.category || 'mileage';
+                document.getElementById('expense_amount').value = button.dataset.amount || '';
+                document.getElementById('expense_date').value = button.dataset.date || '';
+                document.getElementById('expense_note').value = button.dataset.note || '';
+                dialog.showModal();
+                document.getElementById('expense_amount').focus();
+            });
+        });
+
+        document.querySelector('[data-expense-close]').addEventListener('click', function () {
+            dialog.close();
+        });
+        // Clicking the dimmed backdrop closes the dialog
+        dialog.addEventListener('click', function (event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+    });
+</script>
 {% endblock %}

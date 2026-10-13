@@ -229,6 +229,30 @@ class LocumInvoice(models.Model):
         ordering = ['-created_at']
 
 
+class ShiftExpense(models.Model):
+    """An out-of-pocket cost a locum recorded against one of their jobs."""
+    CATEGORY_CHOICES = [
+        ('mileage', 'Mileage'),
+        ('parking', 'Parking'),
+        ('tolls', 'Tolls'),
+        ('other', 'Other'),
+    ]
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='shift_expenses')
+    locum = models.ForeignKey(Locum, on_delete=models.CASCADE, related_name='shift_expenses')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    expense_date = models.DateField()
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_category_display()} £{self.amount} - {self.job.pharmacy_name}"
+
+    class Meta:
+        ordering = ['-expense_date', '-id']
+
+
 class LocumAvailability(models.Model):
     locum = models.ForeignKey(Locum, on_delete=models.CASCADE)
     timings = models.CharField(max_length=255)  # Example: "9 AM - 5 PM"

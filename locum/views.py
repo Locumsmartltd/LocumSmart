@@ -25,6 +25,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
+from functools import wraps
+from urllib.parse import urlencode
+from . import ledger
 import logging
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
@@ -946,15 +949,132 @@ class LocumProfile(View):
         return render(request, self.template_name)
 
 
-def locum_jobs(request, locum_id):
-    # Retrieve the AppliedJob instances for the specified locum where approved is True
-    locum = Locum.objects.get(customuser_ptr_id=locum_id)
-    applied_jobs = AppliedJob.objects.filter(locum_id=locum.id, approved=True)
-    # Retrieve associated Job objects
-    jobs = [applied_job.job for applied_job in applied_jobs]
-    invoices = LocumInvoice.objects.filter(locum=locum).select_related('job')
+def locum_required(view_func):
+    # Locum-only pages: the logged-in locum is passed to the view as request.locum
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, 'Please log in to continue.')
+            return redirect('login')
+        locum = Locum.objects.filter(customuser_ptr_id=request.user.id).first()
+        if locum is None:
+            raise PermissionDenied
+        request.locum = locum
+        return view_func(request, *args, **kwargs)
 
-    return render(request, 'locum_jobs.html', {'jobs': jobs, 'invoices': invoices})
+    return _wrapped_view
+
+
+def get_own_job(locum, job_id):
+    # A locum can only work with jobs they have an approved application for
+    job = get_object_or_404(Job, pk=job_id)
+    if not AppliedJob.objects.filter(job=job, locum=locum, approved=True).exists():
+        raise PermissionDenied
+    return job
+
+
+def get_own_expense(locum, expense_id):
+    expense = get_object_or_404(ShiftExpense, pk=expense_id)
+    if expense.locum_id != locum.id:
+        raise PermissionDenied
+    return expense
+
+
+@locum_required
+def locum_jobs(request, locum_id):
+    locum = request.locum
+    # The id in the URL must be the logged-in locum's own
+    if locum_id != locum.id:
+        raise PermissionDenied
+
+    # Retrieve the AppliedJob instances for the specified locum where approved is True
+    applied_jobs = AppliedJob.objects.filter(
+        locum_id=locum.id, approved=True).select_related('job', 'job__employer')
+    # Retrieve associated Job objects
+    jobs = sorted({applied_job.job.id: applied_job.job for applied_job in applied_jobs}.values(),
+                  key=lambda job: job.start_date, reverse=True)
+    invoices = LocumInvoice.objects.filter(locum=locum).select_related('job')
+    expenses = list(ShiftExpense.objects.filter(locum=locum).select_related('job'))
+
+    # Optional date range for the financial summary
+    date_from = ledger.parse_date(request.GET.get('from'))
+    date_to = ledger.parse_date(request.GET.get('to'))
+    for name in ('from', 'to'):
+        if request.GET.get(name) and ledger.parse_date(request.GET.get(name)) is None:
+            messages.error(request, 'Enter the dates as YYYY-MM-DD.')
+    if date_from and date_to and date_from > date_to:
+        messages.error(request, 'The "From" date must be on or before the "To" date.')
+        date_from = date_to = None
+
+    context = {
+        'ledger': ledger.build_ledger(jobs, expenses, date_from, date_to),
+        'invoices': invoices,
+        'date_from': date_from,
+        'date_to': date_to,
+        'expense_categories': ShiftExpense.CATEGORY_CHOICES,
+    }
+    return render(request, 'locum_jobs.html', context)
+
+
+def ledger_redirect(request):
+    # Back to the locum's ledger, keeping the date range they were looking at
+    params = {name: request.POST.get(name) for name in ('from', 'to')
+              if ledger.parse_date(request.POST.get(name))}
+    url = reverse('locum_jobs', args=[request.locum.id])
+    return redirect(f'{url}?{urlencode(params)}' if params else url)
+
+
+def read_expense_form(request):
+    # Returns (cleaned fields, error message); exactly one of them is None
+    category = request.POST.get('category')
+    if category not in dict(ShiftExpense.CATEGORY_CHOICES):
+        return None, 'Choose an expense type.'
+    amount = ledger.parse_amount(request.POST.get('amount'))
+    if amount is None:
+        return None, 'Enter the amount as a number greater than 0, for example 12.50.'
+    expense_date = ledger.parse_date(request.POST.get('expense_date'))
+    if expense_date is None:
+        return None, 'Enter the date of the expense.'
+    note = (request.POST.get('note') or '').strip()
+    if len(note) > 255:
+        return None, 'Keep the note under 255 characters.'
+    return {'category': category, 'amount': amount, 'expense_date': expense_date, 'note': note}, None
+
+
+@require_POST
+@locum_required
+def add_expense(request, job_id):
+    job = get_own_job(request.locum, job_id)
+    fields, error = read_expense_form(request)
+    if error:
+        messages.error(request, error)
+    else:
+        ShiftExpense.objects.create(job=job, locum=request.locum, **fields)
+        messages.success(request, 'Expense added.')
+    return ledger_redirect(request)
+
+
+@require_POST
+@locum_required
+def edit_expense(request, expense_id):
+    expense = get_own_expense(request.locum, expense_id)
+    fields, error = read_expense_form(request)
+    if error:
+        messages.error(request, error)
+    else:
+        for name, value in fields.items():
+            setattr(expense, name, value)
+        expense.save()
+        messages.success(request, 'Expense updated.')
+    return ledger_redirect(request)
+
+
+@require_POST
+@locum_required
+def delete_expense(request, expense_id):
+    get_own_expense(request.locum, expense_id).delete()
+    messages.success(request, 'Expense deleted.')
+    return ledger_redirect(request)
 
 
 @require_POST
@@ -973,8 +1093,9 @@ def mark_invoice_paid(request, invoice_id):
     return redirect('locum_jobs', locum_id=request.user.id)
 
 
+@locum_required
 def generate_receipt_form(request, job_id):
-    job = Job.objects.get(pk=job_id)
+    job = get_own_job(request.locum, job_id)
     # Determine if the job spans multiple days
     has_multiple_days = job.start_date != job.end_date
 
@@ -990,9 +1111,10 @@ def generate_receipt_form(request, job_id):
     return render(request, 'generate_receipt_form.html', context)
 
 
+@locum_required
 def generate_pdf_receipt(request, job_id):
-    job = get_object_or_404(Job, pk=job_id)
-    locum = job.locum
+    job = get_own_job(request.locum, job_id)
+    locum = request.locum
 
     if request.method == 'POST':
         account_number = request.POST.get('account_number')
@@ -1138,18 +1260,22 @@ def generate_pdf_receipt(request, job_id):
         'job': job, 'payment_terms': settings.INVOICE_PAYMENT_TERMS})
 
 
+@locum_required
 def locum_calander(request, user_id):
-    # Retrieve the AppliedJob instances for the specified locum where approved is True
-    locum = Locum.objects.get(customuser_ptr_id=user_id)
+    locum = request.locum
+    if user_id != locum.id:
+        raise PermissionDenied
     Availability = LocumAvailability.objects.filter(locum_id=locum.id)
     currentLocum = locum
     return render(request, 'locum_calander.html', {'Availability': Availability, 'currentLocum': currentLocum})
 
 
+@locum_required
 def avail_added(request, user_id):
+    locum = request.locum
+    if user_id != locum.id:
+        raise PermissionDenied
     if request.method == 'POST':
-        # Fetch the Locum instance
-        locum = Locum.objects.get(customuser_ptr_id=user_id)
         date = request.POST.get('Date')  # Get the date from form data
         timings = request.POST.get('Timings')  # Get the timings from form data
 
