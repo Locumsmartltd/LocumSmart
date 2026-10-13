@@ -121,3 +121,36 @@ def build_ledger(jobs, expenses, date_from=None, date_to=None):
         'net_profit': total_earnings - total_expenses,
         'unavailable_jobs': unavailable,
     }
+
+
+def tax_year_range(start_year):
+    """UK tax year starting in start_year: 6 April to 5 April."""
+    return date(start_year, 4, 6), date(start_year + 1, 4, 5)
+
+
+def tax_year_options(today, count=5):
+    """The current UK tax year and the ones before it, as (start_year, label)."""
+    current = today.year if today >= date(today.year, 4, 6) else today.year - 1
+    return [(year, f'{year}/{str(year + 1)[-2:]}') for year in range(current, current - count, -1)]
+
+
+def resolve_period(params, today):
+    """Read a date range from request parameters.
+
+    A valid tax_year wins over from/to. Returns (date_from, date_to, tax_year, error);
+    on error the range is empty.
+    """
+    tax_year = (params.get('tax_year') or '').strip()
+    if tax_year:
+        if tax_year.isdigit() and int(tax_year) in dict(tax_year_options(today)):
+            date_from, date_to = tax_year_range(int(tax_year))
+            return date_from, date_to, int(tax_year), None
+        return None, None, None, 'Choose a tax year from the list.'
+
+    for name in ('from', 'to'):
+        if (params.get(name) or '').strip() and parse_date(params.get(name)) is None:
+            return None, None, None, 'Enter the dates as YYYY-MM-DD.'
+    date_from, date_to = parse_date(params.get('from')), parse_date(params.get('to'))
+    if date_from and date_to and date_from > date_to:
+        return None, None, None, 'The "From" date must be on or before the "To" date.'
+    return date_from, date_to, None, None

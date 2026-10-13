@@ -1,6 +1,7 @@
 from io import BytesIO
 from django.templatetags.static import static
 from django.conf import settings
+from structure.invoicing import INVOICE_PAYMENT_TERMS
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
@@ -96,7 +97,7 @@ def generate_gorgemead_invoice_pdf(jobs, created_date, invoice_number, month, to
     p.drawString(50, height - 640, "Bank: Clear Bank")
     p.drawString(50, height - 660, "Acct No.: 20432032")
     p.drawString(50, height - 680, "Sort Code: 04-06-05")
-    p.drawString(50, height - 700, f"Payment Terms: {settings.INVOICE_PAYMENT_TERMS}")
+    p.drawString(50, height - 700, f"Payment Terms: {INVOICE_PAYMENT_TERMS}")
 
     # Customer Message
     p.setFont("Helvetica-Bold", 12)
@@ -218,7 +219,7 @@ def generate_fairgreen_invoice_pdf(jobs, created_date, invoice_number, month, to
     p.drawString(50, height - 640, "Bank: Clear Bank")
     p.drawString(50, height - 660, "Acct No.: 20432032")
     p.drawString(50, height - 680, "Sort Code: 04-06-05")
-    p.drawString(50, height - 700, f"Payment Terms: {settings.INVOICE_PAYMENT_TERMS}")
+    p.drawString(50, height - 700, f"Payment Terms: {INVOICE_PAYMENT_TERMS}")
 
     # Customer Message
     p.setFont("Helvetica-Bold", 12)
@@ -324,7 +325,7 @@ def generate_tesco_invoice_pdf(jobs, created_date, invoice_number, month, total_
     ]))
     elements.append(job_table_part2)
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph(f"Payment Terms: {settings.INVOICE_PAYMENT_TERMS}", styles['Normal']))
+    elements.append(Paragraph(f"Payment Terms: {INVOICE_PAYMENT_TERMS}", styles['Normal']))
 
     doc.build(elements)
     pdf_file.seek(0)
@@ -436,7 +437,7 @@ def generate_cohens_invoice_pdf(jobs, created_date, invoice_number, month, total
     p.drawString(50, height - 640, "Bank: Clear Bank")
     p.drawString(50, height - 660, "Acct No.: 20432032")
     p.drawString(50, height - 680, "Sort Code: 04-06-05")
-    p.drawString(50, height - 700, f"Payment Terms: {settings.INVOICE_PAYMENT_TERMS}")
+    p.drawString(50, height - 700, f"Payment Terms: {INVOICE_PAYMENT_TERMS}")
 
     # Customer Message
     p.setFont("Helvetica-Bold", 12)

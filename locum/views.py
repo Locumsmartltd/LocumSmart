@@ -4,7 +4,7 @@ from django.views import View
 from django.contrib import messages
 from locum.models import *
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.template.loader import get_template
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -14,6 +14,7 @@ from django.http import JsonResponse
 import json
 from django.db.models import Q
 from django.conf import settings
+from structure.invoicing import INVOICE_PAYMENT_TERMS
 from django.core.mail import send_mail
 from django.utils.html import strip_tags
 import pandas as pd
@@ -27,7 +28,7 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 from urllib.parse import urlencode
-from . import ledger
+from . import ledger, reports
 import logging
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
@@ -987,33 +988,51 @@ def locum_jobs(request, locum_id):
     if locum_id != locum.id:
         raise PermissionDenied
 
-    # Retrieve the AppliedJob instances for the specified locum where approved is True
-    applied_jobs = AppliedJob.objects.filter(
-        locum_id=locum.id, approved=True).select_related('job', 'job__employer')
-    # Retrieve associated Job objects
-    jobs = sorted({applied_job.job.id: applied_job.job for applied_job in applied_jobs}.values(),
-                  key=lambda job: job.start_date, reverse=True)
+    # The locum's approved jobs
+    jobs = reports.approved_jobs(locum)
     invoices = LocumInvoice.objects.filter(locum=locum).select_related('job')
     expenses = list(ShiftExpense.objects.filter(locum=locum).select_related('job'))
 
-    # Optional date range for the financial summary
-    date_from = ledger.parse_date(request.GET.get('from'))
-    date_to = ledger.parse_date(request.GET.get('to'))
-    for name in ('from', 'to'):
-        if request.GET.get(name) and ledger.parse_date(request.GET.get(name)) is None:
-            messages.error(request, 'Enter the dates as YYYY-MM-DD.')
-    if date_from and date_to and date_from > date_to:
-        messages.error(request, 'The "From" date must be on or before the "To" date.')
-        date_from = date_to = None
+    # Optional date range (a UK tax year or custom dates) for the financial summary
+    today = timezone.localdate()
+    date_from, date_to, tax_year, error = ledger.resolve_period(request.GET, today)
+    if error:
+        messages.error(request, error)
 
     context = {
         'ledger': ledger.build_ledger(jobs, expenses, date_from, date_to),
         'invoices': invoices,
         'date_from': date_from,
         'date_to': date_to,
+        'tax_year': tax_year,
+        'tax_years': ledger.tax_year_options(today),
         'expense_categories': ShiftExpense.CATEGORY_CHOICES,
     }
     return render(request, 'locum_jobs.html', context)
+
+
+@locum_required
+def download_report(request):
+    # Income and Expenditure Report for the logged-in locum only: there is no
+    # locum id in the URL, so nobody else's records can be requested
+    report_format = request.GET.get('format')
+    if report_format not in ('pdf', 'csv'):
+        return HttpResponseBadRequest('Choose PDF or CSV.')
+    date_from, date_to, _tax_year, error = ledger.resolve_period(request.GET, timezone.localdate())
+    if error:
+        return HttpResponseBadRequest(error)
+
+    report = reports.build_report(request.locum, date_from, date_to)
+    if report_format == 'csv':
+        # utf-8-sig so Excel reads names with accents correctly
+        response = HttpResponse(reports.render_csv(report).encode('utf-8-sig'),
+                                content_type='text/csv; charset=utf-8')
+    else:
+        response = HttpResponse(reports.render_pdf(report), content_type='application/pdf')
+    filename = reports.report_filename(report, report_format)
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 def ledger_redirect(request):
@@ -1105,7 +1124,7 @@ def generate_receipt_form(request, job_id):
         'has_multiple_days': has_multiple_days,
         'start_date': job.start_date,
         'end_date': job.end_date,
-        'payment_terms': settings.INVOICE_PAYMENT_TERMS,
+        'payment_terms': INVOICE_PAYMENT_TERMS,
     }
 
     return render(request, 'generate_receipt_form.html', context)
@@ -1243,7 +1262,7 @@ def generate_pdf_receipt(request, job_id):
         p.drawString(right_box_start_x + col_widths[-1] + 20,
                      additional_table_y_position - 60, f"Total: £{total_cost:.2f}")
         p.drawRightString(letter[0] - 40, additional_table_y_position - 80,
-                          f"Payment Terms: {settings.INVOICE_PAYMENT_TERMS}")
+                          f"Payment Terms: {INVOICE_PAYMENT_TERMS}")
         # Finalize and Return PDF
         p.showPage()
         p.save()
@@ -1257,7 +1276,7 @@ def generate_pdf_receipt(request, job_id):
 
     # For GET requests, show the data entry form
     return render(request, 'generate_receipt_form.html', {
-        'job': job, 'payment_terms': settings.INVOICE_PAYMENT_TERMS})
+        'job': job, 'payment_terms': INVOICE_PAYMENT_TERMS})
 
 
 @locum_required

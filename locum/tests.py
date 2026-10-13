@@ -1,6 +1,8 @@
+import csv
 import json
 from datetime import date
 from decimal import Decimal
+from io import StringIO
 
 from django.test import TestCase
 from django.urls import reverse
@@ -270,3 +272,163 @@ class AccessRestrictionTests(LedgerTestCase):
         self.assertEqual(response['Content-Type'], 'application/pdf')
         invoice = LocumInvoice.objects.get(locum=self.locum)
         self.assertEqual((invoice.total_amount, invoice.status), (Decimal('240.00'), 'pending'))
+
+
+class TaxYearTests(TestCase):
+    def test_uk_tax_year_runs_6_april_to_5_april(self):
+        self.assertEqual(ledger.tax_year_range(2026), (date(2026, 4, 6), date(2027, 4, 5)))
+
+    def test_current_tax_year_changes_on_6_april(self):
+        self.assertEqual(ledger.tax_year_options(date(2026, 4, 5))[0], (2025, '2025/26'))
+        self.assertEqual(ledger.tax_year_options(date(2026, 4, 6))[0], (2026, '2026/27'))
+        self.assertEqual(len(ledger.tax_year_options(date(2026, 10, 14))), 5)
+
+    def test_resolve_period(self):
+        today = date(2026, 10, 14)
+        self.assertEqual(ledger.resolve_period({'tax_year': '2025'}, today),
+                         (date(2025, 4, 6), date(2026, 4, 5), 2025, None))
+        # A tax year takes priority over custom dates
+        self.assertEqual(ledger.resolve_period({'tax_year': '2026', 'from': '2020-01-01'}, today)[:2],
+                         (date(2026, 4, 6), date(2027, 4, 5)))
+        self.assertEqual(ledger.resolve_period({'from': '2026-01-01', 'to': '2026-01-31'}, today),
+                         (date(2026, 1, 1), date(2026, 1, 31), None, None))
+        self.assertEqual(ledger.resolve_period({}, today), (None, None, None, None))
+        for bad in ({'tax_year': '1999'}, {'tax_year': 'abc'}, {'from': 'x'},
+                    {'from': '2026-02-01', 'to': '2026-01-01'}):
+            self.assertIsNotNone(ledger.resolve_period(bad, today)[3], bad)
+
+
+class ReportTests(LedgerTestCase):
+    """self.job is 10-12 Oct 2026, booked at 3 x 8 x 30 = 720 (tax year 2026/27)."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('download_report')
+        ShiftExpense.objects.create(job=self.job, locum=self.locum, category='mileage',
+                                    amount=Decimal('20.25'), expense_date=date(2026, 10, 10),
+                                    note='=SUM(A1) 24 miles')
+        ShiftExpense.objects.create(job=self.job, locum=self.locum, category='parking',
+                                    amount=Decimal('5.00'), expense_date=date(2026, 10, 11))
+
+    def csv_rows(self, **params):
+        params.setdefault('format', 'csv')
+        response = self.client.get(self.url, params)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Type'].startswith('text/csv'))
+        self.assertIn('attachment; filename="locumsmart-income-expenditure_', response['Content-Disposition'])
+        return list(csv.reader(StringIO(response.content.decode('utf-8-sig'))))
+
+    def summary(self, rows):
+        start = rows.index(['Summary', 'Amount (GBP)', 'Note'])
+        return {row[0]: row[1] for row in rows[start + 1:] if len(row) >= 2}
+
+    def test_uninvoiced_job_shows_blank_invoiced_and_paid_not_zero(self):
+        rows = self.csv_rows()
+        income = [row for row in rows if row and row[0] == 'Income']
+        self.assertEqual(len(income), 1)
+        self.assertEqual(income[0][6:9], ['720.00', '', ''])
+        self.assertIn('No invoice on record', income[0][10])
+        summary = self.summary(rows)
+        self.assertEqual(summary['Booked income (not verified)'], '720.00')
+        self.assertEqual(summary['Invoiced'], '')
+        self.assertEqual(summary['Paid'], '')
+        self.assertEqual(summary['Total expenses'], '25.25')
+        self.assertEqual(summary['Expenses: Mileage'], '20.25')
+        self.assertEqual(summary['Expenses: Parking'], '5.00')
+        self.assertEqual(summary['Net (booked income less expenses)'], '694.75')
+
+    def test_invoiced_and_paid_are_reported_separately_from_booked(self):
+        LocumInvoice.objects.create(job=self.job, locum=self.locum, invoice_number='A',
+                                    total_amount=Decimal('450.00'), status='paid')
+        LocumInvoice.objects.create(job=self.job, locum=self.locum, invoice_number='B',
+                                    total_amount=Decimal('225.00'))
+        rows = self.csv_rows()
+        income = [row for row in rows if row and row[0] == 'Income'][0]
+        self.assertEqual(income[6:9], ['720.00', '675.00', '450.00'])
+        summary = self.summary(rows)
+        self.assertEqual((summary['Invoiced'], summary['Paid']), ('675.00', '450.00'))
+
+    def test_pending_invoice_reports_paid_as_a_real_zero(self):
+        LocumInvoice.objects.create(job=self.job, locum=self.locum, invoice_number='A',
+                                    total_amount=Decimal('700.00'))
+        income = [row for row in self.csv_rows() if row and row[0] == 'Income'][0]
+        self.assertEqual(income[7:9], ['700.00', '0.00'])
+
+    def test_unavailable_booked_amount_is_blank_and_flagged(self):
+        make_job(self.employer, self.locum, date(2026, 10, 20), date(2026, 10, 20), hours='9am-5pm')
+        rows = self.csv_rows()
+        flagged = [row for row in rows if row and row[0] == 'Income' and row[6] == '']
+        self.assertEqual(len(flagged), 1)
+        self.assertIn('Booked amount unavailable', flagged[0][10])
+        self.assertEqual(self.summary(rows)['Booked income (not verified)'], '720.00')
+        self.assertTrue(any('Excludes 1 job' in cell for row in rows for cell in row))
+
+    def test_tax_year_preset_and_custom_range(self):
+        # Job and expense just outside 2026/27: last day of 2025/26
+        old_job = make_job(self.employer, self.locum, date(2026, 4, 5), date(2026, 4, 5))
+        ShiftExpense.objects.create(job=old_job, locum=self.locum, category='tolls',
+                                    amount=Decimal('7.00'), expense_date=date(2026, 4, 5))
+        this_year = self.summary(self.csv_rows(tax_year='2026'))
+        self.assertEqual((this_year['Booked income (not verified)'], this_year['Total expenses']),
+                         ('720.00', '25.25'))
+        last_year = self.summary(self.csv_rows(tax_year='2025'))
+        self.assertEqual((last_year['Booked income (not verified)'], last_year['Total expenses']),
+                         ('240.00', '7.00'))
+        custom = self.summary(self.csv_rows(**{'from': '2026-10-11', 'to': '2026-10-31'}))
+        self.assertEqual((custom['Booked income (not verified)'], custom['Total expenses']),
+                         ('0.00', '5.00'))
+        everything = self.summary(self.csv_rows())
+        self.assertEqual(everything['Booked income (not verified)'], '960.00')
+
+    def test_csv_has_disclaimer_and_neutralises_formulas(self):
+        rows = self.csv_rows()
+        cells = [cell for row in rows for cell in row]
+        self.assertTrue(any('not tax advice' in cell for cell in cells))
+        self.assertIn("'=SUM(A1) 24 miles", cells)
+        self.assertFalse(any(cell.startswith('=') for cell in cells))
+
+    def test_pdf_download(self):
+        response = self.client.get(self.url, {'format': 'pdf', 'tax_year': '2026'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+        self.assertIn('_2026-04-06_to_2027-04-05.pdf', response['Content-Disposition'])
+
+    def test_pdf_with_no_data_still_builds(self):
+        self.client.force_login(make_locum('empty@example.com'))
+        response = self.client.get(self.url, {'format': 'pdf'})
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_bad_requests_are_rejected(self):
+        for params in ({}, {'format': 'xlsx'}, {'format': 'csv', 'tax_year': '1999'},
+                       {'format': 'csv', 'from': 'nope'},
+                       {'format': 'pdf', 'from': '2026-12-01', 'to': '2026-01-01'}):
+            self.assertEqual(self.client.get(self.url, params).status_code, 400, params)
+
+    def test_report_only_ever_contains_the_logged_in_locums_records(self):
+        ShiftExpense.objects.create(job=self.other_job, locum=self.other, category='other',
+                                    amount=Decimal('999.00'), expense_date=date(2026, 10, 10),
+                                    note='other locum secret')
+        LocumInvoice.objects.create(job=self.other_job, locum=self.other, invoice_number='Z',
+                                    total_amount=Decimal('888.00'), status='paid')
+        # Extra parameters naming another locum are ignored
+        rows = self.csv_rows(locum_id=self.other.id, locum=self.other.id, user_id=self.other.id)
+        text = '\n'.join(','.join(row) for row in rows)
+        for leaked in ('999.00', '888.00', 'other locum secret', 'other@example.com'):
+            self.assertNotIn(leaked, text)
+        self.assertEqual(self.summary(rows)['Total expenses'], '25.25')
+
+    def test_report_requires_a_logged_in_locum(self):
+        self.client.logout()
+        response = self.client.get(self.url, {'format': 'csv'})
+        self.assertRedirects(response, reverse('login'), fetch_redirect_response=False)
+        admin = Admin.objects.create(email='admin2@example.com', first_name='Ad', last_name='Min')
+        self.client.force_login(admin)
+        self.assertEqual(self.client.get(self.url, {'format': 'pdf'}).status_code, 403)
+
+    def test_ledger_page_offers_tax_years_and_download_links(self):
+        response = self.client.get(self.ledger_url(tax_year='2026'))
+        self.assertEqual(response.context['date_from'], date(2026, 4, 6))
+        self.assertEqual(response.context['date_to'], date(2027, 4, 5))
+        self.assertContains(response, 'format=pdf&amp;from=2026-04-06&amp;to=2027-04-05')
+        self.assertContains(response, 'format=csv&amp;from=2026-04-06&amp;to=2027-04-05')

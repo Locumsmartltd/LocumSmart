@@ -15,6 +15,7 @@ from structure.decorators import admin_required
 from structure.passwords import SITE_URL
 from structure.emails import send_branded_email, send_approval_email
 from django.conf import settings
+from structure.invoicing import INVOICE_PAYMENT_TERMS
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.hashers import make_password
@@ -892,7 +893,7 @@ class JobListView(ListView):
                 'created_date': current_date,
                 'month': current_month,
                 'total_amount': total_amount,
-                'payment_terms': settings.INVOICE_PAYMENT_TERMS,
+                'payment_terms': INVOICE_PAYMENT_TERMS,
             }
 
             # Render the appropriate template

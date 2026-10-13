@@ -4,7 +4,7 @@
 {% load static %}
 {% block title %}My Jobs &amp; Invoices{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261017" />
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261018" />
 {% endblock %}
 
 {% block content %}
@@ -36,7 +36,16 @@
                         Earnings count by job start date, expenses by expense date.
                     </p>
                 </div>
-                <form method="get" action="{% url 'locum_jobs' user.id %}" class="dash-form dash-range">
+                <form method="get" action="{% url 'locum_jobs' user.id %}" class="dash-form dash-range" id="range-form">
+                    <div class="dash-field">
+                        <label for="range_tax_year">Tax year</label>
+                        <select class="dash-input" id="range_tax_year" name="tax_year">
+                            <option value="">Custom dates</option>
+                            {% for year, label in tax_years %}
+                            <option value="{{ year }}" {% if year == tax_year %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="dash-field">
                         <label for="range_from">From</label>
                         <input type="date" class="dash-input" id="range_from" name="from" value="{{ date_from|date:'Y-m-d' }}">
@@ -63,6 +72,19 @@
                 <div class="dash-stat highlight">
                     <span>Net profit</span>
                     <strong>{% if ledger.net_profit < 0 %}-£{{ ledger.net_profit|cut:"-" }}{% else %}£{{ ledger.net_profit }}{% endif %}</strong>
+                </div>
+            </div>
+            <div class="dash-report">
+                <div>
+                    <strong>Income and Expenditure Report</strong>
+                    <p class="dash-card-note">Download the period shown above for your records or tax return.
+                        Booked income is not verified income; the report also shows what you invoiced and were paid.</p>
+                </div>
+                <div class="dash-actions">
+                    <a class="btn btn-primary" data-report-download
+                        href="{% url 'download_report' %}?format=pdf&amp;from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">Download PDF</a>
+                    <a class="btn btn-secondary" data-report-download
+                        href="{% url 'download_report' %}?format=csv&amp;from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">Download CSV</a>
                 </div>
             </div>
             {% if ledger.unavailable_jobs %}
@@ -285,6 +307,65 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Picking a tax year applies it straight away; editing a date switches back to custom dates
+        var rangeForm = document.getElementById('range-form');
+        var taxYear = document.getElementById('range_tax_year');
+        taxYear.addEventListener('change', function () {
+            if (taxYear.value) {
+                rangeForm.submit();
+            }
+        });
+        rangeForm.querySelectorAll('input[type="date"]').forEach(function (input) {
+            input.addEventListener('input', function () { taxYear.value = ''; });
+        });
+
+        // Download the report in the background so the page stays put
+        document.querySelectorAll('[data-report-download]').forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                if (!window.fetch || !window.URL || !URL.createObjectURL) {
+                    return; // plain link download
+                }
+                event.preventDefault();
+                if (link.getAttribute('aria-busy') === 'true') {
+                    return;
+                }
+                var label = link.textContent;
+                link.setAttribute('aria-busy', 'true');
+                link.textContent = 'Preparing…';
+                fetch(link.href, { credentials: 'same-origin' })
+                    .then(function (response) {
+                        if (!response.ok || response.redirected) {
+                            throw new Error('Report request failed');
+                        }
+                        var match = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '');
+                        return response.blob().then(function (blob) {
+                            var url = URL.createObjectURL(blob);
+                            var anchor = document.createElement('a');
+                            anchor.href = url;
+                            anchor.download = match ? match[1] : 'locumsmart-report';
+                            document.body.appendChild(anchor);
+                            anchor.click();
+                            anchor.remove();
+                            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                            if (window.rsToast) {
+                                window.rsToast('Your report has downloaded.', 'success');
+                            }
+                        });
+                    })
+                    .catch(function () {
+                        if (window.rsToast) {
+                            window.rsToast('The report could not be downloaded. Please try again.', 'error');
+                        } else {
+                            alert('The report could not be downloaded. Please try again.');
+                        }
+                    })
+                    .then(function () {
+                        link.removeAttribute('aria-busy');
+                        link.textContent = label;
+                    });
+            });
+        });
+
         var dialog = document.getElementById('expense-dialog');
         var form = document.getElementById('expense-form');
 

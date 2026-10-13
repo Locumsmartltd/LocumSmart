@@ -134,6 +134,9 @@
 .rs .dash-stat strong { font-size: 26px; font-weight: 800; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
 .rs .dash-stat.highlight { background: var(--mint-light); border-color: var(--mint); }
 .rs .dash-stat.highlight strong { color: var(--teal-darker); }
+.rs .dash-report { display: flex; align-items: center; justify-content: space-between; gap: 14px 24px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.rs .dash-report > div:first-child { flex: 1 1 320px; }
+.rs .dash .btn[aria-busy="true"] { opacity: .6; cursor: progress; }
 .rs .dash-warning { margin: 16px 0 0; background: #FFF4E6; border: 1px solid #F5D9B5; color: #8A4B12; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
 .rs .dash .btn-danger { background: var(--bg); color: #B42318; border: 1.5px solid #F5C2BC; }
 .rs .dash .btn-danger:hover { background: #FDECEA; }
