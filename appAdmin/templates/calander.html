@@ -1,38 +1,103 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Calendar{% endblock %}
+{% block title %}Admin Calendar{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261015" />
+{% endblock %}
 {% block page_js %}
 <script src="{% static 'js/adminListSearch.js' %}"></script>
 {% endblock %}
 
 {% block content %}
-<style>
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    .table {
-        width: 100%;
-        white-space: nowrap;
-        /* Prevent text wrapping */
-    }
-
-    table th {
-        min-width: 150px;
-        /* Adjust the value as needed */
-    }
-</style>
-<section>
+<section class="dash">
     <div class="container">
-        <h2>Admin Calander</h2>
-        <!-- Search Filter -->
-        <form method="GET" action="{% url 'calander' %}">
-            <div class="input-group mb-3">
+        <div class="dash-head">
+            <div>
+                <span class="section-tag">Admin</span>
+                <h1 class="dash-title">Admin Calendar</h1>
+                <p class="dash-sub">Tick the jobs to invoice in the job list, then generate the invoice or email it to the pharmacy.</p>
+            </div>
+            <div class="dash-head-actions">
+                <a href="{% url 'email_tracking_log' %}" class="btn btn-secondary">Invoice Tracking</a>
+            </div>
+        </div>
+
+        <div class="dash-grid-2">
+            <!-- Invoice Format Section -->
+            <div class="dash-card">
+                <div class="dash-card-head">
+                    <div>
+                        <h2>Generate invoice</h2>
+                        <p class="dash-card-note">Opens the invoice in a new tab and starts tracking it as Pending.</p>
+                    </div>
+                    <span class="dash-selected is-empty" data-selected-count>No jobs selected</span>
+                </div>
+                <form method="POST" id="invoice-form" target="_blank" class="dash-form">
+                    {% csrf_token %}
+                    <div class="dash-field">
+                        <label for="pharmacy-select">Pharmacy format</label>
+                        <select class="dash-input" id="pharmacy-select" name="pharmacy" required>
+                            <option value="">Select format</option>
+                            <option value="Gorgemead">Gorgemead</option>
+                            <option value="Fairgreen">Fairgreen</option>
+                            <option value="Tesco">Tesco</option>
+                            <option value="Cohens">Cohens</option>
+                        </select>
+                    </div>
+                    <div class="dash-field">
+                        <label for="invoice_no">Invoice number</label>
+                        <input class="dash-input" id="invoice_no" name="invoice_no" placeholder="e.g. 10254" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" name="action" value="generate_invoice">Generate Invoice</button>
+                </form>
+            </div>
+
+            <!-- Email Invoice Section -->
+            <div class="dash-card">
+                <div class="dash-card-head">
+                    <div>
+                        <h2>Email invoice</h2>
+                        <p class="dash-card-note">Sends the invoice above as a PDF, using the same format and number.</p>
+                    </div>
+                </div>
+                <form method="POST" id="email-form" class="dash-form">
+                    {% csrf_token %}
+                    <div class="dash-field">
+                        <label for="email_to">To</label>
+                        <input type="email" class="dash-input" id="email_to" name="to" placeholder="pharmacy@example.com" required>
+                    </div>
+                    <div class="dash-field">
+                        <label for="email_cc">CC (optional)</label>
+                        <input type="email" class="dash-input" id="email_cc" name="cc" placeholder="accounts@example.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary" name="action" value="send_email">Send Email</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Job List Section -->
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h2>Job list</h2>
+                <div class="dash-sort">
+                    <label for="sort_by">Sort by</label>
+                    <select id="sort_by" class="dash-input"
+                        onchange="window.location.href = '{% url 'calander' %}?search={{ search_query|urlencode }}&sort_by=' + this.value">
+                        <option value="">Default</option>
+                        <option value="Earliest" {% if request.GET.sort_by == 'Earliest' %}selected{% endif %}>Earliest</option>
+                        <option value="Latest" {% if request.GET.sort_by == 'Latest' %}selected{% endif %}>Latest</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Search Filter -->
+            <form method="GET" action="{% url 'calander' %}" class="dash-search" style="margin-bottom: 18px;">
                 {% if request.GET.sort_by %}
                 <input type="hidden" name="sort_by" value="{{ request.GET.sort_by }}">
                 {% endif %}
-                <input type="text" class="form-control" name="search"
-                    placeholder="Search by Employer name, locum firstname, lastname, and type"
+                <input type="text" class="dash-input" name="search"
+                    placeholder="Search by employer, locum name or type"
+                    aria-label="Search jobs"
                     value="{{ search_query }}"
                     autocomplete="off" list="admin-search-suggestions"
                     data-admin-live-search>
@@ -40,212 +105,248 @@
                 <button type="submit" class="btn btn-primary" id="search-btn">Search</button>
                 <a href="{% url 'calander' %}{% if request.GET.sort_by %}?sort_by={{ request.GET.sort_by }}{% endif %}"
                     class="btn btn-secondary" data-admin-search-clear title="Clear search">Clear</a>
-            </div>
-        </form>
+            </form>
 
-        <!-- Invoice Format Section -->
-        <h3>Invoice Format</h3>
-        <form method="POST" id="invoice-form" target="_blank">
-            {% csrf_token %}
-            <div class="input-group mb-3">
-                <select class="form-select" id="pharmacy-select" name="pharmacy" required>
-                    <option value="">-- Select Pharmacy Format --</option>
-                    <option value="Gorgemead">Gorgemead</option>
-                    <option value="Fairgreen">Fairgreen</option>
-                    <option value="Tesco">Tesco</option>
-                    <option value="Cohens">Cohens</option>
-                </select>
-                <input class="form-control" id="invoice_no" name="invoice_no" placeholder="Invoice#" required>
-                <button type="submit" class="btn btn-primary" name="action" value="generate_invoice">Generate
-                    Invoice</button>
-            </div>
-        </form>
-
-        <!-- Email Invoice Section -->
-        <h3>Email Invoice</h3>
-        <form method="POST" id="email-form">
-            {% csrf_token %}
-            <div class="input-group mb-3">
-                <input type="hidden" class="form-control" id="email_invoice_no" name="invoice_no">
-                <input type="email" class="form-control" name="to" placeholder="To" required>
-                <input type="email" class="form-control" name="cc" placeholder="CC">
-                <button type="submit" class="btn btn-primary" name="action" value="send_email">Send Email</button>
-                <button type="button" class="btn btn-secondary" name="action" id="email-tracking">Email
-                    Tracking</button>
-            </div>
-        </form>
-
-        <!-- Job List Section -->
-        <!-- Job Table with Sorting -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>Job List</h3>
-            <div>
-                <label for="sort_by">Sort by:</label>
-                <select id="sort_by" class="form-select"
-                    onchange="window.location.href = '{% url 'calander' %}?search={{ search_query }}&sort_by=' + this.value">
-                    <option value="">-- Select --</option>
-                    <option value="Earliest">Earliest</option>
-                    <option value="Latest">Latest</option>
-                </select>
+            <div class="dash-table-wrap">
+                <table class="dash-table wide" id="job-table" data-admin-search-table>
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Employer Name</th>
+                            <th>Job Type</th>
+                            <th>Locum Name</th>
+                            <th>Locum Type</th>
+                            <th>Locum Rate</th>
+                            <th>Expenses Offered</th>
+                            <th>Hours/Day</th>
+                            <th>Agency Fee</th>
+                            <th>Group</th>
+                            <th>Pharmacy Owner</th>
+                            <th>Date of Booking Email</th>
+                            <th>Locum Payment Status</th>
+                            <th>Job Status</th>
+                            <th>Date of Invoice Email</th>
+                            <th>Payment Source</th>
+                            <th>Source Commission Date</th>
+                            <th>Booked By</th>
+                            <th>Additional Info</th>
+                            <th>Update</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in jobs %}
+                        <tr data-job-row>
+                            <td data-label="Select"><input type="checkbox" class="job-checkbox dash-check" name="job_ids"
+                                    value="{{ job.id }}" data-employer="{{ job.pharmacy_name }}"
+                                    aria-label="Select job at {{ job.pharmacy_name }}"></td>
+                            <td data-label="Start Date">{{ job.start_date|date:"d M y" }}</td>
+                            <td data-label="End Date">{{ job.end_date|date:"d M y" }}</td>
+                            <td data-label="Employer Name">{{ job.pharmacy_name }}</td>
+                            <td data-label="Job Type">{% if job.discrete_dates %}Random Days{% else %}Continuous Days{% endif %}</td>
+                            <td data-label="Locum Name">{{ job.locum.firstname }} {{ job.locum.lastname }}</td>
+                            <td data-label="Locum Type">{{ job.locum.user_type }}</td>
+                            <td data-label="Locum Rate" class="num">{{ job.locum_rate }}</td>
+                            <td data-label="Expenses Offered" class="num">{{ job.expenses_offered }}</td>
+                            <td data-label="Hours/Day" class="num">{{ job.times_required }}</td>
+                            <td data-label="Agency Fee" class="num">{{ job.agency_fee|default_if_none:"—" }}</td>
+                            <td data-label="Group"><input type="text" class="dash-input" name="company_name"
+                                    value="{{ job.company_name }}" form="job-form-{{ job.id }}" aria-label="Group"></td>
+                            <td data-label="Pharmacy Owner">{{ job.name }}</td>
+                            <td data-label="Date of Booking Email"><input type="date" class="dash-input" name="date_of_booking_email"
+                                    value="{% if job.date_of_booking_email %}{{ job.date_of_booking_email|date:'Y-m-d' }}{% endif %}"
+                                    form="job-form-{{ job.id }}" aria-label="Date of booking email"></td>
+                            <td data-label="Locum Payment Status"><input type="text" class="dash-input" name="locum_payment_status"
+                                    value="{{ job.locum_payment_status }}" form="job-form-{{ job.id }}" aria-label="Locum payment status"></td>
+                            <td data-label="Job Status"><input type="text" class="dash-input" name="status"
+                                    value="{{ job.status }}" form="job-form-{{ job.id }}" aria-label="Job status"></td>
+                            <td data-label="Date of Invoice Email"><input type="date" class="dash-input" name="date_of_invoice_email"
+                                    value="{% if job.date_of_invoice_email %}{{ job.date_of_invoice_email|date:'Y-m-d' }}{% endif %}"
+                                    form="job-form-{{ job.id }}" aria-label="Date of invoice email"></td>
+                            <td data-label="Payment Source"><input type="text" class="dash-input" name="source"
+                                    value="{{ job.source }}" form="job-form-{{ job.id }}" aria-label="Payment source"></td>
+                            <td data-label="Source Commission Date"><input type="date" class="dash-input" name="source_commission_date"
+                                    value="{% if job.source_commission_date %}{{ job.source_commission_date|date:'Y-m-d' }}{% endif %}"
+                                    form="job-form-{{ job.id }}" aria-label="Source commission date"></td>
+                            <td data-label="Booked By"><input type="text" class="dash-input" name="booked_by"
+                                    value="{{ job.booked_by }}" form="job-form-{{ job.id }}" aria-label="Booked by"></td>
+                            <td data-label="Additional Info" class="wrap">{{ job.any_other_information }}</td>
+                            <td data-label="Update">
+                                <form method="POST" action="{% url 'update_job' job.id %}" id="job-form-{{ job.id }}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="dash-empty">
+                            <td colspan="22">No jobs found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="table-responsive">
-            <table class="table" id="job-table" data-admin-search-table>
-                <thead>
-                    <tr>
-                        <th>Select</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Employer Name</th>
-                        <th>Job Type</th>
-                        <th>Locum Name</th>
-                        <th>Locum Type</th>
-                        <th>Locum Rate</th>
-                        <th>Expenses Offered</th>
-                        <th>Hours/Day</th>
-                        <th>Agency Fee</th>
-                        <th>Group</th>
-                        <th>Pharmacy Owner</th>
-                        <th>Date of Booking Email</th>
-                        <th>Locum Payment Status</th>
-                        <th>Job Status</th>
-                        <th>Date of Invoice Email</th>
-                        <th>Payment Source</th>
-                        <th>Source Commission Date</th>
-                        <th>Booked By</th>
-                        <th>Additonal Info</th>
-                        <th>Update</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for job in jobs %}
-                    <tr>
-                        <td><input type="checkbox" class="job-checkbox" name="job_ids" value="{{ job.id }}"></td>
-                        <td>{{ job.start_date|date:"d M y" }}</td>
-                        <td>{{ job.end_date|date:"d M y" }}</td>
-                        <td>{{ job.pharmacy_name }}</td>
-                        <td>{% if job.discrete_dates %}Random Days{% else %}Continuous Days{% endif %}</td>
-                        <td>{{ job.locum.firstname }} {{ job.locum.lastname }}</td>
-                        <td>{{ job.locum.user_type }}</td>
-                        <td>{{ job.locum_rate }}</td>
-                        <td>{{ job.expenses_offered }}</td>
-                        <td>{{ job.times_required }}</td>
-                        <td>{{ job.agency_fee }}</td>
-                        <form method="POST" action="{% url 'update_job' job.id %}">
-                        <td><input type="text" class="form-control" name="company_name" value="{{ job.company_name }}"></td>
-                        <td>{{ job.name }}</td>
-                        <td>
-                                {% csrf_token %}
-                                <input type="date" class="form-control" name="date_of_booking_email"
-                                    value="{% if job.date_of_booking_email %}{{ job.date_of_booking_email|date:'Y-m-d' }}{% endif %}">
-                        </td>
-                        <td><input type="text" class="form-control" name="locum_payment_status"
-                                value="{{ job.locum_payment_status }}"></td>
-                        <td><input type="text" class="form-control" name="status" value="{{ job.status }}"></td>
-                        <td><input type="date" class="form-control" name="date_of_invoice_email"
-                                value="{% if job.date_of_invoice_email %}{{ job.date_of_invoice_email|date:'Y-m-d' }}{% endif %}">
-                        </td>
-                        <td><input type="text" class="form-control" name="source" value="{{ job.source }}"></td>
-                        <td><input type="date" class="form-control" name="source_commission_date"
-                                value="{% if job.source_commission_date %}{{ job.source_commission_date|date:'Y-m-d' }}{% endif %}">
-                        </td>
-                        <td><input type="text" class="form-control" name="booked_by" value="{{ job.booked_by }}"></td>
-                        <td>{{job.any_other_information}}</td>
-                        <td>
-                            <button type="submit" class="btn btn-primary">Update</button>
-                        </td>
-                        </form>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="17">No jobs found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- Locum Invoice Tracking Section (read-only) -->
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <div>
+                    <h2>Locum invoice tracking</h2>
+                    <p class="dash-card-note">Invoices locums have generated for their own jobs. Locums mark these as paid.</p>
+                </div>
+            </div>
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Locum Name</th>
+                            <th>Employer Name</th>
+                            <th>Invoice Number</th>
+                            <th>Amount</th>
+                            <th>Generated On</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in locum_invoices %}
+                        <tr>
+                            <td data-label="Locum Name">{{ invoice.locum.firstname }} {{ invoice.locum.lastname }}</td>
+                            <td data-label="Employer Name">{{ invoice.job.pharmacy_name }}</td>
+                            <td data-label="Invoice Number">{{ invoice.invoice_number|default:"—" }}</td>
+                            <td data-label="Amount" class="num">£{{ invoice.total_amount }}</td>
+                            <td data-label="Generated On">{{ invoice.created_at|date:"d M y" }}</td>
+                            <td data-label="Status">
+                                {% if invoice.status == 'paid' %}
+                                <span class="status-tag">Paid</span>
+                                {% else %}
+                                <span class="status-tag orange">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="dash-empty">
+                            <td colspan="6">No locum invoices generated yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </section>
 
 <script>
-    $(document).ready(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        var table = document.getElementById('job-table');
+        var tbody = table.querySelector('tbody');
+        var checkboxes = Array.prototype.slice.call(table.querySelectorAll('input.job-checkbox'));
+        var invoiceForm = document.getElementById('invoice-form');
+        var emailForm = document.getElementById('email-form');
+        var counter = document.querySelector('[data-selected-count]');
         var selectedEmployerName = null;
 
-        // Check individual checkboxes with employer name condition
-        $('input.job-checkbox').change(function () {
-            var employerName = $(this).closest('tr').find('td:eq(3)').text().trim();
-
-            if (this.checked) {
-                if (selectedEmployerName === null) {
-                    selectedEmployerName = employerName;
-                } else if (employerName !== selectedEmployerName) {
-                    alert("You can only select jobs with the same Employer Name.");
-                    this.checked = false;
-                }
+        function notify(message) {
+            if (window.rsToast) {
+                window.rsToast(message, 'error');
             } else {
-                // If no checkboxes are checked, reset the selectedEmployerName
-                if ($('input.job-checkbox:checked').length === 0) {
-                    selectedEmployerName = null;
-                }
+                alert(message);
             }
-            sortTable();
-        });
+        }
 
+        function checkedBoxes() {
+            return checkboxes.filter(function (box) { return box.checked; });
+        }
+
+        function updateCounter() {
+            var count = checkedBoxes().length;
+            counter.textContent = count === 0 ? 'No jobs selected' : count + (count === 1 ? ' job selected' : ' jobs selected');
+            counter.classList.toggle('is-empty', count === 0);
+        }
+
+        // Keep the selected jobs at the top of the list
         function sortTable() {
-            var rows = $('#job-table tbody tr').get();
-
-            rows.sort(function (a, b) {
-                var checkedA = $(a).find('input.job-checkbox').is(':checked');
-                var checkedB = $(b).find('input.job-checkbox').is(':checked');
-
-                return (checkedA === checkedB) ? 0 : checkedA ? -1 : 1;
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-job-row]'));
+            var selected = [];
+            var others = [];
+            rows.forEach(function (row) {
+                var isChecked = row.querySelector('input.job-checkbox').checked;
+                row.classList.toggle('is-selected', isChecked);
+                (isChecked ? selected : others).push(row);
             });
-
-            $.each(rows, function (index, row) {
-                $('#job-table').children('tbody').append(row);
+            var anchor = tbody.querySelector('tr:not([data-job-row])');
+            selected.concat(others).forEach(function (row) {
+                tbody.insertBefore(row, anchor);
             });
         }
 
-        // Handle email tracking button click
-        $('#email-tracking').click(function () {
-            window.location.href = "{% url 'email_tracking_log' %}";
-        });
-
-        // Add job_ids and pharmacy to forms on submit
-        $('#invoice-form, #email-form').submit(function (event) {
-            // Remove any existing hidden job_id inputs
-            $(this).find('input[name="job_ids"]').remove();
-            $(this).find('input[name="pharmacy"]').remove();
-
-            // Add hidden inputs for selected job_ids
-            $('input.job-checkbox:checked').each(function () {
-                $('<input>').attr({
-                    type: 'hidden',
-                    name: 'job_ids',
-                    value: $(this).val()
-                }).appendTo($('#invoice-form, #email-form'));
+        // An invoice goes to one employer, so only jobs with the same employer can be selected together
+        checkboxes.forEach(function (box) {
+            box.addEventListener('change', function () {
+                var employerName = box.getAttribute('data-employer');
+                if (box.checked) {
+                    if (selectedEmployerName === null) {
+                        selectedEmployerName = employerName;
+                    } else if (employerName !== selectedEmployerName) {
+                        notify('You can only select jobs with the same Employer Name.');
+                        box.checked = false;
+                    }
+                } else if (checkedBoxes().length === 0) {
+                    selectedEmployerName = null;
+                }
+                sortTable();
+                updateCounter();
             });
-
-            // Add the selected pharmacy
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'pharmacy',
-                value: $('#pharmacy-select').val()
-            }).appendTo($('#invoice-form, #email-form'));
         });
 
-        // Initial sort on page load
+        function setHidden(form, name, values) {
+            Array.prototype.slice.call(form.querySelectorAll('input[type="hidden"][name="' + name + '"]'))
+                .forEach(function (input) { input.remove(); });
+            values.forEach(function (value) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            });
+        }
+
+        // Add the selected jobs (and, for the email, the invoice format and number) on submit
+        function attachSelection(form, isEmail) {
+            form.addEventListener('submit', function (event) {
+                var selected = checkedBoxes();
+                if (selected.length === 0) {
+                    event.preventDefault();
+                    notify('Select at least one job in the job list first.');
+                    return;
+                }
+                setHidden(form, 'job_ids', selected.map(function (box) { return box.value; }));
+
+                if (isEmail) {
+                    var pharmacy = document.getElementById('pharmacy-select').value;
+                    var invoiceNo = document.getElementById('invoice_no').value.trim();
+                    if (!pharmacy || !invoiceNo) {
+                        event.preventDefault();
+                        notify('Choose the pharmacy format and enter the invoice number before sending the email.');
+                        return;
+                    }
+                    setHidden(form, 'pharmacy', [pharmacy]);
+                    setHidden(form, 'invoice_no', [invoiceNo]);
+                }
+            });
+        }
+
+        attachSelection(invoiceForm, false);
+        attachSelection(emailForm, true);
+
+        // Browsers can restore ticked boxes on back/refresh
+        var restored = checkedBoxes();
+        if (restored.length) {
+            selectedEmployerName = restored[0].getAttribute('data-employer');
+        }
         sortTable();
-    });
-    // Sync the invoice_no field between both forms
-    document.getElementById('invoice_no').addEventListener('input', function () {
-        var invoiceNo = this.value;
-        document.getElementById('email_invoice_no').value = invoiceNo; // Set the hidden input in the email form
-    });
-    // On page load, ensure the invoice_no is synced if it has a value already
-    document.addEventListener('DOMContentLoaded', function () {
-        var invoiceNo = document.getElementById('invoice_no').value;
-        document.getElementById('email_invoice_no').value = invoiceNo;
+        updateCounter();
     });
 </script>
 {% endblock %}

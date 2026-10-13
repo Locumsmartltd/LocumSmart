@@ -1,40 +1,89 @@
 {% extends "base.html" %}
-{% load static %}
-{% block title %}Generate Receipt{% endblock %}
+{% load static l10n %}
+{% block title %}Generate Invoice{% endblock %}
 {% block page_css %}
-{% include 'components/legacy_assets.html' %}
-<link rel="stylesheet" href="{% static 'css/generate_receipt.css' %}" />
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261015" />
 {% endblock %}
 {% block content %}
-<section>
+<section class="dash">
     <div class="container">
-        <div class="card card-container shadow-sm">
-            <h2>Enter Details</h2>
-            <form method="post" action="{% url 'generate_pdf_receipt' job.id %}">
+        <div class="dash-narrow">
+            <div class="dash-head">
+                <div>
+                    <span class="section-tag">Locum</span>
+                    <h1 class="dash-title">Generate Invoice</h1>
+                    <p class="dash-sub">Enter your bank details and the hours you worked, then download the invoice as a PDF.</p>
+                    <div class="dash-meta">
+                        <span class="dash-chip">Employer <strong>{{ job.pharmacy_name }}</strong></span>
+                        <span class="dash-chip">Dates <strong>{{ job.start_date|date:"d M Y" }} – {{ job.end_date|date:"d M Y" }}</strong></span>
+                        <span class="dash-chip">Rate <strong>£{{ job.locum_rate }}/hr</strong></span>
+                    </div>
+                </div>
+                {% if user.is_authenticated %}
+                <div class="dash-head-actions">
+                    <a href="{% url 'locum_jobs' user.id %}" class="btn btn-secondary">Back to My Invoices</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{% url 'generate_pdf_receipt' job.id %}" id="invoice-details-form">
                 {% csrf_token %}
-                <div class='row'>
-                    <div class="col-md-4">
-                        <label for="account_number" class="form-label">Account Number*</label>
-                        <input type="text" class="form-control" id="account_number" name="account_number" required>
+                <div class="dash-card">
+                    <div class="dash-card-head">
+                        <div>
+                            <h2>Payment details</h2>
+                            <p class="dash-card-note">Printed on the invoice so the pharmacy knows where to pay you.</p>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label for="sort_code" class="form-label">Sort Code*</label>
-                        <input type="text" class="form-control" id="sort_code" name="sort_code" required>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label for="invoice_number" class="form-label">Invoice Number</label>
-                        <input type="text" class="form-control" id="invoice_number" name="invoice_number">
+                    <div class="dash-fields">
+                        <div class="dash-field">
+                            <label for="account_number">Account number <span class="req">*</span></label>
+                            <input type="text" class="dash-input" id="account_number" name="account_number"
+                                inputmode="numeric" autocomplete="off" required>
+                        </div>
+                        <div class="dash-field">
+                            <label for="sort_code">Sort code <span class="req">*</span></label>
+                            <input type="text" class="dash-input" id="sort_code" name="sort_code"
+                                placeholder="00-00-00" autocomplete="off" required>
+                        </div>
+                        <div class="dash-field">
+                            <label for="invoice_number">Invoice number</label>
+                            <input type="text" class="dash-input" id="invoice_number" name="invoice_number"
+                                placeholder="e.g. INV-001" autocomplete="off">
+                        </div>
                     </div>
                 </div>
-                <br>
-                <br>
+
                 <!-- Dynamic Inputs for Working Hours and Hours Worked -->
-                <div class="mt-4" id="date_inputs">
-                    <h3>Enter Working Hours and Hours Worked for Each Day</h3>
+                <div class="dash-card">
+                    <div class="dash-card-head">
+                        <div>
+                            <h2>Hours worked</h2>
+                            <p class="dash-card-note">One row per day of the job. Working hours is the shift time, for example 09:00 – 17:00.</p>
+                        </div>
+                    </div>
+                    <div id="date_inputs"></div>
                 </div>
 
-                <button type="submit" class="btn btn-primary mt-4 download-btn d-block mx-auto">Download PDF</button>
+                <div class="dash-card">
+                    <div class="dash-summary">
+                        <div class="dash-summary-figures">
+                            <div class="dash-figure">
+                                <span>Total hours</span>
+                                <strong id="total_hours">0</strong>
+                            </div>
+                            <div class="dash-figure total">
+                                <span>Invoice total</span>
+                                <strong id="invoice_total">£0.00</strong>
+                            </div>
+                            <div class="dash-figure">
+                                <span>Payment terms</span>
+                                <strong>{{ payment_terms }}</strong>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg download-btn">Download PDF</button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -52,81 +101,94 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const startDate = new Date('{{ job.start_date }}');
-        let endDate = new Date('{{ job.end_date }}');
-
-        // Add 1 day to endDate to make it inclusive
-        endDate.setDate(endDate.getDate() + 1);
-
+        const hourlyRate = parseFloat('{{ job.locum_rate|unlocalize }}') || 0;
         const dateInputsContainer = document.getElementById('date_inputs');
+        const form = document.getElementById('invoice-details-form');
 
-        // If discreteDates is non-empty, use those dates; otherwise, use the date range
+        // If discreteDates is non-empty, use those dates; otherwise, every day from start to end (inclusive)
         if (discreteDates.length > 0) {
             discreteDates.forEach(function (dateString) {
                 addDateRow(dateString);
             });
         } else {
-            let currentDate = new Date(startDate); // Start from the startDate
-            currentDate.setDate(currentDate.getDate() + 1);
+            // Work in UTC so the dates do not shift with the browser's timezone
+            const currentDate = new Date('{{ job.start_date|date:"Y-m-d" }}T00:00:00Z');
+            const endDate = new Date('{{ job.end_date|date:"Y-m-d" }}T00:00:00Z');
             while (currentDate <= endDate) {
-                const formattedDate = currentDate.toISOString().slice(0, 10);
-                addDateRow(formattedDate);
-                // Move to the next day
-                currentDate.setDate(currentDate.getDate() + 1);
+                addDateRow(currentDate.toISOString().slice(0, 10));
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
             }
         }
 
-        function addDateRow(date) {
-            const dateHeading = document.createElement('h4');
-            dateHeading.textContent = `Date: ${date}`;
+        function addField(labelText, input) {
+            const field = document.createElement('div');
+            field.classList.add('dash-field');
+            const label = document.createElement('label');
+            label.setAttribute('for', input.id);
+            label.textContent = labelText;
+            field.appendChild(label);
+            field.appendChild(input);
+            return field;
+        }
 
-            const workingHoursLabel = document.createElement('label');
-            workingHoursLabel.setAttribute('for', `working_hours_${date}`);
-            workingHoursLabel.classList.add('form-label');
-            workingHoursLabel.textContent = 'Working Hours';
+        function addDateRow(date) {
+            const row = document.createElement('div');
+            row.classList.add('dash-day');
+
+            const dateHeading = document.createElement('div');
+            dateHeading.classList.add('dash-day-date');
+            dateHeading.textContent = date;
 
             const workingHoursInput = document.createElement('input');
             workingHoursInput.setAttribute('type', 'text');
-            workingHoursInput.classList.add('form-control');
+            workingHoursInput.classList.add('dash-input');
             workingHoursInput.setAttribute('id', `working_hours_${date}`);
             workingHoursInput.setAttribute('name', `working_hours_${date}`);
+            workingHoursInput.setAttribute('placeholder', '09:00 – 17:00');
             workingHoursInput.setAttribute('required', '');
-
-            const hoursWorkedLabel = document.createElement('label');
-            hoursWorkedLabel.setAttribute('for', `hours_worked_${date}`);
-            hoursWorkedLabel.classList.add('form-label');
-            hoursWorkedLabel.textContent = 'Hours Worked';
 
             const hoursWorkedInput = document.createElement('input');
             hoursWorkedInput.setAttribute('type', 'number');
-            hoursWorkedInput.classList.add('form-control');
+            hoursWorkedInput.classList.add('dash-input');
             hoursWorkedInput.setAttribute('id', `hours_worked_${date}`);
             hoursWorkedInput.setAttribute('name', `hours_worked_${date}`);
             hoursWorkedInput.setAttribute('required', '');
             hoursWorkedInput.setAttribute('min', '0');
+            hoursWorkedInput.setAttribute('step', '0.25');
+            hoursWorkedInput.setAttribute('placeholder', '8');
+            hoursWorkedInput.dataset.hours = '';
 
-            const rowDiv = document.createElement('div');
-            rowDiv.classList.add('row', 'mb-3');
+            const subtotal = document.createElement('div');
+            subtotal.classList.add('dash-day-subtotal');
+            subtotal.textContent = '£0.00';
+            hoursWorkedInput.addEventListener('input', function () {
+                const hours = parseFloat(hoursWorkedInput.value) || 0;
+                subtotal.textContent = '£' + (hours * hourlyRate).toFixed(2);
+                updateTotals();
+            });
 
-            const dateColumn = document.createElement('div');
-            dateColumn.classList.add('col-md-12');
-            dateColumn.appendChild(dateHeading);
-            rowDiv.appendChild(dateColumn);
-
-            const workingHoursColumn = document.createElement('div');
-            workingHoursColumn.classList.add('col-md-6');
-            workingHoursColumn.appendChild(workingHoursLabel);
-            workingHoursColumn.appendChild(workingHoursInput);
-            rowDiv.appendChild(workingHoursColumn);
-
-            const hoursWorkedColumn = document.createElement('div');
-            hoursWorkedColumn.classList.add('col-md-6');
-            hoursWorkedColumn.appendChild(hoursWorkedLabel);
-            hoursWorkedColumn.appendChild(hoursWorkedInput);
-            rowDiv.appendChild(hoursWorkedColumn);
-
-            dateInputsContainer.appendChild(rowDiv);
+            row.appendChild(dateHeading);
+            row.appendChild(addField('Working hours', workingHoursInput));
+            row.appendChild(addField('Hours worked', hoursWorkedInput));
+            row.appendChild(subtotal);
+            dateInputsContainer.appendChild(row);
         }
+
+        function updateTotals() {
+            let totalHours = 0;
+            dateInputsContainer.querySelectorAll('input[data-hours]').forEach(function (input) {
+                totalHours += parseFloat(input.value) || 0;
+            });
+            document.getElementById('total_hours').textContent = totalHours;
+            document.getElementById('invoice_total').textContent = '£' + (totalHours * hourlyRate).toFixed(2);
+        }
+
+        // The PDF downloads without leaving this page, so confirm what happened
+        form.addEventListener('submit', function () {
+            if (window.rsToast) {
+                window.rsToast('Your invoice is downloading. It is now listed under My Invoices as Pending.', 'success');
+            }
+        });
     });
 </script>
 

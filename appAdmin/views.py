@@ -45,7 +45,13 @@ import mimetypes
 from collections import deque
 from django.http import Http404, FileResponse
 from django.core.exceptions import PermissionDenied
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.utils._os import safe_join
+import logging
+
+# 'django.*' loggers are written to the error log file configured in settings.LOGGING
+logger = logging.getLogger('django.invoices')
 
 
 class AdminMediaView(View):
@@ -773,6 +779,7 @@ class JobListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
+        context['locum_invoices'] = LocumInvoice.objects.select_related('job', 'locum')
         return context
 
 
@@ -787,15 +794,33 @@ class JobListView(ListView):
 
         # Convert the list of job_ids to integers
         try:
-            job_ids = [int(job_id.strip()) for job_id in job_ids]
+            job_ids = [int(job_id.strip()) for job_id in job_ids if job_id.strip()]
         except ValueError:
-            return ("Invalid job ID(s) provided.")
+            messages.error(request, 'Invalid job ID(s) provided.')
+            return redirect(reverse('calander'))
+
+        # An invoice needs at least one job
+        if not job_ids:
+            messages.error(request, 'Select at least one job before generating or emailing an invoice.')
+            return redirect(reverse('calander'))
 
         # Get the list of Job objects based on the job_ids
         jobs = Job.objects.filter(id__in=job_ids)
 
         pharmacy = request.POST.get('pharmacy')
+        if pharmacy not in ('Gorgemead', 'Fairgreen', 'Tesco', 'Cohens'):
+            messages.error(request, 'Choose a pharmacy invoice format first.')
+            return redirect(reverse('calander'))
 
+        # Hours/Day is free text on the job, but the invoice total needs a number
+        for job in jobs:
+            try:
+                float(job.times_required)
+            except (TypeError, ValueError):
+                messages.error(
+                    request,
+                    f'Cannot invoice the {job.pharmacy_name} job: Hours/Day "{job.times_required}" is not a number.')
+                return redirect(reverse('calander'))
 
         # Generate unique invoice number
         if request.POST.get('invoice_no'):
@@ -841,8 +866,12 @@ class JobListView(ListView):
         if request.POST.get('date_time'):
             # Parsing the string into a datetime object
             stored_date_str = request.POST.get('date_time').replace("Sept.", "Sep").replace(".", "")  # Normalize the date
-            stored_date = datetime.strptime(stored_date_str, "%b %d, %Y, %I:%M %p")
-        
+            try:
+                stored_date = datetime.strptime(stored_date_str, "%b %d, %Y, %I:%M %p")
+            except ValueError:
+                # Unrecognised date format: fall back to today rather than failing
+                stored_date = datetime.now()
+
             # Extracting the current month and year in 'Month-YY' format
             current_month = stored_date.strftime('%B-%y')
         
@@ -856,12 +885,14 @@ class JobListView(ListView):
             current_month = datetime.now().strftime('%B-%y')
 
         if action == 'generate_invoice':
+            self.track_invoice(job_ids, pharmacy, invoice_no, total_amount)
             context = {
                 'jobs': jobs,
                 'invoice_number': invoice_no,
                 'created_date': current_date,
                 'month': current_month,
                 'total_amount': total_amount,
+                'payment_terms': settings.INVOICE_PAYMENT_TERMS,
             }
 
             # Render the appropriate template
@@ -893,7 +924,7 @@ class JobListView(ListView):
                 ),
                 from_email=settings.EMAIL_HOST_USER,
                 to=[to_email],
-                cc=[cc_email]
+                cc=[cc_email] if cc_email else []
             )
 
 
@@ -906,19 +937,37 @@ class JobListView(ListView):
             # email.attach('cohens_invoice.pdf', cohens_pdf.read(), 'application/pdf')
 
             # Send the email
-            email.send()
+            try:
+                email.send()
+            except Exception:
+                logger.exception('Failed to email invoice %s', invoice_no)
+                messages.error(request, f'Invoice #{invoice_no} could not be emailed. Please try again.')
+                return redirect(reverse('calander'))
 
-            # Save to EmailTrackingLog
-            EmailTrackingLog.objects.create(
-                to_email=to_email,
-                cc_email=cc_email,
-                from_email=settings.EMAIL_HOST_USER,
-                job_ids=job_ids,
-                invoice_type=pharmacy,
-                invoice_no=invoice_no,
-            )
+            # Record the email against the existing tracking record for this invoice
+            invoice = self.track_invoice(job_ids, pharmacy, invoice_no, total_amount)
+            invoice.to_email = to_email
+            invoice.cc_email = cc_email
+            invoice.from_email = settings.EMAIL_HOST_USER
+            invoice.emailed_at = timezone.now()
+            invoice.save()
+            messages.success(request, f'Invoice #{invoice_no} emailed to {to_email}.')
 
         return redirect(reverse('calander'))
+
+    def track_invoice(self, job_ids, pharmacy, invoice_no, total_amount):
+        # One tracking record per invoice number: created as Pending the first
+        # time the invoice is generated, then reused when it is shown or emailed
+        invoice = EmailTrackingLog.objects.filter(invoice_no=invoice_no).order_by('-id').first()
+        if invoice is None:
+            invoice = EmailTrackingLog(invoice_no=invoice_no)
+        elif invoice.status == EmailTrackingLog.STATUS_PAID:
+            return invoice
+        invoice.job_ids = job_ids
+        invoice.invoice_type = pharmacy
+        invoice.total_amount = total_amount
+        invoice.save()
+        return invoice
 
     def get_template_for_pharmacy(self, pharmacy):
         if pharmacy == 'Gorgemead':
@@ -1245,8 +1294,25 @@ class EmailTrackingLogView(View):
     template_name = 'emailTrackingLog.html'
 
     def get(self, request):
-        email_logs = EmailTrackingLog.objects.all()
+        email_logs = EmailTrackingLog.objects.order_by('-timestamp')
         return render(request, self.template_name, {'email_logs': email_logs})
+
+
+@login_required
+@require_POST
+def mark_agency_invoice_paid(request, invoice_id):
+    # Only admin/staff accounts can confirm payment of an agency invoice
+    if not Admin.objects.filter(id=request.user.id).exists():
+        raise PermissionDenied
+
+    invoice = get_object_or_404(EmailTrackingLog, pk=invoice_id)
+    if invoice.status != EmailTrackingLog.STATUS_PAID:
+        invoice.status = EmailTrackingLog.STATUS_PAID
+        invoice.paid_at = timezone.now()
+        invoice.save()
+        messages.success(request, f'Invoice #{invoice.invoice_no} marked as paid.')
+
+    return redirect('email_tracking_log')
     
 
 def send_email_to_locums(request, job_id):

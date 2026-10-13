@@ -39,6 +39,8 @@ urlpatterns = [
          DeleteEmployer.as_view(), name='delete_employer'),
     path('email-tracking-log/',
          EmailTrackingLogView.as_view(), name='email_tracking_log'),
+    path('invoice/<int:invoice_id>/mark-paid/',
+         views.mark_agency_invoice_paid, name='mark_agency_invoice_paid'),
     path('system-logs/', SystemLogsView.as_view(), name='system_logs'),
     path('media/<path:file_path>/', AdminMediaView.as_view(), name='admin_media'),
     path('send-email/<int:job_id>/', 

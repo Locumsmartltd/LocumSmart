@@ -22,6 +22,9 @@ from appAdmin.models import Admin
 from structure.passwords import SITE_URL
 from structure.emails import send_branded_email, send_approval_email
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.core.exceptions import PermissionDenied
 import logging
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
@@ -949,8 +952,25 @@ def locum_jobs(request, locum_id):
     applied_jobs = AppliedJob.objects.filter(locum_id=locum.id, approved=True)
     # Retrieve associated Job objects
     jobs = [applied_job.job for applied_job in applied_jobs]
+    invoices = LocumInvoice.objects.filter(locum=locum).select_related('job')
 
-    return render(request, 'locum_jobs.html', {'jobs': jobs})
+    return render(request, 'locum_jobs.html', {'jobs': jobs, 'invoices': invoices})
+
+
+@require_POST
+def mark_invoice_paid(request, invoice_id):
+    invoice = get_object_or_404(LocumInvoice, pk=invoice_id)
+    # Only the locum who raised the invoice can mark it as paid
+    if not request.user.is_authenticated or invoice.locum_id != request.user.id:
+        raise PermissionDenied
+
+    if invoice.status != LocumInvoice.STATUS_PAID:
+        invoice.status = LocumInvoice.STATUS_PAID
+        invoice.paid_at = timezone.now()
+        invoice.save()
+        messages.success(request, 'Invoice marked as paid.')
+
+    return redirect('locum_jobs', locum_id=request.user.id)
 
 
 def generate_receipt_form(request, job_id):
@@ -964,6 +984,7 @@ def generate_receipt_form(request, job_id):
         'has_multiple_days': has_multiple_days,
         'start_date': job.start_date,
         'end_date': job.end_date,
+        'payment_terms': settings.INVOICE_PAYMENT_TERMS,
     }
 
     return render(request, 'generate_receipt_form.html', context)
@@ -1099,15 +1120,22 @@ def generate_pdf_receipt(request, job_id):
                      60, "Additional Information:")
         p.drawString(right_box_start_x + col_widths[-1] + 20,
                      additional_table_y_position - 60, f"Total: £{total_cost:.2f}")
-        p.drawString(right_box_start_x + col_widths[-1] + 20,
-                     additional_table_y_position - 80, "Payment Due Date:")
+        p.drawRightString(letter[0] - 40, additional_table_y_position - 80,
+                          f"Payment Terms: {settings.INVOICE_PAYMENT_TERMS}")
         # Finalize and Return PDF
         p.showPage()
         p.save()
+
+        # Track the invoice; regenerating the same invoice number keeps its status
+        LocumInvoice.objects.update_or_create(
+            job=job, locum=locum, invoice_number=invoice_number.strip(),
+            defaults={'total_amount': round(total_cost, 2)},
+        )
         return response
 
     # For GET requests, show the data entry form
-    return render(request, 'generate_receipt_form.html', {'job': job})
+    return render(request, 'generate_receipt_form.html', {
+        'job': job, 'payment_terms': settings.INVOICE_PAYMENT_TERMS})
 
 
 def locum_calander(request, user_id):

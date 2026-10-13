@@ -1,53 +1,88 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Email Tracking Logs{% endblock %}
+{% block title %}Invoice Tracking{% endblock %}
 {% block page_css %}
-{% include 'components/legacy_assets.html' %}
-<link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261015" />
 {% endblock %}
 {% block content %}
-<section>
+<section class="dash">
     <div class="container">
-        <div class="locum-card">
-            <div class="table-responsive">
-                <table class="table">
+        <div class="dash-head">
+            <div>
+                <span class="section-tag">Admin</span>
+                <h1 class="dash-title">Invoice Tracking</h1>
+                <p class="dash-sub">Every agency invoice generated from the calendar, with its email and payment status.</p>
+            </div>
+            <div class="dash-head-actions">
+                <a href="{% url 'calander' %}" class="btn btn-secondary">Back to Calendar</a>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-table-wrap">
+                <table class="dash-table">
                     <thead>
                         <tr>
+                            <th>Invoice No</th>
+                            <th>Invoice Type</th>
+                            <th>Amount</th>
+                            <th>Generated On</th>
+                            <th>Emailed On</th>
                             <th>To Email</th>
                             <th>CC Email</th>
                             <th>From Email</th>
-                            <th>Invoice Type</th>
-                            <th>Invoice No</th>
-                            <th>Timestamp</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in email_logs %}
                         <tr>
-                            <td>{{ log.to_email }}</td>
-                            <td>{{ log.cc_email }}</td>
-                            <td>{{ log.from_email }}</td>
-                            <td>{{ log.invoice_type }}</td>
-                            <td>{{ log.invoice_no }}</td>
-                            <td>{{ log.timestamp }}</td>
-                            <td>
-                                <form method="POST" action="{% url 'calander' %}" target="_blank">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="job_ids" value="{{ log.job_ids|join:',' }}">
-                                    <input type="hidden" name="pharmacy" value="{{ log.invoice_type }}">
-                                    <input type="hidden" name="invoice_no" value="{{ log.invoice_no }}">
-                                    <input type="hidden" name="branch_name" value="">
-                                    <input type="hidden" name="branch_name" value="">
-                                    <input type="hidden" name="date_time" value="{{ log.timestamp }}">
-                                    <input type="hidden" name="action" value="generate_invoice">
-                                    <button type="submit" class="btn btn-primary">Show Invoice</button>
-                                </form>
+                            <td data-label="Invoice No" class="num">{{ log.invoice_no }}</td>
+                            <td data-label="Invoice Type">{{ log.invoice_type }}</td>
+                            <td data-label="Amount" class="num">{% if log.total_amount is not None %}£{{ log.total_amount }}{% else %}—{% endif %}</td>
+                            <td data-label="Generated On">{{ log.timestamp|date:"d M Y, H:i" }}</td>
+                            <td data-label="Emailed On">{% if log.emailed_at %}{{ log.emailed_at|date:"d M Y, H:i" }}{% else %}<span class="muted">Not emailed</span>{% endif %}</td>
+                            <td data-label="To Email">{{ log.to_email|default:"—" }}</td>
+                            <td data-label="CC Email">{{ log.cc_email|default:"—" }}</td>
+                            <td data-label="From Email">{{ log.from_email|default:"—" }}</td>
+                            <td data-label="Status">
+                                {% if log.status == 'paid' %}
+                                <span class="status-tag">Paid</span>
+                                {% else %}
+                                <span class="status-tag orange">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Action">
+                                <div class="dash-actions">
+                                    {% if log.job_ids %}
+                                    <form method="POST" action="{% url 'calander' %}" target="_blank">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="job_ids" value="{{ log.job_ids|join:',' }}">
+                                        <input type="hidden" name="pharmacy" value="{{ log.invoice_type }}">
+                                        <input type="hidden" name="invoice_no" value="{{ log.invoice_no }}">
+                                        <input type="hidden" name="branch_name" value="">
+                                        <input type="hidden" name="branch_name" value="">
+                                        <input type="hidden" name="date_time" value="{{ log.timestamp|date:'M d, Y, h:i A' }}">
+                                        <input type="hidden" name="action" value="generate_invoice">
+                                        <button type="submit" class="btn btn-primary btn-sm">Show Invoice</button>
+                                    </form>
+                                    {% endif %}
+                                    {% if log.status != 'paid' %}
+                                    <form method="POST" action="{% url 'mark_agency_invoice_paid' log.id %}"
+                                        onsubmit="return confirm('Mark invoice #{{ log.invoice_no|escapejs }} as paid? This cannot be undone.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-secondary btn-sm">Mark as Paid</button>
+                                    </form>
+                                    {% else %}
+                                    <span class="muted">Paid on {{ log.paid_at|date:"d M Y" }}</span>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="8">No email logs found.</td>
+                        <tr class="dash-empty">
+                            <td colspan="10">No invoices found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

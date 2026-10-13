@@ -103,13 +103,25 @@ class Employer(CustomUser):
 
 
 class EmailTrackingLog(models.Model):
-    to_email = models.EmailField()
+    STATUS_PENDING = 'pending'
+    STATUS_PAID = 'paid'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_PAID, 'Paid'),
+    ]
+
+    # Email fields stay empty until the invoice is actually emailed
+    to_email = models.EmailField(blank=True)
     cc_email = models.EmailField(blank=True, null=True)
-    from_email = models.EmailField()
+    from_email = models.EmailField(blank=True)
     job_ids = models.JSONField(blank=True, default=list)  # Use ArrayField to store job IDs
     invoice_type = models.CharField(max_length=255)
     invoice_no = models.CharField(max_length=50)  # Invoice number column
     timestamp = models.DateTimeField(auto_now_add=True)  # Automatically set the timestamp when the record is created
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    emailed_at = models.DateTimeField(blank=True, null=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return f"Email sent to {self.to_email} regarding {self.invoice_type} on {self.timestamp}"

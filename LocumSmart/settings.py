@@ -149,6 +149,9 @@ AUTHENTICATION_BACKENDS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/home/rsuwgghilww4/locumsmart.co.uk/media/'
 
+# Payment terms printed on every locum and agency invoice
+INVOICE_PAYMENT_TERMS = 'Within 7 days'
+
 #Email setup
 EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = config('EMAIL_PORT')

@@ -1,43 +1,117 @@
 <!-- locum_jobs.html -->
 
 {% extends "base.html" %}
-{% block title %}Locum Jobs{% endblock %}
+{% load static %}
+{% block title %}My Jobs &amp; Invoices{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261015" />
+{% endblock %}
 
 {% block content %}
-<section>
+<section class="dash">
     <div class="container">
-        <h2>Jobs Applied</h2>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Locum Rate</th>
-                        <th>Hours per Day</th>
-                        <th>Expense Covered</th>
-                        <th>Employer Name</th>
-                        <th>Receipt</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for job in jobs %}
-                    <tr>
-                        <td>{{ job.start_date }}</td>
-                        <td>{{ job.end_date }}</td>
-                        <td>{{ job.locum_rate }}</td>
-                        <td>{{ job.times_required }}</td>
-                        <td>{{ job.expenses_offered }}</td>
-                        <td>{{ job.employer.pharmacy_name }}</td>
-                        <td><a href="{% url 'generate_receipt_form' job.id %}" class="btn btn-primary">Generate</a></td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7">No jobs applied.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="dash-head">
+            <div>
+                <span class="section-tag">Locum</span>
+                <h1 class="dash-title">My Jobs &amp; Invoices</h1>
+                <p class="dash-sub">Generate an invoice for a job you have worked, then mark it as paid once the pharmacy has paid you.</p>
+            </div>
+            <div class="dash-head-actions">
+                <a href="{% url 'locumProfile' %}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h2>Approved jobs</h2>
+            </div>
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Locum Rate</th>
+                            <th>Hours per Day</th>
+                            <th>Expense Covered</th>
+                            <th>Employer Name</th>
+                            <th>Invoice</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in jobs %}
+                        <tr>
+                            <td data-label="Start Date">{{ job.start_date }}</td>
+                            <td data-label="End Date">{{ job.end_date }}</td>
+                            <td data-label="Locum Rate" class="num">£{{ job.locum_rate }}</td>
+                            <td data-label="Hours per Day" class="num">{{ job.times_required }}</td>
+                            <td data-label="Expense Covered" class="num">£{{ job.expenses_offered }}</td>
+                            <td data-label="Employer Name">{{ job.employer.pharmacy_name }}</td>
+                            <td data-label="Invoice"><a href="{% url 'generate_receipt_form' job.id %}" class="btn btn-primary btn-sm">Generate Invoice</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr class="dash-empty">
+                            <td colspan="7">You have no approved jobs yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <div>
+                    <h2>My invoices</h2>
+                    <p class="dash-card-note">Every invoice you generate appears here as Pending until you mark it as paid.</p>
+                </div>
+            </div>
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Invoice Number</th>
+                            <th>Employer Name</th>
+                            <th>Amount</th>
+                            <th>Generated On</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td data-label="Invoice Number">{{ invoice.invoice_number|default:"—" }}</td>
+                            <td data-label="Employer Name">{{ invoice.job.pharmacy_name }}</td>
+                            <td data-label="Amount" class="num">£{{ invoice.total_amount }}</td>
+                            <td data-label="Generated On">{{ invoice.created_at|date:"d M Y" }}</td>
+                            <td data-label="Status">
+                                {% if invoice.status == 'paid' %}
+                                <span class="status-tag">Paid</span>
+                                {% else %}
+                                <span class="status-tag orange">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Action">
+                                {% if invoice.status == 'paid' %}
+                                <span class="muted">Paid on {{ invoice.paid_at|date:"d M Y" }}</span>
+                                {% else %}
+                                <form method="post" action="{% url 'mark_invoice_paid' invoice.id %}"
+                                    onsubmit="return confirm('Mark this invoice as paid? This cannot be undone.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-secondary btn-sm">Mark as Paid</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="dash-empty">
+                            <td colspan="6">No invoices generated yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </section>

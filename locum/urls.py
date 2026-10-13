@@ -12,6 +12,7 @@ urlpatterns = [
     path('locum/<int:locum_id>/jobs/', views.locum_jobs, name='locum_jobs'),
     path('job/<int:job_id>/generate_receipt/', views.generate_receipt_form, name='generate_receipt_form'),
     path('job/<int:job_id>/generate_pdf_receipt/', views.generate_pdf_receipt, name='generate_pdf_receipt'),
+    path('invoice/<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
     path('locumcalendar/<int:user_id>/', views.locum_calander, name='locum_calander'),
     path('avail_added/<int:user_id>/', views.avail_added, name='avail_added'),
     path('addPharmacistManual/', views.addPharmacistManual, name='addPharmacistManual'),
