@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
 {% endblock %}
 {% block page_js %}
-<script src="{% static 'js/adminListSearch.js' %}"></script>
+<script src="{% static 'js/adminListSearch.js' %}?v=20261015b"></script>
 {% endblock %}
 {% block content %}
 <!-- locum_list.html -->
@@ -19,11 +19,10 @@
                 <h2>Staff List</h2>
                 <form method="GET" action="">
                     <div class="input-group rounded">
-                        <input type="search" class="form-control rounded" name="search" placeholder="Search by Email, Firstname or Lastname" aria-label="Search" aria-describedby="search-addon"
+                        <input type="search" class="form-control rounded" name="search" placeholder="Search any column" aria-label="Search" aria-describedby="search-addon"
                             value="{{ search_query }}"
-                            autocomplete="off" list="admin-search-suggestions"
+                            autocomplete="off"
                             data-admin-live-search>
-                        <datalist id="admin-search-suggestions"></datalist>
                         <button type="submit" class="input-group-text border-0" id="search-addon" title="Search">
                             <i class="fas fa-search"></i>
                         </button>
@@ -35,15 +34,15 @@
                 </form>
 
                 <!-- Staff Table -->
-                <div class="table-responsive">
+                <div class="table-responsive" data-admin-search-results>
                     {% if staff_perms %}
                         <table class="table" data-admin-search-table>
                             <thead>
                                 <tr>
-                                    <th>First Name</th>
-                                    <th>Last Name</th>
-                                    <th>Email</th>
-                                    <th>Status</th>
+                                    <th data-suggest>First Name</th>
+                                    <th data-suggest>Last Name</th>
+                                    <th data-suggest>Email</th>
+                                    <th data-suggest>Status</th>
                                     {% if user.admin.is_admin %}
                                     <th>Can Register Employer</th>
                                     <th>Can Delete Locum</th>
@@ -54,7 +53,7 @@
                             </thead>
                             <tbody>
                                 {% for staff, perm_info in staff_perms %}
-                                    <tr>
+                                    <tr data-row-key="{{ staff.id }}">
                                         <td>{{ staff.first_name }}</td>
                                         <td>{{ staff.last_name }}</td>
                                         <td>{{ staff.email }}</td>

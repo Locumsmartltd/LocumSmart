@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261018" />
 {% endblock %}
 {% block page_js %}
-<script src="{% static 'js/adminListSearch.js' %}"></script>
+<script src="{% static 'js/adminListSearch.js' %}?v=20261015b"></script>
 {% endblock %}
 
 {% block content %}
@@ -82,7 +82,7 @@
                 <div class="dash-sort">
                     <label for="sort_by">Sort by</label>
                     <select id="sort_by" class="dash-input"
-                        onchange="window.location.href = '{% url 'calander' %}?search={{ search_query|urlencode }}&sort_by=' + this.value">
+                        onchange="var url = new window.URL(window.location.href); url.searchParams.set('sort_by', this.value); window.location.href = url.toString();">
                         <option value="">Default</option>
                         <option value="Earliest" {% if request.GET.sort_by == 'Earliest' %}selected{% endif %}>Earliest</option>
                         <option value="Latest" {% if request.GET.sort_by == 'Latest' %}selected{% endif %}>Latest</option>
@@ -96,48 +96,47 @@
                 <input type="hidden" name="sort_by" value="{{ request.GET.sort_by }}">
                 {% endif %}
                 <input type="text" class="dash-input" name="search"
-                    placeholder="Search by employer, locum name or type"
+                    placeholder="Search by name, employer, type, status or booked by"
                     aria-label="Search jobs"
                     value="{{ search_query }}"
-                    autocomplete="off" list="admin-search-suggestions"
+                    autocomplete="off"
                     data-admin-live-search>
-                <datalist id="admin-search-suggestions"></datalist>
                 <button type="submit" class="btn btn-primary" id="search-btn">Search</button>
                 <a href="{% url 'calander' %}{% if request.GET.sort_by %}?sort_by={{ request.GET.sort_by }}{% endif %}"
                     class="btn btn-secondary" data-admin-search-clear title="Clear search">Clear</a>
             </form>
 
-            <div class="dash-table-wrap">
+            <div class="dash-table-wrap" data-admin-search-results>
                 <table class="dash-table wide" id="job-table" data-admin-search-table>
                     <thead>
                         <tr>
                             <th>Select</th>
                             <th>Start Date</th>
                             <th>End Date</th>
-                            <th>Employer Name</th>
+                            <th data-suggest>Employer Name</th>
                             <th>Job Type</th>
-                            <th>Locum Name</th>
-                            <th>Locum Type</th>
+                            <th data-suggest>Locum Name</th>
+                            <th data-suggest>Locum Type</th>
                             <th>Locum Rate</th>
                             <th>Expenses Offered</th>
                             <th>Hours/Day</th>
                             <th>Agency Fee</th>
-                            <th>Group</th>
-                            <th>Pharmacy Owner</th>
+                            <th data-suggest>Group</th>
+                            <th data-suggest>Pharmacy Owner</th>
                             <th>Date of Booking Email</th>
-                            <th>Locum Payment Status</th>
-                            <th>Job Status</th>
+                            <th data-suggest>Locum Payment Status</th>
+                            <th data-suggest>Job Status</th>
                             <th>Date of Invoice Email</th>
                             <th>Payment Source</th>
                             <th>Source Commission Date</th>
-                            <th>Booked By</th>
+                            <th data-suggest>Booked By</th>
                             <th>Additional Info</th>
                             <th>Update</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for job in jobs %}
-                        <tr data-job-row>
+                        <tr data-job-row data-row-key="{{ job.id }}">
                             <td data-label="Select"><input type="checkbox" class="job-checkbox dash-check" name="job_ids"
                                     value="{{ job.id }}" data-employer="{{ job.pharmacy_name }}"
                                     aria-label="Select job at {{ job.pharmacy_name }}"></td>
@@ -201,8 +200,8 @@
                 <table class="dash-table">
                     <thead>
                         <tr>
-                            <th>Locum Name</th>
-                            <th>Employer Name</th>
+                            <th data-suggest>Locum Name</th>
+                            <th data-suggest>Employer Name</th>
                             <th>Invoice Number</th>
                             <th>Amount</th>
                             <th>Generated On</th>
@@ -241,7 +240,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         var table = document.getElementById('job-table');
         var tbody = table.querySelector('tbody');
-        var checkboxes = Array.prototype.slice.call(table.querySelectorAll('input.job-checkbox'));
         var invoiceForm = document.getElementById('invoice-form');
         var emailForm = document.getElementById('email-form');
         var counter = document.querySelector('[data-selected-count]');
@@ -255,8 +253,10 @@
             }
         }
 
+        // Looked up each time: the live search swaps rows in and out
         function checkedBoxes() {
-            return checkboxes.filter(function (box) { return box.checked; });
+            return Array.prototype.filter.call(table.querySelectorAll('input.job-checkbox'),
+                function (box) { return box.checked; });
         }
 
         function updateCounter() {
@@ -282,23 +282,25 @@
         }
 
         // An invoice goes to one employer, so only jobs with the same employer can be selected together
-        checkboxes.forEach(function (box) {
-            box.addEventListener('change', function () {
-                var employerName = box.getAttribute('data-employer');
-                if (box.checked) {
-                    if (selectedEmployerName === null) {
-                        selectedEmployerName = employerName;
-                    } else if (employerName !== selectedEmployerName) {
-                        notify('You can only select jobs with the same Employer Name.');
-                        box.checked = false;
-                    }
-                } else if (checkedBoxes().length === 0) {
-                    selectedEmployerName = null;
+        table.addEventListener('change', function (event) {
+            var box = event.target;
+            if (!box.classList.contains('job-checkbox')) return;
+            var employerName = box.getAttribute('data-employer');
+            if (box.checked) {
+                if (selectedEmployerName === null) {
+                    selectedEmployerName = employerName;
+                } else if (employerName !== selectedEmployerName) {
+                    notify('You can only select jobs with the same Employer Name.');
+                    box.checked = false;
                 }
-                sortTable();
-                updateCounter();
-            });
+            } else if (checkedBoxes().length === 0) {
+                selectedEmployerName = null;
+            }
+            sortTable();
+            updateCounter();
         });
+        // Ticked jobs stay listed while searching; keep them at the top
+        table.addEventListener('admin-search:updated', sortTable);
 
         function setHidden(form, name, values) {
             Array.prototype.slice.call(form.querySelectorAll('input[type="hidden"][name="' + name + '"]'))

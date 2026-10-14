@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
 {% endblock %}
 {% block page_js %}
-<script src="{% static 'js/adminListSearch.js' %}"></script>
+<script src="{% static 'js/adminListSearch.js' %}?v=20261015b"></script>
 {% endblock %}
 {% block content %}
 <section>
@@ -17,12 +17,11 @@
                 <form method="GET" action="">
                     <div class="input-group rounded">
                         <input type="search" class="form-control rounded" name="search"
-                            placeholder="Search by (User Type, City), User Type, Email, Firstname, or Last Name"
+                            placeholder="Search any column, or User Type, City"
                             aria-label="Search" aria-describedby="search-addon"
                             value="{{ search_query }}"
-                            autocomplete="off" list="admin-search-suggestions"
+                            autocomplete="off"
                             data-admin-live-search />
-                        <datalist id="admin-search-suggestions"></datalist>
                         <button type="submit" class="input-group-text border-0" id="search-addon" title="Search">
                             <i class="fas fa-search"></i>
                         </button>
@@ -34,25 +33,25 @@
                 </form>
 
                 <!-- Locum Table -->
-                <div class="table-responsive"> <!-- Wrap table in responsive container -->
+                <div class="table-responsive" data-admin-search-results> <!-- Wrap table in responsive container -->
                     {% if locums %}
                     <table class="table" data-admin-search-table>
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="select-all"></th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Telephone</th>
-                                <th>Number</th>
-                                <th>Type</th>
-                                <th>Location</th>
+                                <th data-suggest>Name</th>
+                                <th data-suggest>Email</th>
+                                <th data-suggest>Telephone</th>
+                                <th data-suggest>Number</th>
+                                <th data-suggest>Type</th>
+                                <th data-suggest>Location</th>
                                 <th>Actions</th>
                                 <th>Delete</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for locum in locums %}
-                            <tr>
+                            <tr data-row-key="{{ locum.id }}">
                                 <td><input type="checkbox" class="select-checkbox" name="selected_locums"
                                         value="{{ locum.id }}"></td>
                                 <td><a href="{% url 'locum_detail' locum.id %}">{{ locum.firstname }}
@@ -101,9 +100,9 @@
                             <thead>
                                 <tr>
                                     <th><input type="checkbox" id="select-all"></th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Telephone</th>
+                                    <th data-suggest>Name</th>
+                                    <th data-suggest>Email</th>
+                                    <th data-suggest>Telephone</th>
                                     <th>User Type</th>
                                     <th>Dates</th> <!-- Display concatenated dates -->
                                 </tr>
@@ -153,13 +152,14 @@
     }
 
     $(document).ready(function () {
+        // Delegated, so rows swapped in by the live search work too
         // Handle 'Select All' checkbox functionality
-        $('#select-all').click(function () {
+        $(document).on('click', '#select-all', function () {
             $('.select-checkbox').prop('checked', this.checked);
         });
 
         // Ensure the 'Select All' checkbox is correctly checked/unchecked when individual checkboxes are toggled
-        $('.select-checkbox').click(function () {
+        $(document).on('click', '.select-checkbox', function () {
             if ($('.select-checkbox:checked').length === $('.select-checkbox').length) {
                 $('#select-all').prop('checked', true);
             } else {

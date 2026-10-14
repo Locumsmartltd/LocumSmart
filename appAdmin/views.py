@@ -50,6 +50,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.utils._os import safe_join
 import logging
+from .search import prefix_search
+
+# Text columns shown in the locum and locum request tables (plus the name)
+LOCUM_SEARCH_FIELDS = ['Email', 'telephone', 'gphc_number', 'gmc_number', 'nmc_number', 'user_type', 'county']
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
 logger = logging.getLogger('django.invoices')
@@ -445,15 +449,8 @@ class LocumListView(View):
             search_terms = [term.strip() for term in search_query.split(',')]
 
             if len(search_terms) == 1:
-                # Search for user_type or location if only one term is provided
-                locums = locums.filter(
-                    Q(user_type__icontains=search_terms[0]) |
-                    Q(county__icontains=search_terms[0]) |
-                    Q(Email__icontains=search_terms[0]) |
-                    Q(firstname__icontains=search_terms[0]) |
-                    Q(lastname__icontains=search_terms[0]) |
-                    Q(username__icontains=search_terms[0])
-                )
+                # Any listed column starting with the term
+                locums = prefix_search(locums, search_terms[0], 'firstname', 'lastname', others=LOCUM_SEARCH_FIELDS)
             elif len(search_terms) >= 2:
                 # Search for user_type and location (county) if both terms are provided
                 user_type_query = search_terms[0]
@@ -482,15 +479,8 @@ class LocumRequestsListView(View):
             search_terms = [term.strip() for term in search_query.split(',')]
 
             if len(search_terms) == 1:
-                # Search for user_type or location if only one term is provided
-                locums = locums.filter(
-                    Q(user_type__icontains=search_terms[0]) |
-                    Q(county__icontains=search_terms[0]) |
-                    Q(Email__icontains=search_terms[0]) |
-                    Q(firstname__icontains=search_terms[0]) |
-                    Q(lastname__icontains=search_terms[0]) |
-                    Q(username__icontains=search_terms[0])
-                )
+                # Any listed column starting with the term
+                locums = prefix_search(locums, search_terms[0], 'firstname', 'lastname', others=LOCUM_SEARCH_FIELDS)
             elif len(search_terms) >= 2:
                 # Search for user_type and location (county) if both terms are provided
                 user_type_query = search_terms[0]
@@ -514,13 +504,8 @@ class EmployerListView(View):
         search_query = request.GET.get('search', '')
         employers = Employer.objects.all()
         if search_query:
-            employers = employers.filter(
-                Q(email__icontains=search_query) |
-                Q(first_name__icontains=search_query) |
-                Q(last_name__icontains=search_query) |
-                Q(pharmacy_name__icontains=search_query) |
-                Q(username__icontains=search_query)
-            )
+            employers = prefix_search(employers, search_query, 'first_name', 'last_name',
+                                      others=['email', 'phone_number', 'pharmacy_name', 'post_code', 'city'])
         context = {
             'employers': employers,
             'search_query': search_query,
@@ -605,12 +590,10 @@ class StaffListView(View):
         search_query = request.GET.get('search', '')
         staffs = Admin.objects.all()
         if search_query:
-            staffs = staffs.filter(
-                Q(email__icontains=search_query) |
-                Q(first_name__icontains=search_query) |
-                Q(last_name__icontains=search_query) |
-                Q(username__icontains=search_query)
-            )
+            # The Status column shows "Admin" or "Staff"
+            status = search_query.strip().lower()
+            extra = ([Q(is_admin=True)] if status and 'admin'.startswith(status) else []) +                     ([Q(is_admin=False)] if status and 'staff'.startswith(status) else [])
+            staffs = prefix_search(staffs, search_query, 'first_name', 'last_name', others=['email'], extra=extra)
         perm_array = []
         for staff in staffs:
 
@@ -762,12 +745,10 @@ class JobListView(ListView):
         # Parse and apply filters from the search query
         search_query = self.request.GET.get('search')
         if search_query:
-            queryset = queryset.filter(
-                Q(locum__user_type__icontains=search_query) |
-                Q(locum__firstname__icontains=search_query) |
-                Q(locum__lastname__icontains=search_query) |
-                Q(pharmacy_name__icontains=search_query)
-            )
+            # Any of the job list's text columns starting with the search
+            queryset = prefix_search(queryset, search_query, 'locum__firstname', 'locum__lastname',
+                                     others=['pharmacy_name', 'locum__user_type', 'company_name', 'name',
+                                             'locum_payment_status', 'status', 'booked_by'])
 
         # Sorting by date if specified in query parameters
         sort_by = self.request.GET.get('sort_by')

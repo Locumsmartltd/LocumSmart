@@ -22,8 +22,13 @@ class CustomUser(AbstractUser):
     # No additional fields in the base user model
 
     class Meta(AbstractUser.Meta):
-        # Registration checks for an existing account by email on every submit
-        indexes = [models.Index(fields=['email'], name='customuser_email_idx')]
+        indexes = [
+            # Registration checks for an existing account by email on every submit
+            models.Index(fields=['email'], name='customuser_email_idx'),
+            # Admin search-as-you-type (prefix lookups on names)
+            models.Index(fields=['first_name'], name='customuser_first_name_idx'),
+            models.Index(fields=['last_name'], name='customuser_last_name_idx'),
+        ]
 
 
 class Admin(CustomUser):
@@ -65,11 +70,11 @@ class Admin(CustomUser):
 
 
 class Employer(CustomUser):
-    pharmacy_name = models.CharField(max_length=255)
-    manager_name = models.CharField(max_length=255, null=True, blank=True)
-    phone_number = models.CharField(max_length=20)
-    post_code = models.CharField(max_length=20, null=True, blank=True)
-    city = models.CharField(max_length=100, null=True, blank=True)
+    pharmacy_name = models.CharField(max_length=255, db_index=True)
+    manager_name = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    phone_number = models.CharField(max_length=20, db_index=True)
+    post_code = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    city = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     street_address = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):

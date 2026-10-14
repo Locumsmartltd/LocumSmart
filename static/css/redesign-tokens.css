@@ -55,6 +55,14 @@ html { scroll-behavior: smooth; }
 .rs .rs-upload-progress { height: 6px; margin-top: 10px; border-radius: 3px; background: var(--mint-light); overflow: hidden; }
 .rs .rs-upload-progress-bar { width: 0; height: 100%; background: var(--teal); transition: width .2s; }
 @keyframes rs-spin { to { transform: rotate(360deg); } }
+
+/* Admin list search suggestions dropdown (adminListSearch.js) */
+.rs .admin-suggest { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1050; margin: 0; padding: 6px; list-style: none; background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 30px rgba(42,47,54,.16); max-height: 320px; overflow-y: auto; text-align: left; }
+.rs .admin-suggest-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--charcoal); }
+.rs .admin-suggest-option.is-active, .rs .admin-suggest-option:hover { background: var(--mint-light); }
+.rs .admin-suggest-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs .admin-suggest-text strong { font-weight: 800; color: var(--teal-darker); }
+.rs .admin-suggest-label { flex: none; font-size: 12px; color: var(--grey); }
 .rs .btn-secondary:hover { background: var(--mint-light); }
 .rs .btn-lg { padding: 15px 28px; font-size: 16px; border-radius: 12px; }
 

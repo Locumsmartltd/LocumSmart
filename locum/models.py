@@ -20,25 +20,26 @@ class UserDocumentPath:
 class Locum(CustomUser):
     # Add fields specific to locum users
     title = models.CharField(max_length=100)
-    firstname = models.CharField(max_length=100)
-    lastname = models.CharField(max_length=100)
+    # Indexed for the admin search-as-you-type (prefix lookups on names)
+    firstname = models.CharField(max_length=100, db_index=True)
+    lastname = models.CharField(max_length=100, db_index=True)
     is_accepted = models.BooleanField(default=True)
     gender = models.CharField(max_length=10)
     date_of_birth = models.DateField()
-    Email = models.EmailField()
-    telephone = models.CharField(max_length=20)
-    county = models.CharField(max_length=100)
+    Email = models.EmailField(db_index=True)
+    telephone = models.CharField(max_length=20, db_index=True)
+    county = models.CharField(max_length=100, db_index=True)
     post_code = models.CharField(max_length=20)
     nationality = models.CharField(max_length=100)
     smartcard_number = models.CharField(max_length=20, blank=True)
-    gmc_number = models.CharField(max_length=20, blank=True)
+    gmc_number = models.CharField(max_length=20, blank=True, db_index=True)
     gmc_certificate = models.FileField(
         upload_to=UserDocumentPath(), blank=True)
     gmc_expiry = models.DateField(blank=True, null=True)
-    gphc_number = models.CharField(max_length=20, blank=True, null=True)
+    gphc_number = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     gphc_number_expiry = models.DateField(blank=True, null=True)
     qualified_date = models.DateField(blank=True, null=True)
-    nmc_number = models.CharField(max_length=20, blank=True)
+    nmc_number = models.CharField(max_length=20, blank=True, db_index=True)
     nmc_certificate = models.FileField(
         upload_to=UserDocumentPath(), blank=True)
     nmc_expiry = models.DateField(blank=True, null=True)
@@ -87,7 +88,7 @@ class Locum(CustomUser):
         upload_to=UserDocumentPath(), blank=True, null=True)
     accreditations15 = models.FileField(
         upload_to=UserDocumentPath(), blank=True, null=True)
-    user_type = models.CharField(max_length=100, null=True)
+    user_type = models.CharField(max_length=100, null=True, db_index=True)
     # References: when can_provide_references is true, capture two refs; otherwise, capture reason
     recent_ref_branch_address = models.CharField(max_length=255, blank=True, null=True)
     recent_ref_manager_name = models.CharField(max_length=255, blank=True, null=True)
@@ -136,9 +137,9 @@ class Locum(CustomUser):
 
 
 class Job(models.Model):
-    pharmacy_name = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255, blank=True)
-    name = models.CharField(max_length=255)
+    pharmacy_name = models.CharField(max_length=255, db_index=True)
+    company_name = models.CharField(max_length=255, blank=True, db_index=True)
+    name = models.CharField(max_length=255, db_index=True)
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
     county = models.CharField(max_length=100)
@@ -176,12 +177,12 @@ class Job(models.Model):
         max_digits=8, decimal_places=2, blank=True, null=True)
     date_of_booking_email = models.DateField(blank=True, null=True)
     locum_payment_status = models.CharField(
-        max_length=20, blank=True)  # 'paid'/'unpaid'
-    status = models.CharField(max_length=20, blank=True)  # 'paid'/'unpaid'
+        max_length=20, blank=True, db_index=True)  # 'paid'/'unpaid'
+    status = models.CharField(max_length=20, blank=True, db_index=True)  # 'paid'/'unpaid'
     date_of_invoice_email = models.DateField(blank=True, null=True)
     source = models.TextField(blank=True)  # text field
     source_commission_date = models.DateField(blank=True, null=True)
-    booked_by = models.CharField(max_length=255, blank=True)
+    booked_by = models.CharField(max_length=255, blank=True, db_index=True)
     # JSON field for discrete dates
     discrete_dates = models.TextField(blank=True, null=True)
 
