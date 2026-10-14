@@ -35,12 +35,17 @@ def html_to_text(html):
     return re.sub(r'\n{3,}', '\n\n', text).strip()
 
 
-def send_branded_email(template, subject, to, context=None, cc=None, fail_silently=False):
-    # Send templates/emails/<template>.html in the shared branded layout
+def build_branded_email(template, subject, to, context=None, cc=None):
+    # templates/emails/<template>.html in the shared branded layout, ready to send
     html, text = render_branded_email(template, context)
     message = EmailMultiAlternatives(subject, text, settings.EMAIL_HOST_USER, to, cc=cc)
     message.attach_alternative(html, 'text/html')
-    return message.send(fail_silently=fail_silently)
+    return message
+
+
+def send_branded_email(template, subject, to, context=None, cc=None, fail_silently=False):
+    # Send templates/emails/<template>.html in the shared branded layout
+    return build_branded_email(template, subject, to, context, cc).send(fail_silently=fail_silently)
 
 
 def send_approval_email(locum):

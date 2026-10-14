@@ -49,6 +49,12 @@ html { scroll-behavior: smooth; }
 .rs .btn-primary { background: var(--teal); color: white; box-shadow: 0 4px 12px rgba(27,163,156,.35); }
 .rs .btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(27,163,156,.45); }
 .rs .btn-secondary { background: white; color: var(--teal); border: 2px solid var(--teal); }
+/* Busy submit button: spinner plus an upload progress bar below it (registrationSubmit.js) */
+.rs .btn[aria-busy="true"], .rs .btn[aria-busy="true"]:hover { cursor: progress; opacity: .85; transform: none; }
+.rs .rs-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.45); border-top-color: white; border-radius: 50%; animation: rs-spin .8s linear infinite; flex: none; }
+.rs .rs-upload-progress { height: 6px; margin-top: 10px; border-radius: 3px; background: var(--mint-light); overflow: hidden; }
+.rs .rs-upload-progress-bar { width: 0; height: 100%; background: var(--teal); transition: width .2s; }
+@keyframes rs-spin { to { transform: rotate(360deg); } }
 .rs .btn-secondary:hover { background: var(--mint-light); }
 .rs .btn-lg { padding: 15px 28px; font-size: 16px; border-radius: 12px; }
 

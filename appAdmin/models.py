@@ -21,6 +21,10 @@ class CustomUser(AbstractUser):
 
     # No additional fields in the base user model
 
+    class Meta(AbstractUser.Meta):
+        # Registration checks for an existing account by email on every submit
+        indexes = [models.Index(fields=['email'], name='customuser_email_idx')]
+
 
 class Admin(CustomUser):
     is_admin = models.BooleanField(default=False)

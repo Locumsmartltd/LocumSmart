@@ -21,7 +21,7 @@ import pandas as pd
 from django.core.mail import EmailMultiAlternatives
 from appAdmin.models import Admin
 from structure.passwords import SITE_URL
-from structure.emails import send_branded_email, send_approval_email
+from structure.emails import send_branded_email, send_approval_email, build_branded_email
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -30,6 +30,9 @@ from functools import wraps
 from urllib.parse import urlencode
 from . import ledger, reports
 import logging
+import threading
+from django.core.mail import get_connection
+from django.db import transaction
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
 logger = logging.getLogger('django.registration')
@@ -57,10 +60,27 @@ def missing_registration_fields(request, required_fields, required_files):
     return missing
 
 
+def deliver_emails(emails):
+    # Runs on a background thread: one SMTP session for all the emails, and any
+    # mail server problem is logged rather than raised.
+    try:
+        with get_connection() as connection:
+            for message in emails:
+                try:
+                    connection.send_messages([message])
+                except Exception:
+                    logger.exception("Registration email '%s' to %s could not be sent",
+                                     message.subject, ', '.join(message.to))
+    except Exception:
+        logger.exception("Could not connect to the mail server to send registration emails")
+
+
 def send_registration_emails(firstname, lastname, email, telephone, user_type):
     # Tell the admin about the new request and confirm receipt to the applicant.
     # The registration is already saved at this point, so a mail server problem
-    # must not turn it into a server error for the applicant.
+    # must not turn it into a server error for the applicant. The emails are
+    # rendered here but sent on a background thread once the save is committed,
+    # so the applicant does not wait on the mail server.
     context = {
         'firstname': firstname,
         'lastname': lastname,
@@ -69,14 +89,17 @@ def send_registration_emails(firstname, lastname, email, telephone, user_type):
         'details': [('Name', f'{firstname} {lastname}'), ('Email', email),
                     ('Phone', telephone), ('User Type', user_type)],
     }
+    emails = []
     for template, subject, to_email in [
         ('registration_admin', f'LocumSmart Ltd: New {user_type} Registration Request', settings.EMAIL_HOST_USER),
         ('registration_received', f'LocumSmart Ltd: {user_type} Registration Request Submitted', email),
     ]:
         try:
-            send_branded_email(template, subject, [to_email], context)
+            emails.append(build_branded_email(template, subject, [to_email], context))
         except Exception:
-            logger.exception("Registration email '%s' to %s could not be sent", subject, to_email)
+            logger.exception("Registration email '%s' to %s could not be rendered", subject, to_email)
+    if emails:
+        transaction.on_commit(lambda: threading.Thread(target=deliver_emails, args=(emails,)).start())
 
 
 def registration_submitted(request):
@@ -84,6 +107,9 @@ def registration_submitted(request):
     # dialog; closing it leads to the jobs page, which shows the awaiting-approval notice.
     messages.success(request, 'Your registration request has been submitted.', extra_tags='registered')
     request.session['awaiting_approval'] = True
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Sent by registrationSubmit.js, which then loads the page itself
+        return JsonResponse({'redirect': request.path})
     return redirect(request.path)
 
 # Create your views here.
