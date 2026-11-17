@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import DetailView, UpdateView
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.views import View
 from django.contrib import messages
 from locum.models import *
@@ -57,6 +57,16 @@ LOCUM_SEARCH_FIELDS = ['Email', 'telephone', 'gphc_number', 'gmc_number', 'nmc_n
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
 logger = logging.getLogger('django.invoices')
+
+
+class StaffRequiredMixin:
+    """Restrict new app-admin workflows to registered staff accounts."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not Admin.objects.filter(
+                pk=request.user.pk).exists():
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
 
 class AdminMediaView(View):
@@ -511,6 +521,146 @@ class EmployerListView(View):
             'search_query': search_query,
         }
         return render(request, self.template_name, context)
+
+
+class EmployerJobsView(StaffRequiredMixin, View):
+    template_name = 'employer_jobs.html'
+
+    def get(self, request, employer_id):
+        employer = get_object_or_404(Employer, pk=employer_id)
+        jobs = Job.objects.filter(employer=employer).select_related('locum').annotate(
+            application_count=Count('appliedjob')
+        ).order_by('-start_date', '-id')
+        return render(request, self.template_name, {
+            'employer': employer,
+            'jobs': jobs,
+            'live_job_count': jobs.filter(
+                approved=True, rejected=False, applied_status=False).count(),
+            'total_application_count': sum(job.application_count for job in jobs),
+        })
+
+
+class EmployerJobEditView(StaffRequiredMixin, View):
+    template_name = 'EmployerRequest.html'
+
+    def get_context(self, employer, job):
+        discrete_dates = []
+        if job.discrete_dates:
+            try:
+                discrete_dates = json.loads(job.discrete_dates)
+            except (TypeError, ValueError):
+                discrete_dates = []
+
+        return {
+            'employer': employer,
+            'employer_locked': True,
+            'editing': True,
+            'job': job,
+            'discrete_dates': discrete_dates,
+            'initial_data': {
+                'company_name': employer.pharmacy_name,
+                'email': employer.email,
+                'telephone': employer.phone_number,
+                'first_name': employer.first_name,
+                'last_name': employer.last_name,
+                'street_address': employer.street_address,
+                'city': employer.city,
+                'manager_name': employer.manager_name,
+                'post_code': employer.post_code,
+                'locum_rate': job.locum_rate,
+                'expenses_offered': job.expenses_offered,
+                'times_required': job.times_required,
+                'any_other_information': job.any_other_information,
+                'start_date': job.start_date,
+                'end_date': job.end_date,
+            },
+        }
+
+    def get(self, request, employer_id, job_id):
+        employer = get_object_or_404(Employer, pk=employer_id)
+        job = get_object_or_404(Job, pk=job_id, employer=employer)
+        return render(request, self.template_name, self.get_context(employer, job))
+
+    def post(self, request, employer_id, job_id):
+        employer = get_object_or_404(Employer, pk=employer_id)
+        job = get_object_or_404(Job, pk=job_id, employer=employer)
+
+        try:
+            locum_rate = Decimal(request.POST.get('locum_rate', ''))
+            expenses_offered = Decimal(request.POST.get('expenses_offered') or '0')
+        except Exception:
+            messages.error(request, 'Enter valid values for the rate and expenses.')
+            return render(request, self.template_name, self.get_context(employer, job))
+
+        if (not locum_rate.is_finite() or locum_rate <= 0 or
+                not expenses_offered.is_finite() or expenses_offered < 0):
+            messages.error(request, 'Rate must be greater than zero and expenses cannot be negative.')
+            return render(request, self.template_name, self.get_context(employer, job))
+        if not request.POST.get('times_required', '').strip():
+            messages.error(request, 'Enter the hours required per day.')
+            return render(request, self.template_name, self.get_context(employer, job))
+
+        role_fields = {
+            'pharmacist_required': 'pharmacist_required',
+            'Technician_required': 'technician_required',
+            'Dispenser_required': 'dispenser_required',
+            'Nurse_required': 'nurse_required',
+            'ANP_required': 'anp_nurse_required',
+            'GP_required': 'gp_required',
+            'Optometrist_required': 'optometrist_required',
+            'DO_required': 'do_required',
+        }
+        selected_roles = [post_name for post_name in role_fields if post_name in request.POST]
+        if not selected_roles:
+            messages.error(request, 'Select at least one required role.')
+            return render(request, self.template_name, self.get_context(employer, job))
+
+        date_type = request.POST.get('date_type')
+        if date_type == 'discrete':
+            dates = sorted(filter(None, request.POST.getlist('discrete_dates[]')))
+            if not dates:
+                messages.error(request, 'Select at least one job date.')
+                return render(request, self.template_name, self.get_context(employer, job))
+            start_date, end_date = dates[0], dates[-1]
+            job.discrete_dates = json.dumps(dates)
+        else:
+            start_date = request.POST.get('start_date')
+            end_date = request.POST.get('end_date')
+            if not start_date or not end_date or start_date > end_date:
+                messages.error(request, 'Enter a valid job date range.')
+                return render(request, self.template_name, self.get_context(employer, job))
+            job.discrete_dates = None
+
+        # Employer/company information always comes from the selected employer.
+        job.pharmacy_name = employer.pharmacy_name
+        job.company_name = employer.pharmacy_name
+        job.name = employer.base_username()
+        job.email = employer.email
+        job.telephone = employer.phone_number
+        job.county = employer.city or ''
+        job.post_code = employer.post_code or ''
+        job.locum_rate = locum_rate
+        job.expenses_offered = expenses_offered
+        job.start_date = start_date
+        job.end_date = end_date
+        job.times_required = request.POST.get('times_required', '').strip()
+        job.any_other_information = request.POST.get('any_other_information', '').strip()
+        for post_name, model_field in role_fields.items():
+            setattr(job, model_field, post_name in request.POST)
+        job.save()
+
+        messages.success(request, 'Job updated successfully.')
+        return redirect('employer_jobs', employer_id=employer.id)
+
+
+class EmployerJobDeleteView(StaffRequiredMixin, View):
+    def post(self, request, employer_id, job_id):
+        employer = get_object_or_404(Employer, pk=employer_id)
+        job = get_object_or_404(Job, pk=job_id, employer=employer)
+        job_label = f'{job.pharmacy_name} job starting {job.start_date:%d %b %Y}'
+        job.delete()
+        messages.success(request, f'{job_label} was deleted.')
+        return redirect('employer_jobs', employer_id=employer.id)
 
 @method_decorator(login_required, name='dispatch')
 class LocumDetailView(DetailView):

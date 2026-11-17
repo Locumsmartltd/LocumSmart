@@ -165,7 +165,10 @@ LOGGING = {
         'file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
-            'filename': '/home/rsuwgghilww4/django-error.log',
+            # Production keeps its existing path; local/CI runs can point this
+            # at a writable location without editing settings.
+            'filename': os.environ.get(
+                'DJANGO_LOG_FILE', '/home/rsuwgghilww4/django-error.log'),
         },
     },
     'loggers': {

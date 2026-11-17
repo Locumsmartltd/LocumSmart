@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Jobs for {{ employer.pharmacy_name }}{% endblock %}
+{% block page_css %}
+<style>
+  .rs .employer-jobs-page { min-height: 70vh; padding: 44px 0 76px; background: linear-gradient(180deg, var(--mint-light) 0, var(--bg-soft) 360px); }
+  .rs .ej-shell { max-width: 1120px; margin: 0 auto; }
+  .rs .ej-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; color: var(--teal-darker); font-size: 14px; font-weight: 700; text-decoration: none; }
+  .rs .ej-back:hover { color: var(--teal); }
+  .rs .ej-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 28px; padding: 30px 32px; background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .rs .ej-kicker { margin-bottom: 8px; color: var(--teal-darker); font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+  .rs .ej-hero h1 { margin: 0; font-size: clamp(27px, 4vw, 38px); letter-spacing: -.8px; }
+  .rs .ej-contact { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 15px 0 0; color: var(--grey); font-size: 13px; }
+  .rs .ej-contact span { display: inline-flex; align-items: center; gap: 7px; }
+  .rs .ej-contact i { color: var(--teal); }
+  .rs .ej-summary { display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)); gap: 10px; margin: 22px 0 28px; }
+  .rs .ej-summary-item { padding: 16px 18px; background: rgba(255,255,255,.82); border: 1px solid var(--border); border-radius: var(--radius); }
+  .rs .ej-summary-value { display: block; color: var(--charcoal); font-size: 22px; font-weight: 800; }
+  .rs .ej-summary-label { color: var(--grey); font-size: 12px; font-weight: 600; }
+  .rs .ej-list { display: grid; gap: 16px; }
+  .rs .ej-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; padding: 24px; background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 8px 24px rgba(27, 57, 63, .06); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+  .rs .ej-card:hover { transform: translateY(-2px); border-color: var(--mint); box-shadow: 0 14px 34px rgba(27, 57, 63, .1); }
+  .rs .ej-card-main { min-width: 0; }
+  .rs .ej-card-head { display: flex; align-items: flex-start; gap: 14px; }
+  .rs .ej-role-icon { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; flex: 0 0 46px; border: 1px solid var(--mint); border-radius: 13px; background: var(--mint-light); color: var(--teal-darker); font-size: 13px; font-weight: 800; }
+  .rs .ej-card-title { min-width: 0; }
+  .rs .ej-card-title h2 { margin: 0 0 7px; font-size: 19px; line-height: 1.3; }
+  .rs .ej-card-title p { margin: 0; color: var(--grey); font-size: 13px; }
+  .rs .ej-meta { display: grid; grid-template-columns: repeat(4, minmax(115px, 1fr)); gap: 12px; margin-top: 21px; }
+  .rs .ej-meta-item { padding: 12px 14px; border-radius: 10px; background: var(--bg-soft); }
+  .rs .ej-meta-label { display: block; margin-bottom: 5px; color: var(--grey); font-size: 10px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+  .rs .ej-meta-value { color: var(--charcoal); font-size: 13px; font-weight: 700; line-height: 1.4; }
+  .rs .ej-card-side { display: flex; width: 174px; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 20px; }
+  .rs .ej-status { display: inline-flex; align-self: flex-end; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+  .rs .ej-status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+  .rs .status-live { color: #08766f; background: #dff7f2; }
+  .rs .status-pending { color: #7a5a00; background: #fff2bd; }
+  .rs .status-rejected { color: #a52b3a; background: #ffe4e8; }
+  .rs .status-filled { color: #3d5e86; background: #e7effa; }
+  .rs .ej-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rs .ej-actions .btn { min-height: 40px; padding: 10px 12px; justify-content: center; font-size: 12px; }
+  .rs .ej-actions form { grid-column: 1 / -1; }
+  .rs .ej-actions form .btn { width: 100%; }
+  .rs .ej-delete { border: 1px solid #f2c7cc; background: #fff6f7; color: #b3263a; }
+  .rs .ej-delete:hover { border-color: #b3263a; background: #b3263a; color: white; }
+  .rs .ej-empty { padding: 58px 24px; text-align: center; background: white; border: 1px dashed var(--mint); border-radius: var(--radius-lg); }
+  .rs .ej-empty-icon { display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; margin: 0 auto 18px; border-radius: 18px; background: var(--mint-light); color: var(--teal); font-size: 22px; }
+  .rs .ej-empty h2 { margin-bottom: 8px; font-size: 23px; }
+  .rs .ej-empty p { margin-bottom: 22px; color: var(--grey); }
+  @media (max-width: 880px) {
+    .rs .ej-meta { grid-template-columns: 1fr 1fr; }
+    .rs .ej-card { grid-template-columns: 1fr; }
+    .rs .ej-card-side { width: 100%; flex-direction: row; align-items: center; }
+    .rs .ej-status { align-self: auto; }
+    .rs .ej-actions { display: flex; }
+    .rs .ej-actions form { display: flex; }
+  }
+  @media (max-width: 620px) {
+    .rs .employer-jobs-page { padding: 26px 0 52px; }
+    .rs .ej-hero { grid-template-columns: 1fr; padding: 24px 20px; }
+    .rs .ej-hero .btn { width: 100%; }
+    .rs .ej-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .rs .ej-summary-item { padding: 13px 10px; }
+    .rs .ej-summary-value { font-size: 19px; }
+    .rs .ej-summary-label { font-size: 10px; line-height: 1.25; }
+    .rs .ej-card { padding: 19px; }
+    .rs .ej-meta { grid-template-columns: 1fr; }
+    .rs .ej-card-side { flex-direction: column; align-items: stretch; }
+    .rs .ej-status { align-self: flex-start; }
+    .rs .ej-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<section class="employer-jobs-page">
+  <div class="container ej-shell">
+    <a class="ej-back" href="{% url 'employersList' %}"><i class="fa-solid fa-arrow-left"></i> All employers</a>
+
+    <header class="ej-hero">
+      <div>
+        <div class="ej-kicker">Employer job management</div>
+        <h1>{{ employer.pharmacy_name }}</h1>
+        <div class="ej-contact">
+          <span><i class="fa-regular fa-user"></i>{{ employer.first_name }} {{ employer.last_name }}</span>
+          <span><i class="fa-regular fa-envelope"></i>{{ employer.email }}</span>
+          {% if employer.city %}<span><i class="fa-solid fa-location-dot"></i>{{ employer.city }}{% if employer.post_code %}, {{ employer.post_code }}{% endif %}</span>{% endif %}
+        </div>
+      </div>
+      <a href="{% url 'post_job' employer.id %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Post another job</a>
+    </header>
+
+    <div class="ej-summary" aria-label="Job summary">
+      <div class="ej-summary-item"><span class="ej-summary-value">{{ jobs|length }}</span><span class="ej-summary-label">Total job{{ jobs|length|pluralize }}</span></div>
+      <div class="ej-summary-item"><span class="ej-summary-value">{{ live_job_count|default:0 }}</span><span class="ej-summary-label">Currently live</span></div>
+      <div class="ej-summary-item"><span class="ej-summary-value">{{ total_application_count|default:0 }}</span><span class="ej-summary-label">Application{{ total_application_count|pluralize }}</span></div>
+    </div>
+
+    {% if jobs %}
+    <div class="ej-list">
+      {% for job in jobs %}
+      <article class="ej-card">
+        <div class="ej-card-main">
+          <div class="ej-card-head">
+            <div class="ej-role-icon">{% if job.pharmacist_required %}Rx{% elif job.technician_required %}Tc{% elif job.dispenser_required %}Ds{% elif job.gp_required %}GP{% elif job.nurse_required %}PN{% elif job.anp_nurse_required %}AN{% elif job.optometrist_required %}Op{% else %}DO{% endif %}</div>
+            <div class="ej-card-title">
+              <h2>
+                {% if job.pharmacist_required %}Pharmacist{% endif %}
+                {% if job.technician_required %}{% if job.pharmacist_required %} · {% endif %}Technician{% endif %}
+                {% if job.dispenser_required %}{% if job.pharmacist_required or job.technician_required %} · {% endif %}Dispenser{% endif %}
+                {% if job.nurse_required %}Practice Nurse{% endif %}
+                {% if job.anp_nurse_required %}ANP Nurse{% endif %}
+                {% if job.gp_required %}GP{% endif %}
+                {% if job.optometrist_required %}Optometrist{% endif %}
+                {% if job.do_required %}Dispensing Optician{% endif %}
+              </h2>
+              <p>Job #{{ job.id }} · Created for {{ job.pharmacy_name }}</p>
+            </div>
+          </div>
+          <div class="ej-meta">
+            <div class="ej-meta-item"><span class="ej-meta-label">Dates</span><span class="ej-meta-value">{{ job.start_date|date:"d M Y" }}{% if job.end_date != job.start_date %}<br>to {{ job.end_date|date:"d M Y" }}{% endif %}</span></div>
+            <div class="ej-meta-item"><span class="ej-meta-label">Location</span><span class="ej-meta-value">{{ job.county }}{% if job.post_code %}<br>{{ job.post_code }}{% endif %}</span></div>
+            <div class="ej-meta-item"><span class="ej-meta-label">Rate</span><span class="ej-meta-value">£{{ job.locum_rate }}/hr<br><span style="color:var(--grey);font-weight:600;">{{ job.times_required }} hrs/day</span></span></div>
+            <div class="ej-meta-item"><span class="ej-meta-label">Hiring</span><span class="ej-meta-value">{{ job.application_count }} application{{ job.application_count|pluralize }}<br>{% if job.locum %}{{ job.locum.first_name }} {{ job.locum.last_name }}{% else %}<span style="color:var(--grey);font-weight:600;">No locum assigned</span>{% endif %}</span></div>
+          </div>
+        </div>
+        <aside class="ej-card-side">
+          {% if job.applied_status %}<span class="ej-status status-filled">Filled</span>{% elif job.rejected %}<span class="ej-status status-rejected">Rejected</span>{% elif job.approved %}<span class="ej-status status-live">Live</span>{% else %}<span class="ej-status status-pending">Pending approval</span>{% endif %}
+          <div class="ej-actions">
+            <a href="{% url 'job_details' job.id %}" class="btn btn-primary"><i class="fa-regular fa-eye"></i> View</a>
+            <a href="{% url 'edit_employer_job' employer.id job.id %}" class="btn btn-secondary"><i class="fa-regular fa-pen-to-square"></i> Edit</a>
+            <form method="post" action="{% url 'delete_employer_job' employer.id job.id %}" onsubmit="return confirm('Delete this job permanently?{% if job.application_count %} It has {{ job.application_count }} application{{ job.application_count|pluralize }}.{% endif %}{% if job.locum %} A locum is assigned.{% endif %} Related applications, invoices and expenses will also be removed.');">
+              {% csrf_token %}<button type="submit" class="btn ej-delete"><i class="fa-regular fa-trash-can"></i> Delete job</button>
+            </form>
+          </div>
+        </aside>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="ej-empty">
+        <div class="ej-empty-icon"><i class="fa-regular fa-clipboard"></i></div>
+        <h2>No jobs posted yet</h2>
+        <p>Create the first job using the employer information already on file.</p>
+        <a href="{% url 'post_job' employer.id %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Post first job</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -202,8 +202,14 @@ class LocumJobs(View):
     template_name = 'locumJobs.html'
 
     def get(self, request):
-        # Retrieve all jobs with applied_status=False (jobs not yet applied to)
-        jobs = Job.objects.filter(applied_status=False)
+        # A job is public only after approval and while it is still unfilled.
+        # Keeping this rule in the queryset makes the count and rendered cards
+        # describe the exact same set of jobs.
+        jobs = Job.objects.filter(
+            applied_status=False,
+            approved=True,
+            rejected=False,
+        ).select_related('employer').order_by('start_date', 'id')
         cities = City.objects.all()
         cities = [capfirst(onecity.city) for onecity in cities]
         # Filter jobs based on search criteria from request parameters
@@ -438,12 +444,6 @@ class JobDetailsView(View):
 
 def check_login(request, job_id):
     if request.user.is_authenticated:
-        action = request.GET.get('action', 'view')  # Default to 'view' if no action is provided
-        if action == 'delete':
-            job = get_object_or_404(Job, id=job_id)
-            job.delete()
-            messages.success(request, 'Job has been deleted successfully.')
-            return redirect('locumjobs')  # Redirect to the 'locumjobs' page after deletion
         # User is authenticated, redirect to job details page
         return redirect('job_details', job_id=job_id)
     else:

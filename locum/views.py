@@ -33,6 +33,7 @@ import logging
 import threading
 from django.core.mail import get_connection
 from django.db import transaction
+from decimal import Decimal, InvalidOperation
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
 logger = logging.getLogger('django.registration')
@@ -256,45 +257,78 @@ def addtechManual(request):
 class EmployerRequestView(View):
     template_name = 'EmployerRequest.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        # The employer-specific route is an admin workflow.  The public
+        # employer request route (which has no employer_id) remains available.
+        if kwargs.get('employer_id'):
+            if not request.user.is_authenticated or not Admin.objects.filter(
+                    pk=request.user.pk).exists():
+                raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, employer_id=None):
         if employer_id:
             employer = get_object_or_404(Employer, id=employer_id)
             initial_data = {
-                'employer_name': employer.pharmacy_name,
-                'company_name': '',  # Assuming you don't have this in Employer model
-                'name': f'{employer.first_name} {employer.last_name}',
+                'company_name': employer.pharmacy_name,
                 'email': employer.email,
                 'telephone': employer.phone_number,
-                'county': employer.city,  # Assuming city is stored as county
+                'first_name': employer.first_name,
+                'last_name': employer.last_name,
+                'street_address': employer.street_address,
+                'city': employer.city,
+                'manager_name': employer.manager_name,
                 'post_code': employer.post_code,
             }
         else:
+            employer = None
             initial_data = {}
-        return render(request, self.template_name, {'initial_data': initial_data})
+        return render(request, self.template_name, {
+            'initial_data': initial_data,
+            'employer': employer,
+            'employer_locked': bool(employer),
+        })
 
     def post(self, request, employer_id=None):
-        company_name = request.POST.get('company_name', '')
-        email = request.POST.get('email')
-        post_code = request.POST.get('post_code')
-        locum_rate = float(request.POST.get('locum_rate'))
+        employer = None
+        if employer_id:
+            employer = get_object_or_404(Employer, id=employer_id)
+
+        company_name = employer.pharmacy_name if employer else request.POST.get('company_name', '').strip()
+        email = employer.email if employer else request.POST.get('email')
+        post_code = employer.post_code if employer else request.POST.get('post_code')
+        try:
+            locum_rate = Decimal(request.POST.get('locum_rate', ''))
+        except (InvalidOperation, TypeError):
+            messages.error(request, 'Enter a valid locum rate.')
+            return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
         expenses_offered = request.POST.get('expenses_offered')
         times_required = request.POST.get('times_required')
-        any_other_information = request.POST.get('any_other_information')
+        any_other_information = request.POST.get('any_other_information', '')
         date_type = request.POST.get('date_type')
 
         # New employer registration fields
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        street_address = request.POST.get('street_address')
-        city = request.POST.get('city')
-        manager_name = request.POST.get('manager_name')
-        telephone = request.POST.get('telephone')
+        first_name = employer.first_name if employer else request.POST.get('first_name')
+        last_name = employer.last_name if employer else request.POST.get('last_name')
+        street_address = employer.street_address if employer else request.POST.get('street_address')
+        city = employer.city if employer else request.POST.get('city')
+        manager_name = employer.manager_name if employer else request.POST.get('manager_name')
+        telephone = employer.phone_number if employer else request.POST.get('telephone')
     
 
-        if expenses_offered and expenses_offered.strip():
-            expenses_offered = float(expenses_offered)
-        else:
-            expenses_offered = 0
+        try:
+            expenses_offered = Decimal(expenses_offered) if expenses_offered and expenses_offered.strip() else Decimal('0')
+        except InvalidOperation:
+            messages.error(request, 'Enter a valid expenses amount.')
+            return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
+
+        if (not locum_rate.is_finite() or locum_rate <= 0 or
+                not expenses_offered.is_finite() or expenses_offered < 0):
+            messages.error(request, 'Rate must be greater than zero and expenses cannot be negative.')
+            return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
+        if not (times_required or '').strip():
+            messages.error(request, 'Enter the hours required per day.')
+            return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
 
         # Handle boolean fields
         pharmacist_required = 'pharmacist_required' in request.POST
@@ -316,13 +350,27 @@ class EmployerRequestView(View):
         elif date_type == 'discrete':
             discrete_dates = request.POST.getlist('discrete_dates[]')
             discrete_dates = [date for date in discrete_dates if date]
+            if not discrete_dates:
+                messages.error(request, 'Select at least one job date.')
+                return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
             discrete_dates = sorted(discrete_dates)
             start_date = discrete_dates[0]
             end_date = discrete_dates[-1]
             discrete_dates_json = json.dumps(discrete_dates)
 
+        if not start_date or not end_date or start_date > end_date:
+            messages.error(request, 'Enter a valid job date range.')
+            return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
+
+        if not any((pharmacist_required, Technician_required, Dispenser_required,
+                    Nurse_required, ANP_required, GP_required,
+                    Optometrist_required, DO_required)):
+            messages.error(request, 'Select at least one required role.')
+            return redirect('post_job', employer_id=employer_id) if employer_id else redirect('employerrequest')
+
         # Check if the employer exists
-        employer = Employer.objects.filter(email=email, post_code=post_code).first()
+        if employer is None:
+            employer = Employer.objects.filter(email=email, post_code=post_code).first()
 
         if not employer:
             # If employer is new, validate required fields
@@ -428,7 +476,8 @@ class EmployerRequestView(View):
         job.save()
 
         if employer_id:
-            return redirect('employerRequests')
+            messages.success(request, 'Job created successfully for this employer.')
+            return redirect('employer_jobs', employer_id=employer_id)
         else:
             messages.success(request, "Your request has been submitted successfully. You will be notified via email, if your request is approved by LocumSmart!")
             return redirect('employerrequest')

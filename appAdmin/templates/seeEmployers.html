@@ -4,6 +4,23 @@
 {% block page_css %}
 {% include 'components/legacy_assets.html' %}
 <link rel="stylesheet" href="{% static 'css/seeLocum.css' %}" />
+<style>
+    .employer-actions { display: flex; align-items: center; gap: 7px; min-width: 300px; }
+    .employer-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 9px 12px; border-radius: 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .employer-actions .manage-jobs-btn { min-width: 112px; border-color: var(--teal); background: var(--teal); color: #fff !important; }
+    .employer-actions .manage-jobs-btn:hover { border-color: var(--teal-darker); background: var(--teal-darker); }
+    .employer-actions .post-job-btn { border: 1px solid var(--mint); background: var(--mint-light); color: var(--teal-darker); }
+    .employer-actions .post-job-btn:hover { border-color: var(--teal); background: #fff; color: var(--teal-darker); }
+    .employer-actions .action-icon-btn { width: 38px; min-width: 38px; padding: 9px; }
+    .employer-actions .delete-employer-btn { border: 1px solid #f2c7cc; background: #fff6f7; color: #b3263a; }
+    .employer-actions .delete-employer-btn:hover { border-color: #b3263a; background: #b3263a; color: #fff; }
+    .employer-actions form { display: inline-flex; margin: 0; }
+    .employer-actions-header { min-width: 300px; }
+    @media (max-width: 760px) {
+        .employer-actions { min-width: 245px; flex-wrap: wrap; }
+        .employer-actions-header { min-width: 245px; }
+    }
+</style>
 {% endblock %}
 {% block page_js %}
 <script src="{% static 'js/adminListSearch.js' %}?v=20261015b"></script>
@@ -54,9 +71,7 @@
                                     <th data-suggest>Employer</th>
                                     <th data-suggest>PostCode</th>
                                     <th data-suggest>City</th>
-                                    <th>Post Job</th>
-                                    <th>Edit</th>
-                                    <th>Delete</th>
+                                    <th class="employer-actions-header">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -69,21 +84,20 @@
                                         <td>{{ employer.pharmacy_name }}</td>
                                         <td>{{ employer.post_code }}</td>
                                         <td>{{ employer.city }}</td>
-                                        <td>
-                                            <a href="{% url 'post_job' employer.id %}" class="btn btn-primary">post</a>
-                                        </td>
-                                        <td>
-                                            <a href="{% url 'edit_employer' employer.id %}" class="btn btn-secondary">Edit</a>
-                                        </td>
-                                        <td>
-                                            <form method="post" action="{% url 'delete_employer' employer.id %}" style="display:inline;">
+                                        <td data-label="Actions">
+                                            <div class="employer-actions">
+                                                <a href="{% url 'employer_jobs' employer.id %}" class="btn btn-info manage-jobs-btn"><i class="fas fa-briefcase"></i> Manage jobs</a>
+                                                <a href="{% url 'post_job' employer.id %}" class="btn post-job-btn" title="Post a new job"><i class="fas fa-plus"></i> Post job</a>
+                                                <a href="{% url 'edit_employer' employer.id %}" class="btn btn-secondary action-icon-btn" title="Edit employer" aria-label="Edit {{ employer.pharmacy_name }}"><i class="fas fa-pen"></i></a>
+                                                <form method="post" action="{% url 'delete_employer' employer.id %}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this employer?');">Delete</button>
-                                            </form>
+                                                    <button type="submit" class="btn action-icon-btn delete-employer-btn" title="Delete employer" aria-label="Delete {{ employer.pharmacy_name }}" onclick="return confirm('Delete this employer and all related jobs permanently?');"><i class="fas fa-trash"></i></button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 {% empty %}
-                                    <tr><td colspan="9">No employers found.</td></tr>
+                                    <tr><td colspan="8">No employers found.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

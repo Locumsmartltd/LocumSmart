@@ -1,272 +1,192 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Job Details{% endblock %}
+{% block title %}Job Details — {{ job.pharmacy_name }}{% endblock %}
+
 {% block page_css %}
-{% include 'components/legacy_assets.html' %}
-<link rel="stylesheet" href="{% static 'css/jobDetails.css' %}" />
+<style>
+  .rs .job-detail-page { min-height: 70vh; padding: 42px 0 80px; background: linear-gradient(180deg, var(--mint-light) 0, var(--bg-soft) 430px); }
+  .rs .jd-shell { max-width: 1080px; margin: 0 auto; }
+  .rs .jd-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; color: var(--teal-darker); font-size: 14px; font-weight: 700; text-decoration: none; }
+  .rs .jd-back:hover { color: var(--teal); }
+  .rs .jd-hero { position: relative; overflow: hidden; padding: 34px; background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .rs .jd-hero::after { position: absolute; top: -95px; right: -85px; width: 260px; height: 260px; border-radius: 50%; background: var(--mint-light); content: ""; }
+  .rs .jd-hero-top { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 26px; align-items: flex-start; }
+  .rs .jd-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .rs .jd-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; background: var(--mint-light); color: var(--teal-darker); font-size: 10px; font-weight: 800; letter-spacing: .45px; text-transform: uppercase; }
+  .rs .jd-badge-live { background: #e4f8eb; color: #177346; }
+  .rs .jd-badge-live::before { width: 6px; height: 6px; border-radius: 50%; background: #22b36b; content: ""; }
+  .rs .jd-badge-pending { background: #fff2bd; color: #765700; }
+  .rs .jd-badge-filled { background: #e7effa; color: #3d5e86; }
+  .rs .jd-badge-rejected { background: #ffe4e8; color: #a52b3a; }
+  .rs .jd-role-row { display: flex; align-items: center; gap: 15px; }
+  .rs .jd-role-icon { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; flex: 0 0 56px; border: 1px solid var(--mint); border-radius: 16px; background: linear-gradient(145deg, var(--mint-light), white); color: var(--teal-darker); font-size: 15px; font-weight: 800; }
+  .rs .jd-hero h1 { margin: 0 0 7px; font-size: clamp(28px, 4vw, 40px); letter-spacing: -1px; line-height: 1.15; }
+  .rs .jd-company { margin: 0; color: var(--grey); font-size: 15px; font-weight: 600; }
+  .rs .jd-rate-card { position: relative; z-index: 1; min-width: 185px; padding: 18px 20px; border: 1px solid var(--mint); border-radius: 14px; background: rgba(255,255,255,.9); text-align: right; }
+  .rs .jd-rate-label { color: var(--grey); font-size: 10px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+  .rs .jd-rate { margin-top: 4px; color: var(--teal-darker); font-size: 28px; font-weight: 800; letter-spacing: -.5px; }
+  .rs .jd-rate small { font-size: 12px; font-weight: 700; }
+  .rs .jd-quick-meta { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 27px; padding-top: 23px; border-top: 1px solid var(--border); color: var(--grey); font-size: 13px; font-weight: 600; }
+  .rs .jd-quick-meta span { display: inline-flex; align-items: center; gap: 8px; }
+  .rs .jd-quick-meta i { color: var(--teal); }
+  .rs .jd-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; margin-top: 20px; align-items: start; }
+  .rs .jd-card { padding: 26px; background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 8px 25px rgba(27,57,63,.055); }
+  .rs .jd-card + .jd-card { margin-top: 16px; }
+  .rs .jd-card h2 { display: flex; align-items: center; gap: 9px; margin: 0 0 20px; font-size: 19px; }
+  .rs .jd-card h2 i { color: var(--teal); font-size: 16px; }
+  .rs .jd-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .rs .jd-detail-item { padding: 14px 15px; border-radius: 11px; background: var(--bg-soft); }
+  .rs .jd-detail-item.full { grid-column: 1 / -1; }
+  .rs .jd-detail-label { display: block; margin-bottom: 6px; color: var(--grey); font-size: 10px; font-weight: 800; letter-spacing: .75px; text-transform: uppercase; }
+  .rs .jd-detail-value { color: var(--charcoal); font-size: 13px; font-weight: 700; line-height: 1.5; }
+  .rs .jd-roles { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rs .jd-role-chip { padding: 8px 11px; border: 1px solid var(--mint); border-radius: 999px; background: var(--mint-light); color: var(--teal-darker); font-size: 12px; font-weight: 700; }
+  .rs .jd-dates { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .rs .jd-dates li { display: flex; align-items: center; gap: 8px; color: var(--charcoal); font-size: 13px; font-weight: 700; }
+  .rs .jd-dates i { color: var(--teal); }
+  .rs .jd-notes { margin: 0; color: var(--grey); font-size: 14px; line-height: 1.75; white-space: pre-line; }
+  .rs .jd-side { position: sticky; top: 92px; }
+  .rs .jd-action-card { padding: 24px; background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .rs .jd-action-card h2 { margin: 0 0 8px; font-size: 20px; }
+  .rs .jd-action-card > p { margin: 0 0 20px; color: var(--grey); font-size: 13px; line-height: 1.6; }
+  .rs .jd-action-stack { display: grid; gap: 10px; }
+  .rs .jd-action-stack .btn { width: 100%; min-height: 45px; justify-content: center; }
+  .rs .jd-action-stack form { margin: 0; }
+  .rs .jd-application textarea { min-height: 126px; width: 100%; resize: vertical; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); padding: 13px 14px; color: var(--charcoal); font: inherit; font-size: 13px; }
+  .rs .jd-application textarea:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(28,163,155,.12); }
+  .rs .jd-application label { display: block; margin-bottom: 8px; color: var(--charcoal); font-size: 12px; font-weight: 700; }
+  .rs .jd-trust { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--grey); font-size: 11px; line-height: 1.55; }
+  .rs .jd-trust i { margin-top: 2px; color: var(--teal); }
+  @media (max-width: 860px) {
+    .rs .jd-layout { grid-template-columns: 1fr; }
+    .rs .jd-side { position: static; }
+  }
+  @media (max-width: 600px) {
+    .rs .job-detail-page { padding: 26px 0 54px; }
+    .rs .jd-hero { padding: 23px 20px; }
+    .rs .jd-hero-top { grid-template-columns: 1fr; }
+    .rs .jd-rate-card { width: 100%; text-align: left; }
+    .rs .jd-detail-grid { grid-template-columns: 1fr; }
+    .rs .jd-detail-item.full { grid-column: auto; }
+    .rs .jd-card { padding: 21px; }
+  }
+</style>
 {% endblock %}
+
 {% block content %}
+<section class="job-detail-page">
+  <div class="container jd-shell">
+    {% if user.admin and user.is_authenticated %}
+      <a class="jd-back" href="{% url 'employer_jobs' job.employer.id %}"><i class="fa-solid fa-arrow-left"></i> Back to employer jobs</a>
+    {% else %}
+      <a class="jd-back" href="{% url 'locumjobs' %}"><i class="fa-solid fa-arrow-left"></i> Back to jobs</a>
+    {% endif %}
 
-<section class="job-details">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card shadow">
-                    <div class="card-body">
-                        {% if user.admin and user.is_authenticated %}
-                        <form method="post" id="job-details-form">
-                            {% csrf_token %}
-                            <h2 class="text-primary">
-                                <input type="text" class="form-control" name="pharmacy_name"
-                                    value="{{ job.pharmacy_name }}">
-                            </h2>
-                            <p><strong>Company Name:</strong> <input type="text" class="form-control"
-                                    name="company_name" value="{{ job.company_name }}"></p>
-                            <p><strong>Employer Name:</strong> {{ job.employer.first_name }} {{ job.employer.last_name}}
-                            </p>
-                            <p><strong>Employer Email:</strong> {{ job.email }}</p>
-                            <p><strong>Employer Telephone:</strong> {{ job.telephone }}</p>
-                            <p><strong>City:</strong> <input type="text" class="form-control" name="county"
-                                    value="{{ job.county }}"></p>
-                            <p><strong>Post Code:</strong> <input type="text" class="form-control" name="post_code"
-                                    value="{{ job.post_code }}"></p>
-                            <p><strong>Locum Rate:</strong> £<input type="number" class="form-control" name="locum_rate"
-                                    step="0.01" value="{{ job.locum_rate }}"></p>
-                            <p><strong>Expenses Offered:</strong> £<input type="number" class="form-control"
-                                    name="expenses_offered" step="0.01" value="{{ job.expenses_offered }}"></p>
-                            <p><strong>Hours per day:</strong> <input type="text" class="form-control"
-                                    name="times_required" value="{{ job.times_required }}"></p>
-                            <p><strong>Additional Information:</strong> <textarea class="form-control"
-                                    name="any_other_information">{{ job.any_other_information }}</textarea></p>
-
-                            <p><strong>Date Selection Type:</strong></p>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="date_type" id="continuous"
-                                    value="continuous" {% if not discrete_dates %}checked{% endif %}>
-                                <label class="form-check-label" for="continuous">Continuous Dates</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="date_type" id="discrete"
-                                    value="discrete" {% if discrete_dates %}checked{% endif %}>
-                                <label class="form-check-label" for="discrete">Random Dates</label>
-                            </div>
-
-                            <!-- Continuous Dates Inputs -->
-                            <div class="row continuous-dates {% if discrete_dates %}d-none{% endif %} my-3">
-                                <!-- Start Date -->
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="startDateInput">Start Date</label>
-                                        <input type="date" class="form-control" name="start_date" id="startDateInput"
-                                            value="{{ job.start_date|date:"Y-m-d" }}" {% if not discrete_dates %}required{% endif %}>
-                                    </div>
-                                </div>
-                                <!-- End Date -->
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="endDateInput">End Date</label>
-                                        <input type="date" class="form-control" name="end_date" id="endDateInput"
-                                            value="{{ job.end_date|date:"Y-m-d" }}" {% if not discrete_dates %}required{% endif %}>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Discrete Dates Inputs -->
-                            <div class="row discrete-dates {% if not discrete_dates %}d-none{% endif %} my-3">
-                                <div id="discrete-dates-container" class="col-md-6">
-                                    {% for date in discrete_dates %}
-                                    <div class="input-group mb-2">
-                                        <input type="date" class="form-control" name="discrete_dates[]"
-                                            value="{{ date|date:"Y-m-d" }}" required>
-                                        <button type="button" class="btn btn-danger remove-date-btn">-</button>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="col-md-12 text-right">
-                                    <button type="button" id="add-date-btn" class="btn btn-secondary">+ Add
-                                        Date</button>
-                                </div>
-                                <div class="col-md-12 text-right d-none" id="date-limit-message">
-                                    <p class="text-muted">Contact to increase dates*</p>
-                                </div>
-                            </div>
-
-                            <p><strong>Locum Role Required:</strong></p>
-                            <div class="form-check d-flex flex-wrap justify-content-between">
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <input type="checkbox" class="form-check-input" id="pharmacist" name="locum_role"
-                                        value="pharmacist" {% if job.pharmacist_required %}checked{% endif %}>
-                                    <label class="form-check-label" for="pharmacist">Pharmacist</label>
-                                </div>
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <input type="checkbox" class="form-check-input" id="technician" name="locum_role"
-                                        value="technician" {% if job.technician_required %}checked{% endif %}>
-                                    <label class="form-check-label" for="technician">Technician</label>
-                                </div>
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <input type="checkbox" class="form-check-input" id="dispenser" name="locum_role"
-                                        value="dispenser" {% if job.dispenser_required %}checked{% endif %}>
-                                    <label class="form-check-label" for="dispenser">Dispenser</label>
-                                </div>
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <input type="checkbox" class="form-check-input" id="nurse" name="locum_role"
-                                        value="nurse" {% if job.nurse_required %}checked{% endif %}>
-                                    <label class="form-check-label" for="nurse">Nurse</label>
-                                </div>
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <input type="checkbox" class="form-check-input" id="anp_nurse" name="locum_role"
-                                        value="anp_nurse" {% if job.anp_nurse_required %}checked{% endif %}>
-                                    <label class="form-check-label" for="anp_nurse">ANP Nurse</label>
-                                </div>
-                                <div class="col-md-4 col-sm-6 mb-2">
-                                    <input type="checkbox" class="form-check-input" id="gp" name="locum_role" value="gp"
-                                        {% if job.gp_required %}checked{% endif %}>
-                                    <label class="form-check-label" for="gp">GP</label>
-                                </div>
-                            </div>
-
-                            <input type="hidden" name="edit" value=true>
-                            <br>
-                            <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
-                        </form>
-                        <br>
-                        <form method="post">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-primary btn-block">See Available Locums</button>
-                            <br>
-                        </form>
-                        {% else %}
-                        <h2 class="text-primary">Pharmacy</h2>
-                        <p><strong>City:</strong> {{ job.county }}</p>
-                        <p><strong>Post Code:</strong> <span id="post-code">{{ job.post_code }}</span></p>
-                        <p><strong>Locum Role Required:</strong>
-                            {% if job.pharmacist_required %} Pharmacist {% endif %}
-                            {% if job.technician_required %}, Technician {% endif %}
-                            {% if job.dispenser_required %}, Dispenser {% endif %}
-                            {% if job.nurse_required %}, Nurse {% endif %}
-                            {% if job.anp_nurse_required %}, ANP Nurse {% endif %}
-                            {% if job.gp_required %}, GP {% endif %}
-                        </p>
-                        <p><strong>Locum Rate:</strong> £{{ job.locum_rate }}/hr</p>
-                        <p><strong>Expenses Offered:</strong> £{{ job.expenses_offered }}</p>
-
-                        {% if discrete_dates %}
-                        <p><strong>Random Dates:</strong></p>
-                        <ul>
-                            {% for adate in discrete_dates %}
-                            <li>{{ adate }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p><strong>Start Date:</strong> {{ job.start_date|date:"d F Y" }}</p>
-                        <p><strong>End Date:</strong> {{ job.end_date|date:"d F Y" }}</p>
-                        {% endif %}
-
-                        <p><strong>Hours per day:</strong> {{ job.times_required }}</p>
-                        <p><strong>Additional Information:</strong> {{ job.any_other_information }}</p>
-
-                        <div class="row justify-content-center">
-                            <div class="col-md-6">
-                                <h2 class="text-primary">Additional Information</h2>
-                                <form id="additionalInfoForm" method="post">
-                                    {% csrf_token %}
-                                    <div class="form-group">
-                                        <label for="additional_info">Additional Information</label>
-                                        <textarea id="additional_info" name="additional_info" class="form-control" rows="4" placeholder="Add any information you want the employer to know (optional)"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary btn-block">Apply</button>
-                                    <br>
-                                    <p>After you apply, you and the job employer will receive an email. If your
-                                        application gets approved, you will receive your contract email respectively.
-                                    </p>
-                                    <p style="text-align:center">Thank you</p>
-                                </form>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+    <header class="jd-hero">
+      <div class="jd-hero-top">
+        <div>
+          <div class="jd-badges">
+            {% if job.applied_status %}<span class="jd-badge jd-badge-filled">Filled</span>
+            {% elif job.rejected %}<span class="jd-badge jd-badge-rejected">Rejected</span>
+            {% elif job.approved %}<span class="jd-badge jd-badge-live">Open role</span>
+            {% else %}<span class="jd-badge jd-badge-pending">Pending approval</span>{% endif %}
+            {% if job.discrete_dates %}<span class="jd-badge">Selected dates</span>{% elif job.shift_count > 1 %}<span class="jd-badge">Multi-day job</span>{% else %}<span class="jd-badge">Single-day job</span>{% endif %}
+          </div>
+          <div class="jd-role-row">
+            <div class="jd-role-icon">{% if job.pharmacist_required %}Rx{% elif job.technician_required %}Tc{% elif job.dispenser_required %}Ds{% elif job.gp_required %}GP{% elif job.nurse_required %}PN{% elif job.anp_nurse_required %}AN{% elif job.optometrist_required %}Op{% else %}DO{% endif %}</div>
+            <div>
+              <h1>{% if job.pharmacist_required %}Pharmacist{% elif job.technician_required %}Technician{% elif job.dispenser_required %}Dispenser{% elif job.nurse_required %}Practice Nurse{% elif job.anp_nurse_required %}ANP Nurse{% elif job.gp_required %}GP{% elif job.optometrist_required %}Optometrist{% else %}Dispensing Optician{% endif %}</h1>
+              <p class="jd-company">{{ job.pharmacy_name }}{% if job.company_name and job.company_name != job.pharmacy_name %} · {{ job.company_name }}{% endif %}</p>
             </div>
+          </div>
         </div>
+        <div class="jd-rate-card"><div class="jd-rate-label">Hourly rate</div><div class="jd-rate">£{{ job.locum_rate }}<small>/hr</small></div></div>
+      </div>
+      <div class="jd-quick-meta">
+        <span><i class="fa-solid fa-location-dot"></i>{{ job.county }}{% if user.admin and job.post_code %}, {{ job.post_code }}{% endif %}</span>
+        <span><i class="fa-regular fa-calendar"></i>{{ job.start_date|date:"d M Y" }}{% if job.end_date != job.start_date %} – {{ job.end_date|date:"d M Y" }}{% endif %}</span>
+        <span><i class="fa-regular fa-clock"></i>{% if job.shift_count and job.total_hours %}{{ job.shift_count }} shift{{ job.shift_count|pluralize }} · {{ job.total_hours|floatformat:"-2" }} total hours · {% endif %}{{ job.times_required }} hours/day</span>
+        {% if job.expenses_offered %}<span><i class="fa-solid fa-receipt"></i>£{{ job.expenses_offered }} expenses</span>{% endif %}
+      </div>
+    </header>
+
+    <div class="jd-layout">
+      <main>
+        <section class="jd-card">
+          <h2><i class="fa-regular fa-clipboard"></i> Job overview</h2>
+          <div class="jd-detail-grid">
+            <div class="jd-detail-item"><span class="jd-detail-label">Location</span><span class="jd-detail-value">{{ job.county }}<br>{% if user.admin %}{{ job.post_code }}{% else %}{{ job.post_code|slice:":3" }}****{% endif %}</span></div>
+            <div class="jd-detail-item"><span class="jd-detail-label">Hours and expenses</span><span class="jd-detail-value">{{ job.times_required }} hours per day<br>£{{ job.expenses_offered }} expenses offered</span></div>
+            <div class="jd-detail-item full">
+              <span class="jd-detail-label">Roles required</span>
+              <div class="jd-roles">
+                {% if job.pharmacist_required %}<span class="jd-role-chip">Pharmacist</span>{% endif %}
+                {% if job.technician_required %}<span class="jd-role-chip">Technician</span>{% endif %}
+                {% if job.dispenser_required %}<span class="jd-role-chip">Dispenser</span>{% endif %}
+                {% if job.nurse_required %}<span class="jd-role-chip">Practice Nurse</span>{% endif %}
+                {% if job.anp_nurse_required %}<span class="jd-role-chip">ANP Nurse</span>{% endif %}
+                {% if job.gp_required %}<span class="jd-role-chip">GP</span>{% endif %}
+                {% if job.optometrist_required %}<span class="jd-role-chip">Optometrist</span>{% endif %}
+                {% if job.do_required %}<span class="jd-role-chip">Dispensing Optician</span>{% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="jd-card">
+          <h2><i class="fa-regular fa-calendar-days"></i> Schedule</h2>
+          {% if discrete_dates %}
+            <ul class="jd-dates">{% for adate in discrete_dates %}<li><i class="fa-regular fa-circle-check"></i>{{ adate|date:"l, d F Y" }}</li>{% endfor %}</ul>
+          {% else %}
+            <div class="jd-detail-grid">
+              <div class="jd-detail-item"><span class="jd-detail-label">Start date</span><span class="jd-detail-value">{{ job.start_date|date:"l, d F Y" }}</span></div>
+              <div class="jd-detail-item"><span class="jd-detail-label">End date</span><span class="jd-detail-value">{{ job.end_date|date:"l, d F Y" }}</span></div>
+            </div>
+          {% endif %}
+        </section>
+
+        <section class="jd-card">
+          <h2><i class="fa-regular fa-message"></i> Additional information</h2>
+          <p class="jd-notes">{{ job.any_other_information|default:"No additional information has been provided for this role." }}</p>
+        </section>
+
+        {% if user.admin and user.is_authenticated %}
+        <section class="jd-card">
+          <h2><i class="fa-regular fa-building"></i> Employer information</h2>
+          <div class="jd-detail-grid">
+            <div class="jd-detail-item"><span class="jd-detail-label">Contact</span><span class="jd-detail-value">{{ job.employer.first_name }} {{ job.employer.last_name }}<br>{{ job.telephone }}</span></div>
+            <div class="jd-detail-item"><span class="jd-detail-label">Email</span><span class="jd-detail-value">{{ job.email }}</span></div>
+          </div>
+        </section>
+        {% endif %}
+      </main>
+
+      <aside class="jd-side">
+        {% if user.admin and user.is_authenticated %}
+        <div class="jd-action-card">
+          <h2>Manage this job</h2>
+          <p>Edit the posting or review locums whose availability overlaps these dates.</p>
+          <div class="jd-action-stack">
+            <a href="{% url 'edit_employer_job' job.employer.id job.id %}" class="btn btn-primary"><i class="fa-regular fa-pen-to-square"></i> Edit job details</a>
+            <form method="post">{% csrf_token %}<button type="submit" class="btn btn-secondary"><i class="fa-solid fa-users"></i> See available locums</button></form>
+          </div>
+          <div class="jd-trust"><i class="fa-solid fa-circle-info"></i><span>Approval and booking status are managed separately from the job details.</span></div>
+        </div>
+        {% else %}
+        <div class="jd-action-card jd-application">
+          <h2>Interested in this shift?</h2>
+          <p>Send your application to LocumSmart. You can include a short note for the admin team.</p>
+          <form method="post">
+            {% csrf_token %}
+            <label for="additional_info">Additional information <span style="color:var(--grey);font-weight:500;">(optional)</span></label>
+            <textarea id="additional_info" name="additional_info" placeholder="Availability, relevant experience or anything else we should know"></textarea>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;">Apply for this job <i class="fa-solid fa-arrow-right"></i></button>
+          </form>
+          <div class="jd-trust"><i class="fa-solid fa-shield-halved"></i><span>Your application is reviewed by LocumSmart before the employer makes a booking decision.</span></div>
+        </div>
+        {% endif %}
+      </aside>
     </div>
+  </div>
 </section>
-<script>
-    $(document).ready(function () {
-        // Function to update required attributes based on date type
-        function updateRequiredAttributes() {
-            const dateType = $('input[name="date_type"]:checked').val();
-            if (dateType === 'continuous') {
-                $('#startDateInput').attr('required', true);
-                $('#endDateInput').attr('required', true);
-                $('input[name="discrete_dates[]"]').attr('required', false);
-            } else {
-                $('#startDateInput').attr('required', false);
-                $('#endDateInput').attr('required', false);
-                $('input[name="discrete_dates[]"]').first().attr('required', true);
-            }
-        }
-
-        // Initial load
-        updateRequiredAttributes();
-
-        // Toggle visibility of date inputs based on selected date type
-        $('input[name="date_type"]').change(function () {
-            if ($(this).val() === 'continuous') {
-                $('.continuous-dates').removeClass('d-none');
-                $('.discrete-dates').addClass('d-none');
-            } else {
-                $('.continuous-dates').addClass('d-none');
-                $('.discrete-dates').removeClass('d-none');
-            }
-            updateRequiredAttributes();
-        });
-
-        // Add new date field
-        let dateFieldCounter = parseInt("{{ discrete_dates|length }}") || 0;
-        const maxDateFields = 10;
-        const dateFieldContainer = $('#discrete-dates-container');
-        const addDateBtn = $('#add-date-btn');
-        const dateLimitMessage = $('#date-limit-message');
-
-        addDateBtn.click(function () {
-            if (dateFieldCounter < maxDateFields) {
-                dateFieldCounter++;
-                const newDateField = `
-                <div class="input-group mb-2">
-                    <input class="form-control" type="date" name="discrete_dates[]" required>
-                    <button type="button" class="btn btn-danger remove-date-btn">-</button>
-                </div>
-            `;
-                dateFieldContainer.append(newDateField);
-                if (dateFieldCounter === maxDateFields) {
-                    addDateBtn.addClass('d-none');
-                    dateLimitMessage.removeClass('d-none');
-                }
-            }
-        });
-
-        // Remove newly added date field
-        $(document).on('click', '.remove-date-btn', function () {
-            $(this).closest('.input-group').remove();
-            dateFieldCounter--;
-            // Ensure the add button and limit message visibility is managed correctly
-            if (dateFieldCounter < maxDateFields) {
-                addDateBtn.removeClass('d-none');
-                dateLimitMessage.addClass('d-none');
-            }
-        });
-
-        // Mask post code
-        var postCodeElement = document.getElementById('post-code');
-        if (postCodeElement) {
-            var postCode = postCodeElement.textContent.trim();
-            if (postCode.length > 3) {
-                var maskedPostCode = postCode.slice(0, 3) + '*'.repeat(postCode.length - 3);
-                postCodeElement.textContent = maskedPostCode;
-            }
-        }
-    });
-</script>
-
-
 {% endblock %}

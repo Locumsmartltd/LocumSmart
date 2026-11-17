@@ -186,6 +186,23 @@ class Job(models.Model):
     # JSON field for discrete dates
     discrete_dates = models.TextField(blank=True, null=True)
 
+    @property
+    def shift_count(self):
+        """Return the number of scheduled work dates represented by this job."""
+        from .ledger import job_day_count
+
+        return job_day_count(self)
+
+    @property
+    def total_hours(self):
+        """Return the total scheduled hours when the stored hours are valid."""
+        from .ledger import job_hours_per_day
+
+        hours_per_day = job_hours_per_day(self)
+        if self.shift_count is None or hours_per_day is None:
+            return None
+        return hours_per_day * self.shift_count
+
     def __str__(self):
         return f"Job - {self.name} ({self.pharmacy_name})"
 
