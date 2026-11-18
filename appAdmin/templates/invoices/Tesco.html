@@ -67,19 +67,19 @@
             </thead>
             <tbody>
                 {% for job in jobs %}
-                {% for date in job.days_list %}
+                {% for day in job.invoice_day_rows %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ date }}</td>
+                    <td>{{ day.date }}</td>
                     <td>{{ invoice_number }}</td> <!-- Assuming job ID or another unique identifier -->
                     <td>{{ job.locum.gphc_number }}</td>
                     <td>{{ job.locum.first_name }} {{ job.locum.last_name }}</td>
                     <td>Locumsmart Ltd.</td>
                     <td> </td> <!-- Assuming a field or variable for store number -->
-                    <td>{{ job.times_required }}</td> <!-- Assuming you have a way to calculate total hours worked -->
-                    <td>£{{ job.per_day_price }}</td>
+                    <td>{{ day.hours }}</td>
+                    <td>£{{ day.price }}</td>
                     <td> </td>
-                    <td>£{{ job.per_day_price }}</td>
+                    <td>£{{ day.price }}</td>
                 </tr>
                 {% endfor %}
                 {% endfor %}

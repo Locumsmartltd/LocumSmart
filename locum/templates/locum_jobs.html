@@ -101,7 +101,7 @@
             <div class="dash-card-head">
                 <div>
                     <h2>Approved jobs</h2>
-                    <p class="dash-card-note">Gross = hourly rate × hours per day × days. Net income = gross − your expenses for that job.</p>
+                    <p class="dash-card-note">Once every shift is verified, gross uses approved payable hours after unpaid break deductions. Net income = gross − your expenses.</p>
                 </div>
             </div>
             <div class="dash-table-wrap">
@@ -110,7 +110,7 @@
                         <tr>
                             <th>Dates</th>
                             <th>Employer</th>
-                            <th>Rate × Hours × Days</th>
+                            <th>Rate × Payable Hours</th>
                             <th>Expenses Offered</th>
                             <th>Gross</th>
                             <th>My Expenses</th>
@@ -123,7 +123,7 @@
                         <tr>
                             <td data-label="Dates" class="num">{{ row.job.start_date|date:"d M Y" }}{% if row.job.end_date != row.job.start_date %} – {{ row.job.end_date|date:"d M Y" }}{% endif %}</td>
                             <td data-label="Employer">{{ row.job.employer.pharmacy_name }}</td>
-                            <td data-label="Rate × Hours × Days" class="num">£{{ row.job.locum_rate }} × {{ row.job.times_required }} × {{ row.days|default_if_none:"—" }}</td>
+                            <td data-label="Rate × Payable Hours" class="num">£{{ row.job.locum_rate }} × {% if row.payable_hours is not None %}{{ row.payable_hours }} {% if row.hours_verified %}verified{% else %}booked{% endif %} hrs{% else %}<span class="muted">Awaiting shift verification</span>{% endif %}</td>
                             <td data-label="Expenses Offered" class="num">£{{ row.job.expenses_offered }}</td>
                             <td data-label="Gross" class="num">
                                 {% if row.gross is None %}
@@ -142,7 +142,7 @@
                                         data-action="{% url 'add_expense' row.job.id %}"
                                         data-title="Add expense: {{ row.job.employer.pharmacy_name }}"
                                         data-date="{{ row.job.start_date|date:'Y-m-d' }}">Add Expense</button>
-                                    <a href="{% url 'generate_receipt_form' row.job.id %}" class="btn btn-primary btn-sm">Invoice</a>
+                                    {% if row.invoice_ready %}<a href="{% url 'generate_receipt_form' row.job.id %}" class="btn btn-primary btn-sm">Invoice</a>{% else %}<a href="{% url 'locum_calander' user.id %}" class="btn btn-secondary btn-sm">Review shifts</a>{% endif %}
                                 </div>
                             </td>
                         </tr>

@@ -22,8 +22,8 @@ DISCLAIMER = ('This report summarises records held in LocumSmart. It is not tax 
               'with your own records or an accountant before using them in a tax return.')
 
 NOTES = [
-    'Booked income is hourly rate x hours per day x days, as agreed when the job was booked. '
-    'It is not verified income.',
+    'Where all shifts are approved, booked income uses verified payable hours after unpaid breaks. '
+    'Older jobs without shift reports use the originally booked hours.',
     'Invoiced and paid amounts come from invoices you generated in LocumSmart and marked as paid. '
     'A blank means no invoice is recorded for that job, not that the amount is zero.',
     'Income is listed by job start date. Expenses are listed by expense date.',
@@ -33,7 +33,8 @@ NOTES = [
 def approved_jobs(locum):
     """The locum's approved jobs, newest first."""
     applied_jobs = AppliedJob.objects.filter(
-        locum_id=locum.id, approved=True).select_related('job', 'job__employer')
+        locum_id=locum.id, approved=True).select_related(
+            'job', 'job__employer').prefetch_related('job__shift_completions')
     jobs = {applied_job.job.id: applied_job.job for applied_job in applied_jobs}
     return sorted(jobs.values(), key=lambda job: job.start_date, reverse=True)
 
@@ -67,6 +68,8 @@ def build_report(locum, date_from=None, date_to=None):
             'days': row['days'],
             'booked': row['gross'],
             'booked_reason': row['gross_reason'],
+            'payable_hours': row['payable_hours'],
+            'hours_verified': row['hours_verified'],
             'invoiced': invoiced,
             'paid': paid,
             'invoice_count': len(invoices),
@@ -118,6 +121,9 @@ def report_filename(report, extension):
 
 def calculation(row):
     job = row['job']
+    if row.get('payable_hours') is not None:
+        label = 'verified hours' if row.get('hours_verified') else 'booked hours'
+        return f'{job.locum_rate} x {row["payable_hours"]} {label}'
     days = row['days'] if row['days'] is not None else '?'
     return f'{job.locum_rate} x {job.times_required} x {days}'
 

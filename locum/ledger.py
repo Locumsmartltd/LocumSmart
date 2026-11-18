@@ -1,6 +1,6 @@
 """Server-side earnings and expense calculations for a locum's approved jobs."""
 import json
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 TWO_PLACES = Decimal('0.01')
@@ -8,18 +8,24 @@ TWO_PLACES = Decimal('0.01')
 
 def job_day_count(job):
     """Number of days worked on a job, or None when the dates cannot be trusted."""
+    dates = job_shift_dates(job)
+    return len(dates) if dates else None
+
+
+def job_shift_dates(job):
+    """Return the actual scheduled dates for a job, or an empty list if invalid."""
     if job.discrete_dates:
         try:
-            dates = json.loads(job.discrete_dates)
+            values = json.loads(job.discrete_dates)
+            dates = sorted({date.fromisoformat(value) for value in values})
         except (TypeError, ValueError):
-            return None
-        if not isinstance(dates, list) or not dates:
-            return None
-        return len(set(dates))
+            return []
+        return dates
 
     if not job.start_date or not job.end_date or job.end_date < job.start_date:
-        return None
-    return (job.end_date - job.start_date).days + 1
+        return []
+    return [job.start_date + timedelta(days=offset)
+            for offset in range((job.end_date - job.start_date).days + 1)]
 
 
 def job_hours_per_day(job):
@@ -39,14 +45,25 @@ def job_gross(job):
     Returns (amount, reason). amount is None when it cannot be calculated
     reliably, and reason then says why.
     """
-    hours = job_hours_per_day(job)
-    if hours is None:
-        return None, f'Hours per day "{job.times_required}" is not a number between 0 and 24'
     days = job_day_count(job)
     if days is None:
         return None, 'The job dates are missing or invalid'
     if job.locum_rate is None or job.locum_rate <= 0:
         return None, 'The hourly rate is missing'
+
+    reports = list(job.shift_completions.all())
+    if reports:
+        scheduled_dates = set(job_shift_dates(job))
+        approved = {report.shift_date: report for report in reports
+                    if report.status == report.STATUS_APPROVED}
+        if set(approved) != scheduled_dates:
+            return None, 'All shift completions must be approved before earnings are calculated'
+        payable_hours = sum((report.payable_hours for report in approved.values()), Decimal('0'))
+        return (job.locum_rate * payable_hours).quantize(TWO_PLACES), ''
+
+    hours = job_hours_per_day(job)
+    if hours is None:
+        return None, f'Hours per day "{job.times_required}" is not a number between 0 and 24'
     return (job.locum_rate * hours * days).quantize(TWO_PLACES), ''
 
 
@@ -96,6 +113,17 @@ def build_ledger(jobs, expenses, date_from=None, date_to=None):
         if not in_range(job.start_date, date_from, date_to):
             continue
         gross, reason = job_gross(job)
+        completion_reports = list(job.shift_completions.all())
+        scheduled_dates = set(job_shift_dates(job))
+        approved_reports = [report for report in completion_reports
+                            if report.status == report.STATUS_APPROVED]
+        invoice_ready = bool(scheduled_dates) and {
+            report.shift_date for report in approved_reports} == scheduled_dates
+        payable_hours = (sum((report.payable_hours for report in approved_reports), Decimal('0'))
+                         if invoice_ready else None)
+        if not completion_reports:
+            booked_hours = job_hours_per_day(job)
+            payable_hours = booked_hours * len(scheduled_dates) if booked_hours else None
         job_expenses = sum((e.amount for e in expenses_by_job.get(job.id, [])), Decimal('0.00'))
         if gross is None:
             unavailable.append(job)
@@ -106,6 +134,10 @@ def build_ledger(jobs, expenses, date_from=None, date_to=None):
             'days': job_day_count(job),
             'gross': gross,
             'gross_reason': reason,
+            'invoice_ready': invoice_ready,
+            'hours_verified': invoice_ready,
+            'payable_hours': payable_hours,
+            'completion_reports': completion_reports,
             'expenses': job_expenses,
             'net': None if gross is None else gross - job_expenses,
         })

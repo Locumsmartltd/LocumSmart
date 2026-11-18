@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from appAdmin.models import Admin, Employer
-from locum.models import Job
+from locum.models import Job, Locum
 
 
 def make_job(employer, **overrides):
@@ -28,6 +28,68 @@ def make_job(employer, **overrides):
     }
     values.update(overrides)
     return Job.objects.create(**values)
+
+
+class AdminCalendarJobListTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Admin.objects.create(
+            email='calendar-admin@example.com', first_name='Admin', last_name='User')
+        cls.employer = Employer.objects.create(
+            email='calendar-owner@example.com', first_name='Ava', last_name='Owner',
+            pharmacy_name='Calendar Pharmacy', phone_number='07123456789',
+            post_code='M1 1AA', city='Manchester')
+        cls.locum = Locum.objects.create(
+            email='calendar-locum@example.com', first_name='Sam', last_name='Locum',
+            date_of_birth=date(1990, 1, 1), user_type='Pharmacist')
+        cls.job = make_job(
+            cls.employer, locum=cls.locum, start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 3), times_required='6',
+            status='Booked', locum_payment_status='Pending', booked_by='Admin User',
+            any_other_information='Bring the pharmacy smart card.')
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_job_list_is_compact_and_exposes_modal_editing(self):
+        response = self.client.get(reverse('calander'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['job_count'], 1)
+        self.assertEqual(response.context['scheduled_shift_count'], 3)
+        self.assertEqual(response.context['pending_payment_count'], 1)
+        self.assertContains(response, '<strong>3</strong>', html=True)
+        self.assertContains(response, 'shifts across these jobs')
+        self.assertContains(response, 'class="btn btn-secondary btn-sm job-edit-trigger"')
+        self.assertContains(response, 'id="job-edit-dialog"')
+        self.assertContains(response, 'Payment and invoicing')
+        self.assertNotContains(response, 'form="job-form-')
+
+    def test_modal_update_can_save_and_clear_operational_fields(self):
+        response = self.client.post(reverse('update_job', args=[self.job.id]), {
+            'company_name': 'Updated Group',
+            'booked_by': '',
+            'status': 'Completed',
+            'date_of_booking_email': '2026-12-01',
+            'locum_payment_status': 'Paid',
+            'date_of_invoice_email': '',
+            'source': 'Direct',
+            'source_commission_date': '2026-12-10',
+            'search': 'Calendar',
+            'sort_by': 'Latest',
+        })
+
+        self.assertRedirects(
+            response, reverse('calander') + '?search=Calendar&sort_by=Latest')
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.company_name, 'Updated Group')
+        self.assertEqual(self.job.booked_by, '')
+        self.assertEqual(self.job.status, 'Completed')
+        self.assertEqual(self.job.locum_payment_status, 'Paid')
+        self.assertEqual(self.job.date_of_booking_email, date(2026, 12, 1))
+        self.assertIsNone(self.job.date_of_invoice_email)
+        self.assertEqual(self.job.source, 'Direct')
+        self.assertEqual(self.job.source_commission_date, date(2026, 12, 10))
 
 
 class EmployerJobManagementTests(TestCase):

@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from appAdmin.models import Admin, Employer
 from locum import ledger
-from locum.models import AppliedJob, Job, Locum, LocumInvoice, ShiftExpense
+from locum.models import AppliedJob, Job, Locum, LocumInvoice, ShiftCompletion, ShiftExpense
 
 
 def make_locum(email):
@@ -264,14 +264,70 @@ class AccessRestrictionTests(LedgerTestCase):
         self.assertEqual(self.client.get(self.ledger_url()).status_code, 403)
 
     def test_owner_can_still_generate_their_invoice_pdf(self):
+        for shift_date in (date(2026, 10, 10), date(2026, 10, 11), date(2026, 10, 12)):
+            ShiftCompletion.objects.create(
+                job=self.job, locum=self.locum, shift_date=shift_date,
+                start_time='09:00', end_time='17:00', break_minutes=30,
+                status=ShiftCompletion.STATUS_APPROVED)
         response = self.client.post(reverse('generate_pdf_receipt', args=[self.job.id]), {
             'account_number': '12345678', 'sort_code': '00-00-00', 'invoice_number': 'INV-1',
-            'working_hours_2026-10-10': '9-5', 'hours_worked_2026-10-10': '8',
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         invoice = LocumInvoice.objects.get(locum=self.locum)
-        self.assertEqual((invoice.total_amount, invoice.status), (Decimal('240.00'), 'pending'))
+        self.assertEqual((invoice.total_amount, invoice.status), (Decimal('675.00'), 'pending'))
+
+
+class ShiftCompletionWorkflowTests(LedgerTestCase):
+    def test_candidate_calendar_lists_each_confirmed_shift(self):
+        response = self.client.get(reverse('locum_calander', args=[self.locum.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Confirmed shifts')
+        self.assertContains(response, 'Mark completed', count=3)
+
+    def test_candidate_report_deducts_break_and_waits_for_review(self):
+        response = self.client.post(
+            reverse('report_shift_completion', args=[self.job.id, '2026-10-10']), {
+                'start_time': '09:00', 'end_time': '17:00',
+                'break_minutes': '30', 'candidate_note': 'Quiet shift',
+            })
+        self.assertRedirects(response, reverse('locum_calander', args=[self.locum.id]))
+        report = ShiftCompletion.objects.get()
+        self.assertEqual(report.status, ShiftCompletion.STATUS_PENDING)
+        self.assertEqual(report.gross_hours, Decimal('8.00'))
+        self.assertEqual(report.payable_hours, Decimal('7.50'))
+        self.assertEqual(report.amount, Decimal('225.00'))
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, 'Completion review')
+
+    def test_admin_can_approve_report(self):
+        report = ShiftCompletion.objects.create(
+            job=self.job, locum=self.locum, shift_date=date(2026, 10, 10),
+            start_time='09:00', end_time='17:00', break_minutes=30)
+        admin = Admin.objects.create(email='shift-admin@example.com', first_name='Shift', last_name='Admin')
+        self.client.force_login(admin)
+        response = self.client.post(
+            reverse('review_shift_completion', args=[report.id, 'approve']),
+            {'admin_note': 'Times verified'})
+        self.assertRedirects(response, reverse('calander') + '#job-list')
+        report.refresh_from_db()
+        self.assertEqual(report.status, ShiftCompletion.STATUS_APPROVED)
+        self.assertEqual(report.admin_note, 'Times verified')
+        self.assertEqual(report.reviewed_by, admin)
+
+    def test_all_approved_shifts_complete_job_and_drive_earnings(self):
+        for shift_date in (date(2026, 10, 10), date(2026, 10, 11), date(2026, 10, 12)):
+            ShiftCompletion.objects.create(
+                job=self.job, locum=self.locum, shift_date=shift_date,
+                start_time='09:00', end_time='17:00', break_minutes=30,
+                status=ShiftCompletion.STATUS_APPROVED)
+        from locum.shifts import refresh_completion_status
+        self.assertTrue(refresh_completion_status(self.job, self.locum))
+        application = AppliedJob.objects.get(job=self.job, locum=self.locum)
+        self.assertTrue(application.completed)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, 'Completed')
+        self.assertEqual(ledger.job_gross(self.job), (Decimal('675.00'), ''))
 
 
 class TaxYearTests(TestCase):

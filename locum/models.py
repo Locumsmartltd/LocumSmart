@@ -1,10 +1,11 @@
 from django.db import models
-from appAdmin.models import CustomUser, Employer
+from appAdmin.models import Admin, CustomUser, Employer
 from django.contrib.auth.hashers import make_password
 from django.utils.deconstruct import deconstructible
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import date
+from decimal import Decimal
 
 
 @deconstructible
@@ -269,6 +270,63 @@ class ShiftExpense(models.Model):
 
     class Meta:
         ordering = ['-expense_date', '-id']
+
+
+class ShiftCompletion(models.Model):
+    """A candidate's per-day shift report, reviewed by an administrator."""
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_DECLINED = 'declined'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending review'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_DECLINED, 'Declined'),
+    ]
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='shift_completions')
+    locum = models.ForeignKey(Locum, on_delete=models.CASCADE, related_name='shift_completions')
+    shift_date = models.DateField(db_index=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    break_minutes = models.PositiveIntegerField(default=0)
+    candidate_note = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES,
+                              default=STATUS_PENDING, db_index=True)
+    admin_note = models.CharField(max_length=500, blank=True)
+    reviewed_by = models.ForeignKey(
+        Admin, on_delete=models.SET_NULL, blank=True, null=True,
+        related_name='reviewed_shift_completions')
+    reported_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+
+    @property
+    def gross_hours(self):
+        from decimal import Decimal
+        start = datetime.combine(self.shift_date, self.start_time)
+        end = datetime.combine(self.shift_date, self.end_time)
+        if end <= start:
+            end += timedelta(days=1)
+        return (Decimal(str((end - start).total_seconds())) / Decimal('3600')).quantize(Decimal('0.01'))
+
+    @property
+    def payable_hours(self):
+        from decimal import Decimal
+        return max(self.gross_hours - (Decimal(self.break_minutes) / Decimal('60')),
+                   Decimal('0')).quantize(Decimal('0.01'))
+
+    @property
+    def amount(self):
+        return (self.payable_hours * self.job.locum_rate).quantize(Decimal('0.01'))
+
+    class Meta:
+        ordering = ['shift_date', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['job', 'locum', 'shift_date'], name='unique_shift_completion')
+        ]
+
+    def __str__(self):
+        return f'{self.job.pharmacy_name} - {self.shift_date} ({self.status})'
 
 
 class LocumAvailability(models.Model):

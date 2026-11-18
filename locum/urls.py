@@ -18,6 +18,8 @@ urlpatterns = [
     path('expense/<int:expense_id>/delete/', views.delete_expense, name='delete_expense'),
     path('invoice/<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
     path('locumcalendar/<int:user_id>/', views.locum_calander, name='locum_calander'),
+    path('job/<int:job_id>/shift/<str:shift_date>/report/',
+         views.report_shift_completion, name='report_shift_completion'),
     path('avail_added/<int:user_id>/', views.avail_added, name='avail_added'),
     path('addPharmacistManual/', views.addPharmacistManual, name='addPharmacistManual'),
     path('addtechManual/', views.addtechManual, name='addtechManual'),

@@ -29,6 +29,8 @@ urlpatterns = [
          views.reject_job, name='reject_job'),
     path('calander/', JobListView.as_view(), name='calander'),
     path('update-job/<int:job_id>/', UpdateJobView.as_view(), name='update_job'),
+    path('shift-completion/<int:completion_id>/<str:decision>/',
+         ShiftCompletionReviewView.as_view(), name='review_shift_completion'),
     path('locums/<int:locum_id>/edit/',
          LocumEditView.as_view(), name='edit_locum'),
     path('post-job/<int:employer_id>/',

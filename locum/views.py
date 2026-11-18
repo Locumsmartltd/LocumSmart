@@ -1190,15 +1190,19 @@ def mark_invoice_paid(request, invoice_id):
 @locum_required
 def generate_receipt_form(request, job_id):
     job = get_own_job(request.locum, job_id)
-    # Determine if the job spans multiple days
-    has_multiple_days = job.start_date != job.end_date
-
-    # Prepare context based on job details
+    scheduled_dates = set(ledger.job_shift_dates(job))
+    approved_completions = list(job.shift_completions.filter(
+        locum=request.locum, status=ShiftCompletion.STATUS_APPROVED).order_by('shift_date'))
+    approved_dates = {completion.shift_date for completion in approved_completions}
+    invoice_ready = bool(scheduled_dates) and approved_dates == scheduled_dates
     context = {
         'job': job,
-        'has_multiple_days': has_multiple_days,
-        'start_date': job.start_date,
-        'end_date': job.end_date,
+        'approved_completions': approved_completions,
+        'invoice_ready': invoice_ready,
+        'approved_total_hours': sum(
+            (completion.payable_hours for completion in approved_completions), Decimal('0')),
+        'approved_total_amount': sum(
+            (completion.amount for completion in approved_completions), Decimal('0')),
         'payment_terms': INVOICE_PAYMENT_TERMS,
     }
 
@@ -1211,6 +1215,12 @@ def generate_pdf_receipt(request, job_id):
     locum = request.locum
 
     if request.method == 'POST':
+        scheduled_dates = set(ledger.job_shift_dates(job))
+        completions = list(job.shift_completions.filter(
+            locum=locum, status=ShiftCompletion.STATUS_APPROVED).order_by('shift_date'))
+        if not scheduled_dates or {item.shift_date for item in completions} != scheduled_dates:
+            messages.error(request, 'Every shift must be approved before this job can be invoiced.')
+            return redirect('generate_receipt_form', job_id=job.id)
         account_number = request.POST.get('account_number')
         sort_code = request.POST.get('sort_code')
         current_date = datetime.now()
@@ -1265,9 +1275,8 @@ def generate_pdf_receipt(request, job_id):
 
         # Table Headers
         table_y_position = height - 320
-        headers = ["Date", "Hours Worked",
-                   "No of hours worked", "Hourly Rate", "Subtotal"]
-        col_widths = [100, 120, 120, 100, 100]  # Adjusted column widths
+        headers = ["Date", "Worked", "Gross", "Break", "Payable", "Subtotal"]
+        col_widths = [82, 86, 70, 70, 78, 88]
 
         x_position = 50
         for header, width in zip(headers, col_widths):
@@ -1279,24 +1288,21 @@ def generate_pdf_receipt(request, job_id):
 
         # Table Entries
         table_y_position -= 20
-        total_cost = 0.0  # Total of all subtotals
-        for key in request.POST:
-            if key.startswith('working_hours_'):
-                date = key.split('_')[2]
-                working_hours = request.POST.get(f'working_hours_{date}')
-                hours_worked = request.POST.get(f'hours_worked_{date}')
-                rate = float(job.locum_rate)
-                subtotal = float(hours_worked) * rate
-                entries = [
-                    date, f"{working_hours} ", f"{hours_worked} hours", f"£{rate:.2f}", f"£{subtotal:.2f}"]
-
-                x_position = 50
-                for entry, width in zip(entries, col_widths):
-                    p.rect(x_position, table_y_position, width, 20)
-                    p.drawString(x_position + 5, table_y_position + 5, entry)
-                    x_position += width
-                total_cost += subtotal
-                table_y_position -= 20
+        total_cost = Decimal('0.00')
+        for completion in completions:
+            entries = [
+                completion.shift_date.strftime('%d/%m/%Y'),
+                f'{completion.start_time:%H:%M}-{completion.end_time:%H:%M}',
+                f'{completion.gross_hours}h', f'{completion.break_minutes}m',
+                f'{completion.payable_hours}h', f'£{completion.amount}',
+            ]
+            x_position = 50
+            for entry, column_width in zip(entries, col_widths):
+                p.rect(x_position, table_y_position, column_width, 20)
+                p.drawString(x_position + 5, table_y_position + 5, str(entry))
+                x_position += column_width
+            total_cost += completion.amount
+            table_y_position -= 20
 
         # Additional Services Section
         additional_services = [
@@ -1345,7 +1351,7 @@ def generate_pdf_receipt(request, job_id):
         # Track the invoice; regenerating the same invoice number keeps its status
         LocumInvoice.objects.update_or_create(
             job=job, locum=locum, invoice_number=invoice_number.strip(),
-            defaults={'total_amount': round(total_cost, 2)},
+            defaults={'total_amount': total_cost.quantize(Decimal('0.01'))},
         )
         return response
 
@@ -1359,9 +1365,81 @@ def locum_calander(request, user_id):
     locum = request.locum
     if user_id != locum.id:
         raise PermissionDenied
-    Availability = LocumAvailability.objects.filter(locum_id=locum.id)
-    currentLocum = locum
-    return render(request, 'locum_calander.html', {'Availability': Availability, 'currentLocum': currentLocum})
+    jobs = reports.approved_jobs(locum)
+    shift_rows = []
+    status_counts = {'scheduled': 0, 'pending': 0, 'approved': 0, 'declined': 0}
+    for job in jobs:
+        reports_by_date = {report.shift_date: report for report in job.shift_completions.all()}
+        for shift_date in ledger.job_shift_dates(job):
+            report = reports_by_date.get(shift_date)
+            status = report.status if report else 'scheduled'
+            status_counts[status] += 1
+            shift_rows.append({
+                'job': job,
+                'date': shift_date,
+                'report': report,
+                'status': status,
+                'can_report': shift_date <= timezone.localdate() and
+                              (report is None or report.status != ShiftCompletion.STATUS_APPROVED),
+            })
+    shift_rows.sort(key=lambda row: row['date'], reverse=True)
+    return render(request, 'locum_calander.html', {
+        'Availability': LocumAvailability.objects.filter(locum_id=locum.id),
+        'currentLocum': locum,
+        'shift_rows': shift_rows,
+        'status_counts': status_counts,
+        'today': timezone.localdate(),
+    })
+
+
+@require_POST
+@locum_required
+def report_shift_completion(request, job_id, shift_date):
+    job = get_own_job(request.locum, job_id)
+    report_date = ledger.parse_date(shift_date)
+    if report_date not in ledger.job_shift_dates(job):
+        raise PermissionDenied
+    if report_date > timezone.localdate():
+        messages.error(request, 'A future shift cannot be marked as completed.')
+        return redirect('locum_calander', user_id=request.locum.id)
+
+    existing = ShiftCompletion.objects.filter(
+        job=job, locum=request.locum, shift_date=report_date).first()
+    if existing and existing.status == ShiftCompletion.STATUS_APPROVED:
+        messages.error(request, 'This shift has already been approved and can no longer be changed.')
+        return redirect('locum_calander', user_id=request.locum.id)
+
+    try:
+        start_time = datetime.strptime(request.POST.get('start_time', ''), '%H:%M').time()
+        end_time = datetime.strptime(request.POST.get('end_time', ''), '%H:%M').time()
+        break_minutes = int(request.POST.get('break_minutes', '0'))
+    except (TypeError, ValueError):
+        messages.error(request, 'Enter valid start, end and break values.')
+        return redirect('locum_calander', user_id=request.locum.id)
+    note = (request.POST.get('candidate_note') or '').strip()
+    if break_minutes < 0 or len(note) > 500:
+        messages.error(request, 'Break minutes cannot be negative and notes must be under 500 characters.')
+        return redirect('locum_calander', user_id=request.locum.id)
+
+    candidate = ShiftCompletion(
+        job=job, locum=request.locum, shift_date=report_date,
+        start_time=start_time, end_time=end_time, break_minutes=break_minutes)
+    if start_time == end_time or candidate.gross_hours > Decimal('18') or candidate.payable_hours <= 0:
+        messages.error(request, 'Check the shift times and ensure the unpaid break is shorter than the shift.')
+        return redirect('locum_calander', user_id=request.locum.id)
+
+    ShiftCompletion.objects.update_or_create(
+        job=job, locum=request.locum, shift_date=report_date,
+        defaults={
+            'start_time': start_time, 'end_time': end_time,
+            'break_minutes': break_minutes, 'candidate_note': note,
+            'status': ShiftCompletion.STATUS_PENDING,
+            'admin_note': '', 'reviewed_by': None, 'reviewed_at': None,
+        })
+    from .shifts import refresh_completion_status
+    refresh_completion_status(job, request.locum)
+    messages.success(request, 'Shift completion submitted for admin review.')
+    return redirect('locum_calander', user_id=request.locum.id)
 
 
 @locum_required

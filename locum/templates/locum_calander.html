@@ -1,69 +1,54 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Locum Calander{% endblock %}
-{% block page_css %}
-{% include 'components/legacy_assets.html' %}
-<link rel="stylesheet" href="{% static 'css/generate_receipt.css' %}" />
-{% endblock %}
+{% block title %}My Calendar{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261117" />{% endblock %}
 {% block content %}
-<section>
-    <div class="container">
-        <div class="row justify-content-center">
-            <br>
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h2 class="text-center mb-4">Add Availability</h2>
-                        <form method="post" action="{% url 'avail_added' user.id %}">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="Date">Date</label>
-                                <input type="date" class="form-control" id="Date" name="Date" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="Timings">Timings</label>
-                                <input type="text" class="form-control" id="Timings" name="Timings" placeholder="e.g., 9 AM - 5 PM" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-block">Add</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-<br>
-        <div class="row justify-content-center mt-4">
-            <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h2 class="text-center mb-4">Availabilities Added</h2>
-                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Timings</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for avail in Availability %}
-                                    <tr>
-                                        <td>{{ avail.date }}</td>
-                                        <td>{{ avail.timings }}</td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="2" class="text-center">No Availabilities Added.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <br>
-        <br>
-    </div>
-</section>
+<section class="dash"><div class="container">
+  <div class="dash-head">
+    <div><span class="section-tag">Candidate</span><h1 class="dash-title">My Calendar</h1><p class="dash-sub">See confirmed work, report completed shifts and follow each admin review.</p></div>
+    <div class="dash-head-actions"><a href="{% url 'locum_jobs' user.id %}" class="btn btn-secondary">My Jobs &amp; Invoices</a><a href="{% url 'locumProfile' %}" class="btn btn-secondary">Back to Profile</a></div>
+  </div>
+  <div class="candidate-calendar-stats" aria-label="Shift status summary">
+    <div class="dash-stat"><span>Scheduled</span><strong>{{ status_counts.scheduled }}</strong></div>
+    <div class="dash-stat"><span>Pending review</span><strong>{{ status_counts.pending }}</strong></div>
+    <div class="dash-stat highlight"><span>Approved</span><strong>{{ status_counts.approved }}</strong></div>
+    <div class="dash-stat"><span>Declined</span><strong>{{ status_counts.declined }}</strong></div>
+  </div>
+  <div class="dash-card">
+    <div class="dash-card-head"><div><h2>Confirmed shifts</h2><p class="dash-card-note">Each approved job is split into its individual work dates. Report a shift after it has taken place.</p></div></div>
+    <div class="dash-table-wrap"><table class="dash-table candidate-shift-table">
+      <thead><tr><th>Date</th><th>Job</th><th>Scheduled</th><th>Reported details</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>{% for row in shift_rows %}<tr>
+        <td data-label="Date"><span class="job-primary">{{ row.date|date:"D, d M Y" }}</span></td>
+        <td data-label="Job"><span class="job-primary">{{ row.job.pharmacy_name }}</span><span class="job-cell-sub">{{ row.job.county }} · £{{ row.job.locum_rate }}/hr</span></td>
+        <td data-label="Scheduled">{{ row.job.times_required }} hours</td>
+        <td data-label="Reported details">{% if row.report %}<span class="job-primary">{{ row.report.start_time|time:"H:i" }}–{{ row.report.end_time|time:"H:i" }}</span><span class="job-cell-sub">{{ row.report.break_minutes }} min break · {{ row.report.payable_hours }} payable hours</span>{% else %}<span class="muted">Not reported</span>{% endif %}</td>
+        <td data-label="Status">
+          {% if row.status == 'approved' %}<span class="job-status-pill is-success">Approved</span>{% elif row.status == 'pending' %}<span class="job-status-pill is-warning">Pending review</span>{% elif row.status == 'declined' %}<span class="job-status-pill is-danger">Declined</span>{% elif row.date > today %}<span class="job-status-pill">Upcoming</span>{% else %}<span class="job-status-pill">Ready to report</span>{% endif %}
+          {% if row.report.admin_note %}<span class="job-cell-sub">Admin: {{ row.report.admin_note }}</span>{% endif %}
+        </td>
+        <td data-label="Action">{% if row.can_report %}<button type="button" class="btn btn-primary btn-sm" data-report-shift data-action="{% url 'report_shift_completion' row.job.id row.date|date:'Y-m-d' %}" data-title="{{ row.job.pharmacy_name }} · {{ row.date|date:'d M Y' }}" data-start="{% if row.report %}{{ row.report.start_time|time:'H:i' }}{% endif %}" data-end="{% if row.report %}{{ row.report.end_time|time:'H:i' }}{% endif %}" data-break="{% if row.report %}{{ row.report.break_minutes }}{% else %}0{% endif %}" data-note="{% if row.report %}{{ row.report.candidate_note }}{% endif %}">{% if row.report %}Edit report{% else %}Mark completed{% endif %}</button>{% elif row.status == 'approved' %}<span class="muted">Verified</span>{% else %}<span class="muted">Available after shift</span>{% endif %}</td>
+      </tr>{% empty %}<tr class="dash-empty"><td colspan="6">No confirmed shifts yet. Approved jobs will appear here automatically.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+  <div class="dash-grid-2 candidate-availability-grid">
+    <div class="dash-card"><div class="dash-card-head"><div><h2>Add availability</h2><p class="dash-card-note">Tell the team when you are available for additional work.</p></div></div><form method="post" action="{% url 'avail_added' user.id %}" class="dash-form">{% csrf_token %}<div class="dash-field"><label for="Date">Date</label><input type="date" class="dash-input" id="Date" name="Date" required></div><div class="dash-field"><label for="Timings">Times</label><input type="text" class="dash-input" id="Timings" name="Timings" placeholder="e.g. 09:00–17:00" required></div><button type="submit" class="btn btn-primary">Add availability</button></form></div>
+    <div class="dash-card"><div class="dash-card-head"><div><h2>Availability added</h2><p class="dash-card-note">Your currently recorded availability.</p></div></div><div class="candidate-availability-list">{% for avail in Availability %}<div><strong>{{ avail.date|date:"D, d M Y" }}</strong><span>{{ avail.timings }}</span></div>{% empty %}<p class="muted">No availability added yet.</p>{% endfor %}</div></div>
+  </div>
+</div></section>
+<dialog class="dash-dialog job-edit-dialog" id="shift-report-dialog" aria-labelledby="shift-report-title"><form method="post" id="shift-report-form">{% csrf_token %}
+  <div class="job-edit-dialog-head"><div><span class="section-tag">Completed shift</span><h2 id="shift-report-title">Report shift</h2></div><button type="button" class="job-edit-dialog-close" data-report-close aria-label="Close">&times;</button></div>
+  <p class="dash-card-note">Enter the actual times worked. Unpaid breaks are deducted from payable hours and invoice totals.</p>
+  <div class="job-edit-grid"><div class="dash-field"><label for="report-start">Start time</label><input type="time" class="dash-input" id="report-start" name="start_time" required></div><div class="dash-field"><label for="report-end">End time</label><input type="time" class="dash-input" id="report-end" name="end_time" required></div><div class="dash-field"><label for="report-break">Unpaid break (minutes)</label><input type="number" class="dash-input" id="report-break" name="break_minutes" min="0" step="5" value="0" required></div><div class="dash-field"><label>Payable hours</label><output class="shift-payable-preview" id="payable-preview">—</output></div></div>
+  <div class="dash-field"><label for="report-note">Note for admin (optional)</label><textarea class="dash-input" id="report-note" name="candidate_note" maxlength="500" rows="3" placeholder="Anything the admin should know about this shift"></textarea></div>
+  <div class="dash-dialog-actions"><button type="button" class="btn btn-secondary" data-report-close>Cancel</button><button type="submit" class="btn btn-primary">Submit for review</button></div>
+</form></dialog>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var dialog=document.getElementById('shift-report-dialog'), form=document.getElementById('shift-report-form'), title=document.getElementById('shift-report-title'), start=document.getElementById('report-start'), end=document.getElementById('report-end'), breakInput=document.getElementById('report-break'), note=document.getElementById('report-note'), preview=document.getElementById('payable-preview');
+  function calculate(){if(!start.value||!end.value){preview.textContent='—';return;}var s=Number(start.value.slice(0,2))*60+Number(start.value.slice(3)),e=Number(end.value.slice(0,2))*60+Number(end.value.slice(3));if(e<=s)e+=1440;var payable=(e-s-(Number(breakInput.value)||0))/60;preview.textContent=payable>0?payable.toFixed(2)+' hours':'Check break duration';}
+  document.addEventListener('click',function(event){var button=event.target.closest('[data-report-shift]');if(!button)return;form.action=button.dataset.action;title.textContent=button.dataset.title;start.value=button.dataset.start||'';end.value=button.dataset.end||'';breakInput.value=button.dataset.break||'0';note.value=button.dataset.note||'';calculate();dialog.showModal?dialog.showModal():dialog.setAttribute('open','');start.focus();});
+  [start,end,breakInput].forEach(function(field){field.addEventListener('input',calculate);});document.querySelectorAll('[data-report-close]').forEach(function(button){button.addEventListener('click',function(){dialog.close();});});dialog.addEventListener('click',function(event){if(event.target===dialog)dialog.close();});
+});
+</script>
 {% endblock %}

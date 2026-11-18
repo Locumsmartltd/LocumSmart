@@ -8,6 +8,7 @@ from django.db.models import Q, Count
 from django.views import View
 from django.contrib import messages
 from locum.models import *
+from locum import ledger
 from django.core.mail import send_mail, EmailMessage
 from appAdmin.models import *
 from structure.models import Testimonial
@@ -19,7 +20,7 @@ from structure.invoicing import INVOICE_PAYMENT_TERMS
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.hashers import make_password
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from django.views.generic.detail import DetailView
 from django.utils.html import strip_tags
 import json
@@ -50,6 +51,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.utils._os import safe_join
 import logging
+from urllib.parse import urlencode
+
 from .search import prefix_search
 
 # Text columns shown in the locum and locum request tables (plus the name)
@@ -890,7 +893,8 @@ class JobListView(ListView):
     context_object_name = 'jobs'
 
     def get_queryset(self):
-        queryset = super().get_queryset().filter(locum__isnull=False)
+        queryset = super().get_queryset().filter(locum__isnull=False).select_related(
+            'locum', 'employer').prefetch_related('shift_completions__reviewed_by')
 
         # Parse and apply filters from the search query
         search_query = self.request.GET.get('search')
@@ -910,8 +914,20 @@ class JobListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        jobs = list(context['jobs'])
+        from locum.shifts import job_review_summary
+        for job in jobs:
+            job.review_summary = job_review_summary(job)
+        context['jobs'] = jobs
         context['search_query'] = self.request.GET.get('search', '')
         context['locum_invoices'] = LocumInvoice.objects.select_related('job', 'locum')
+        context['job_count'] = len(jobs)
+        context['scheduled_shift_count'] = sum(job.shift_count or 0 for job in jobs)
+        context['pending_payment_count'] = sum(
+            1 for job in jobs
+            if (job.locum_payment_status or '').strip().lower() != 'paid')
+        context['pending_shift_review_count'] = sum(
+            job.review_summary['pending'] for job in jobs)
         return context
 
 
@@ -937,22 +953,12 @@ class JobListView(ListView):
             return redirect(reverse('calander'))
 
         # Get the list of Job objects based on the job_ids
-        jobs = Job.objects.filter(id__in=job_ids)
+        jobs = Job.objects.filter(id__in=job_ids).prefetch_related('shift_completions')
 
         pharmacy = request.POST.get('pharmacy')
         if pharmacy not in ('Gorgemead', 'Fairgreen', 'Tesco', 'Cohens'):
             messages.error(request, 'Choose a pharmacy invoice format first.')
             return redirect(reverse('calander'))
-
-        # Hours/Day is free text on the job, but the invoice total needs a number
-        for job in jobs:
-            try:
-                float(job.times_required)
-            except (TypeError, ValueError):
-                messages.error(
-                    request,
-                    f'Cannot invoice the {job.pharmacy_name} job: Hours/Day "{job.times_required}" is not a number.')
-                return redirect(reverse('calander'))
 
         # Generate unique invoice number
         if request.POST.get('invoice_no'):
@@ -965,6 +971,41 @@ class JobListView(ListView):
 
         # Process jobs to calculate the number of days and total prices
         for job in jobs:
+            completion_reports = list(job.shift_completions.all())
+            if completion_reports:
+                scheduled_dates = set(ledger.job_shift_dates(job))
+                approved_reports = {
+                    report.shift_date: report for report in completion_reports
+                    if report.status == ShiftCompletion.STATUS_APPROVED}
+                if set(approved_reports) != scheduled_dates:
+                    messages.error(
+                        request,
+                        f'Cannot invoice {job.pharmacy_name}: every candidate shift report must be approved first.')
+                    return redirect(reverse('calander'))
+                job.discrete_dates_list = [day.strftime('%d/%m/%Y') for day in sorted(scheduled_dates)]
+                job.days = len(job.discrete_dates_list)
+                job.working_dates = ', '.join(job.discrete_dates_list)
+                job.invoice_day_rows = [
+                    {'date': report.shift_date.strftime('%d/%m/%Y'),
+                     'hours': report.payable_hours, 'price': report.amount}
+                    for report in sorted(approved_reports.values(), key=lambda item: item.shift_date)
+                ]
+                total_hours = sum(
+                    (report.payable_hours for report in approved_reports.values()), Decimal('0'))
+                job.times_required = f'{total_hours / job.days:.2f}'
+                job.per_day_price = float(job.locum_rate * (total_hours / job.days))
+                job.total_price = float(job.locum_rate * total_hours)
+                job.days_list = job.discrete_dates_list
+                total_amount += job.total_price
+                continue
+
+            try:
+                hours_per_day = float(job.times_required)
+            except (TypeError, ValueError):
+                messages.error(
+                    request,
+                    f'Cannot invoice the {job.pharmacy_name} job: Hours/Day "{job.times_required}" is not a number.')
+                return redirect(reverse('calander'))
             if job.discrete_dates:
                 job.discrete_dates_list = job.discrete_dates.strip('[]').replace('"', '').split(', ')
                 job.days = len(job.discrete_dates_list)
@@ -979,8 +1020,14 @@ class JobListView(ListView):
                 job.days = len(job.discrete_dates_list)
                 job.working_dates = ', '.join(job.discrete_dates_list)
 
+            job.invoice_day_rows = [
+                {'date': day, 'hours': job.times_required,
+                 'price': Decimal(str(job.locum_rate)) * Decimal(str(hours_per_day))}
+                for day in job.discrete_dates_list
+            ]
+
             # Calculate per_day_price
-            job.per_day_price = float(job.locum_rate) * float(job.times_required)
+            job.per_day_price = float(job.locum_rate) * hours_per_day
 
             # Calculate total_price for all days combined
             job.total_price = job.per_day_price * job.days
@@ -1124,39 +1171,64 @@ class JobListView(ListView):
 
 class UpdateJobView(View):
     def post(self, request, job_id):
-        # Retrieve job object
-        job = Job.objects.get(pk=job_id)
-        # Update job object based on query parameters
-        date_of_booking_email = request.POST.get('date_of_booking_email')
-        company_name = request.POST.get('company_name')
-        locum_payment_status = request.POST.get('locum_payment_status')
-        status = request.POST.get('status')
-        date_of_invoice_email = request.POST.get('date_of_invoice_email')
-        source = request.POST.get('source')
-        source_commission_date = request.POST.get('source_commission_date')
-        booked_by = request.POST.get('booked_by')
-        if date_of_booking_email:
-            job.date_of_booking_email = date_of_booking_email
-        if locum_payment_status:
-            job.locum_payment_status = locum_payment_status
-        if status:
-            job.status = status
-        if date_of_invoice_email:
-            job.date_of_invoice_email = date_of_invoice_email
-        if source:
-            job.source = source
-        if source_commission_date:
-            job.source_commission_date = source_commission_date
-        if booked_by:
-            job.booked_by = booked_by
-        if company_name:
-            job.company_name = company_name
+        job = get_object_or_404(Job, pk=job_id)
+        update_fields = []
 
-        # Save updated job object
-        job.save()
+        for field_name in (
+                'company_name', 'locum_payment_status', 'status', 'source', 'booked_by'):
+            if field_name in request.POST:
+                setattr(job, field_name, request.POST.get(field_name, '').strip())
+                update_fields.append(field_name)
 
-        # Redirect back to calendar page with pre-filled fields
-        return HttpResponseRedirect(reverse('calander'))
+        for field_name in (
+                'date_of_booking_email', 'date_of_invoice_email', 'source_commission_date'):
+            if field_name not in request.POST:
+                continue
+            raw_value = request.POST.get(field_name, '').strip()
+            try:
+                parsed_value = date.fromisoformat(raw_value) if raw_value else None
+            except ValueError:
+                messages.error(request, 'Enter dates in the format YYYY-MM-DD.')
+                return HttpResponseRedirect(reverse('calander'))
+            setattr(job, field_name, parsed_value)
+            update_fields.append(field_name)
+
+        if update_fields:
+            job.save(update_fields=update_fields)
+        messages.success(request, f'{job.pharmacy_name} job updated successfully.')
+
+        query_parts = []
+        if request.POST.get('search'):
+            query_parts.append(('search', request.POST['search']))
+        if request.POST.get('sort_by'):
+            query_parts.append(('sort_by', request.POST['sort_by']))
+        redirect_url = reverse('calander')
+        if query_parts:
+            redirect_url += '?' + urlencode(query_parts)
+        return HttpResponseRedirect(redirect_url)
+
+
+class ShiftCompletionReviewView(StaffRequiredMixin, View):
+    def post(self, request, completion_id, decision):
+        completion = get_object_or_404(
+            ShiftCompletion.objects.select_related('job', 'locum'), pk=completion_id)
+        if decision not in ('approve', 'decline'):
+            raise Http404
+        completion.status = (ShiftCompletion.STATUS_APPROVED
+                             if decision == 'approve' else ShiftCompletion.STATUS_DECLINED)
+        completion.admin_note = (request.POST.get('admin_note') or '').strip()[:500]
+        completion.reviewed_by = Admin.objects.get(pk=request.user.pk)
+        completion.reviewed_at = timezone.now()
+        completion.save(update_fields=[
+            'status', 'admin_note', 'reviewed_by', 'reviewed_at'])
+
+        from locum.shifts import refresh_completion_status
+        refresh_completion_status(completion.job, completion.locum)
+        messages.success(
+            request,
+            f'{completion.shift_date:%d %b %Y} shift '
+            f'{"approved" if decision == "approve" else "declined"}.')
+        return redirect(reverse('calander') + '#job-list')
 
 
 class LocumEditView(View):

@@ -76,9 +76,12 @@
         </div>
 
         <!-- Job List Section -->
-        <div class="dash-card">
+        <div class="dash-card" id="job-list">
             <div class="dash-card-head">
-                <h2>Job list</h2>
+                <div>
+                    <h2>Job list</h2>
+                    <p class="dash-card-note">Review scheduled work at a glance. Use Edit to update booking, payment and invoice details.</p>
+                </div>
                 <div class="dash-sort">
                     <label for="sort_by">Sort by</label>
                     <select id="sort_by" class="dash-input"
@@ -87,6 +90,25 @@
                         <option value="Earliest" {% if request.GET.sort_by == 'Earliest' %}selected{% endif %}>Earliest</option>
                         <option value="Latest" {% if request.GET.sort_by == 'Latest' %}selected{% endif %}>Latest</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="job-list-stats" aria-label="Job list summary">
+                <div class="job-list-stat">
+                    <span class="job-list-stat-icon"><i class="fa-regular fa-calendar-check"></i></span>
+                    <span class="job-list-stat-copy"><strong>{{ job_count }}</strong><span>scheduled job{{ job_count|pluralize }}</span></span>
+                </div>
+                <div class="job-list-stat">
+                    <span class="job-list-stat-icon"><i class="fa-regular fa-clock"></i></span>
+                    <span class="job-list-stat-copy"><strong>{{ scheduled_shift_count }}</strong><span>shift{{ scheduled_shift_count|pluralize }} across these jobs</span></span>
+                </div>
+                <div class="job-list-stat">
+                    <span class="job-list-stat-icon"><i class="fa-solid fa-sterling-sign"></i></span>
+                    <span class="job-list-stat-copy"><strong>{{ pending_payment_count }}</strong><span>locum payment{{ pending_payment_count|pluralize }} not marked paid</span></span>
+                </div>
+                <div class="job-list-stat">
+                    <span class="job-list-stat-icon"><i class="fa-solid fa-user-check"></i></span>
+                    <span class="job-list-stat-copy"><strong>{{ pending_shift_review_count }}</strong><span>shift report{{ pending_shift_review_count|pluralize }} awaiting review</span></span>
                 </div>
             </div>
 
@@ -107,31 +129,18 @@
             </form>
 
             <div class="dash-table-wrap" data-admin-search-results>
-                <table class="dash-table wide" id="job-table" data-admin-search-table>
+                <table class="dash-table job-list-table" id="job-table" data-admin-search-table>
                     <thead>
                         <tr>
                             <th>Select</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th data-suggest>Employer Name</th>
-                            <th>Job Type</th>
-                            <th data-suggest>Locum Name</th>
-                            <th data-suggest>Locum Type</th>
-                            <th>Locum Rate</th>
-                            <th>Expenses Offered</th>
-                            <th>Hours/Day</th>
-                            <th>Agency Fee</th>
-                            <th data-suggest>Group</th>
-                            <th data-suggest>Pharmacy Owner</th>
-                            <th>Date of Booking Email</th>
-                            <th data-suggest>Locum Payment Status</th>
-                            <th data-suggest>Job Status</th>
-                            <th>Date of Invoice Email</th>
-                            <th>Payment Source</th>
-                            <th>Source Commission Date</th>
+                            <th>Shift</th>
+                            <th data-suggest>Pharmacy</th>
+                            <th data-suggest>Locum</th>
+                            <th>Pay</th>
+                            <th data-suggest>Status</th>
                             <th data-suggest>Booked By</th>
-                            <th>Additional Info</th>
-                            <th>Update</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -140,53 +149,157 @@
                             <td data-label="Select"><input type="checkbox" class="job-checkbox dash-check" name="job_ids"
                                     value="{{ job.id }}" data-employer="{{ job.pharmacy_name }}"
                                     aria-label="Select job at {{ job.pharmacy_name }}"></td>
-                            <td data-label="Start Date">{{ job.start_date|date:"d M y" }}</td>
-                            <td data-label="End Date">{{ job.end_date|date:"d M y" }}</td>
-                            <td data-label="Employer Name">{{ job.pharmacy_name }}</td>
-                            <td data-label="Job Type">{% if job.discrete_dates %}Random Days{% else %}Continuous Days{% endif %}</td>
-                            <td data-label="Locum Name">{{ job.locum.firstname }} {{ job.locum.lastname }}</td>
-                            <td data-label="Locum Type">{{ job.locum.user_type }}</td>
-                            <td data-label="Locum Rate" class="num">{{ job.locum_rate }}</td>
-                            <td data-label="Expenses Offered" class="num">{{ job.expenses_offered }}</td>
-                            <td data-label="Hours/Day" class="num">{{ job.times_required }}</td>
-                            <td data-label="Agency Fee" class="num">{{ job.agency_fee|default_if_none:"—" }}</td>
-                            <td data-label="Group"><input type="text" class="dash-input" name="company_name"
-                                    value="{{ job.company_name }}" form="job-form-{{ job.id }}" aria-label="Group"></td>
-                            <td data-label="Pharmacy Owner">{{ job.name }}</td>
-                            <td data-label="Date of Booking Email"><input type="date" class="dash-input" name="date_of_booking_email"
-                                    value="{% if job.date_of_booking_email %}{{ job.date_of_booking_email|date:'Y-m-d' }}{% endif %}"
-                                    form="job-form-{{ job.id }}" aria-label="Date of booking email"></td>
-                            <td data-label="Locum Payment Status"><input type="text" class="dash-input" name="locum_payment_status"
-                                    value="{{ job.locum_payment_status }}" form="job-form-{{ job.id }}" aria-label="Locum payment status"></td>
-                            <td data-label="Job Status"><input type="text" class="dash-input" name="status"
-                                    value="{{ job.status }}" form="job-form-{{ job.id }}" aria-label="Job status"></td>
-                            <td data-label="Date of Invoice Email"><input type="date" class="dash-input" name="date_of_invoice_email"
-                                    value="{% if job.date_of_invoice_email %}{{ job.date_of_invoice_email|date:'Y-m-d' }}{% endif %}"
-                                    form="job-form-{{ job.id }}" aria-label="Date of invoice email"></td>
-                            <td data-label="Payment Source"><input type="text" class="dash-input" name="source"
-                                    value="{{ job.source }}" form="job-form-{{ job.id }}" aria-label="Payment source"></td>
-                            <td data-label="Source Commission Date"><input type="date" class="dash-input" name="source_commission_date"
-                                    value="{% if job.source_commission_date %}{{ job.source_commission_date|date:'Y-m-d' }}{% endif %}"
-                                    form="job-form-{{ job.id }}" aria-label="Source commission date"></td>
-                            <td data-label="Booked By"><input type="text" class="dash-input" name="booked_by"
-                                    value="{{ job.booked_by }}" form="job-form-{{ job.id }}" aria-label="Booked by"></td>
-                            <td data-label="Additional Info" class="wrap">{{ job.any_other_information }}</td>
-                            <td data-label="Update">
-                                <form method="POST" action="{% url 'update_job' job.id %}" id="job-form-{{ job.id }}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-primary btn-sm">Update</button>
-                                </form>
+                            <td data-label="Shift">
+                                <span class="job-primary">{{ job.start_date|date:"d M Y" }}{% if job.end_date != job.start_date %} – {{ job.end_date|date:"d M Y" }}{% endif %}</span>
+                                <span class="job-cell-sub">{{ job.shift_count }} shift{{ job.shift_count|pluralize }} · {{ job.times_required }} hours/day · {% if job.discrete_dates %}Selected dates{% else %}Continuous dates{% endif %}</span>
+                            </td>
+                            <td data-label="Pharmacy">
+                                <span class="job-primary">{{ job.pharmacy_name }}</span>
+                                <span class="job-cell-sub">{{ job.company_name|default:"No group" }} · {{ job.name }}</span>
+                            </td>
+                            <td data-label="Locum">
+                                <span class="job-primary">{{ job.locum.firstname }} {{ job.locum.lastname }}</span>
+                                <span class="job-cell-sub">{{ job.locum.user_type|default:"Type not set" }}</span>
+                            </td>
+                            <td data-label="Pay" class="num">
+                                <span class="job-primary">£{{ job.locum_rate }}/hr</span>
+                                <span class="job-cell-sub">£{{ job.expenses_offered }} expenses · £{{ job.agency_fee|default_if_none:"—" }} fee</span>
+                            </td>
+                            <td data-label="Status">
+                                <span class="job-status-stack">
+                                    {% if job.status %}<span class="job-status-pill">{{ job.status }}</span>{% else %}<span class="job-status-pill is-warning">Job status not set</span>{% endif %}
+                                    {% if job.locum_payment_status|lower == "paid" %}<span class="job-status-pill is-success">Locum paid</span>{% elif job.locum_payment_status %}<span class="job-status-pill is-warning">{{ job.locum_payment_status }}</span>{% else %}<span class="job-status-pill is-warning">Payment not set</span>{% endif %}
+                                    {% if job.review_summary.pending %}<span class="job-status-pill is-warning">{{ job.review_summary.pending }} shift{{ job.review_summary.pending|pluralize }} awaiting review</span>{% endif %}
+                                    {% if job.review_summary.declined %}<span class="job-status-pill is-danger">{{ job.review_summary.declined }} shift{{ job.review_summary.declined|pluralize }} declined</span>{% endif %}
+                                    {% if job.review_summary.approved == job.review_summary.total and job.review_summary.total %}<span class="job-status-pill is-success">All shifts verified</span>{% endif %}
+                                </span>
+                            </td>
+                            <td data-label="Booked By">{{ job.booked_by|default:"—" }}</td>
+                            <td data-label="Notes">
+                                <span class="job-note-preview">{{ job.any_other_information|default:"No additional notes" }}</span>
+                                <span class="job-full-note" hidden>{{ job.any_other_information }}</span>
+                            </td>
+                            <td data-label="Actions">
+                                <button type="button" class="btn btn-primary btn-sm" data-shift-details
+                                    data-template="shift-details-{{ job.id }}"
+                                    data-title="{{ job.pharmacy_name }} · {{ job.locum.firstname }} {{ job.locum.lastname }}">Shift details</button>
+                                <button type="button" class="btn btn-secondary btn-sm job-edit-trigger"
+                                    data-action="{% url 'update_job' job.id %}"
+                                    data-title="{{ job.pharmacy_name }} · {{ job.start_date|date:'d M Y' }}"
+                                    data-company-name="{{ job.company_name }}"
+                                    data-date-of-booking-email="{% if job.date_of_booking_email %}{{ job.date_of_booking_email|date:'Y-m-d' }}{% endif %}"
+                                    data-locum-payment-status="{{ job.locum_payment_status }}"
+                                    data-status="{{ job.status }}"
+                                    data-date-of-invoice-email="{% if job.date_of_invoice_email %}{{ job.date_of_invoice_email|date:'Y-m-d' }}{% endif %}"
+                                    data-source="{{ job.source }}"
+                                    data-source-commission-date="{% if job.source_commission_date %}{{ job.source_commission_date|date:'Y-m-d' }}{% endif %}"
+                                    data-booked-by="{{ job.booked_by }}">Edit</button>
+                                <template id="shift-details-{{ job.id }}">
+                                    <div class="admin-shift-summary"><strong>{{ job.review_summary.approved }}/{{ job.review_summary.total }} verified</strong><span>{{ job.review_summary.reported }} reported</span></div>
+                                    <div class="admin-shift-list">
+                                    {% for completion in job.shift_completions.all %}
+                                        <form method="post" class="admin-shift-report">
+                                            {% csrf_token %}
+                                            <div class="admin-shift-report-head"><div><strong>{{ completion.shift_date|date:"D, d M Y" }}</strong><span>{{ completion.start_time|time:"H:i" }}–{{ completion.end_time|time:"H:i" }}</span></div>
+                                                {% if completion.status == 'approved' %}<span class="job-status-pill is-success">Approved</span>{% elif completion.status == 'declined' %}<span class="job-status-pill is-danger">Declined</span>{% else %}<span class="job-status-pill is-warning">Pending</span>{% endif %}
+                                            </div>
+                                            <div class="admin-shift-metrics"><span>Gross <strong>{{ completion.gross_hours }}h</strong></span><span>Break <strong>{{ completion.break_minutes }} min</strong></span><span>Payable <strong>{{ completion.payable_hours }}h</strong></span><span>Amount <strong>£{{ completion.amount }}</strong></span></div>
+                                            {% if completion.candidate_note %}<p class="admin-shift-note"><strong>Candidate:</strong> {{ completion.candidate_note }}</p>{% endif %}
+                                            <div class="dash-field"><label for="admin-note-{{ completion.id }}">Admin note</label><input class="dash-input" id="admin-note-{{ completion.id }}" name="admin_note" value="{{ completion.admin_note }}" maxlength="500" placeholder="Optional reason or response"></div>
+                                            <div class="dash-dialog-actions"><button type="submit" class="btn btn-secondary btn-sm" formaction="{% url 'review_shift_completion' completion.id 'decline' %}">Decline</button><button type="submit" class="btn btn-primary btn-sm" formaction="{% url 'review_shift_completion' completion.id 'approve' %}">Approve</button></div>
+                                        </form>
+                                    {% empty %}<div class="results-empty"><p>The candidate has not reported any shifts for this job yet.</p></div>{% endfor %}
+                                    </div>
+                                </template>
                             </td>
                         </tr>
                         {% empty %}
                         <tr class="dash-empty">
-                            <td colspan="22">No jobs found.</td>
+                            <td colspan="9">No jobs found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <dialog class="dash-dialog job-edit-dialog" id="job-edit-dialog" aria-labelledby="job-edit-title">
+            <form method="POST" id="job-edit-form">
+                {% csrf_token %}
+                <input type="hidden" name="search" value="{{ search_query }}">
+                <input type="hidden" name="sort_by" value="{{ request.GET.sort_by }}">
+                <div class="job-edit-dialog-head">
+                    <div>
+                        <span class="section-tag">Manage shift</span>
+                        <h2 id="job-edit-title">Edit job</h2>
+                    </div>
+                    <button type="button" class="job-edit-dialog-close" data-job-dialog-close aria-label="Close edit dialog">&times;</button>
+                </div>
+
+                <div class="job-edit-section">
+                    <p class="job-edit-section-title">Booking</p>
+                    <div class="job-edit-grid">
+                        <div class="dash-field">
+                            <label for="edit-company-name">Group</label>
+                            <input class="dash-input" id="edit-company-name" name="company_name" autocomplete="organization">
+                        </div>
+                        <div class="dash-field">
+                            <label for="edit-booked-by">Booked by</label>
+                            <input class="dash-input" id="edit-booked-by" name="booked_by" autocomplete="name">
+                        </div>
+                        <div class="dash-field">
+                            <label for="edit-job-status">Job status</label>
+                            <input class="dash-input" id="edit-job-status" name="status" list="job-status-options" placeholder="e.g. Booked">
+                        </div>
+                        <div class="dash-field">
+                            <label for="edit-booking-email-date">Booking email date</label>
+                            <input type="date" class="dash-input" id="edit-booking-email-date" name="date_of_booking_email">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="job-edit-section">
+                    <p class="job-edit-section-title">Payment and invoicing</p>
+                    <div class="job-edit-grid">
+                        <div class="dash-field">
+                            <label for="edit-locum-payment-status">Locum payment status</label>
+                            <input class="dash-input" id="edit-locum-payment-status" name="locum_payment_status" list="payment-status-options" placeholder="e.g. Paid">
+                        </div>
+                        <div class="dash-field">
+                            <label for="edit-invoice-email-date">Invoice email date</label>
+                            <input type="date" class="dash-input" id="edit-invoice-email-date" name="date_of_invoice_email">
+                        </div>
+                        <div class="dash-field">
+                            <label for="edit-payment-source">Payment source</label>
+                            <input class="dash-input" id="edit-payment-source" name="source" placeholder="e.g. Direct">
+                        </div>
+                        <div class="dash-field">
+                            <label for="edit-commission-date">Source commission date</label>
+                            <input type="date" class="dash-input" id="edit-commission-date" name="source_commission_date">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="job-edit-section">
+                    <p class="job-edit-section-title">Additional information</p>
+                    <div class="job-edit-context" id="job-edit-notes">No additional notes</div>
+                </div>
+
+                <div class="dash-dialog-actions">
+                    <button type="button" class="btn btn-secondary" data-job-dialog-close>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </dialog>
+        <datalist id="job-status-options"><option value="Booked"><option value="Completed"><option value="Cancelled"></datalist>
+        <datalist id="payment-status-options"><option value="Pending"><option value="Paid"><option value="On hold"></datalist>
+
+        <dialog class="dash-dialog admin-shift-dialog" id="admin-shift-dialog" aria-labelledby="admin-shift-title">
+            <div class="admin-shift-dialog-inner">
+                <div class="job-edit-dialog-head"><div><span class="section-tag">Candidate reports</span><h2 id="admin-shift-title">Shift details</h2></div><button type="button" class="job-edit-dialog-close" data-shift-dialog-close aria-label="Close shift details">&times;</button></div>
+                <div id="admin-shift-dialog-body"></div>
+            </div>
+        </dialog>
 
         <!-- Locum Invoice Tracking Section (read-only) -->
         <div class="dash-card">
@@ -244,6 +357,24 @@
         var emailForm = document.getElementById('email-form');
         var counter = document.querySelector('[data-selected-count]');
         var selectedEmployerName = null;
+        var editDialog = document.getElementById('job-edit-dialog');
+        var editForm = document.getElementById('job-edit-form');
+        var editTitle = document.getElementById('job-edit-title');
+        var editNotes = document.getElementById('job-edit-notes');
+        var shiftDialog = document.getElementById('admin-shift-dialog');
+        var shiftDialogTitle = document.getElementById('admin-shift-title');
+        var shiftDialogBody = document.getElementById('admin-shift-dialog-body');
+
+        var editFields = {
+            companyName: document.getElementById('edit-company-name'),
+            bookedBy: document.getElementById('edit-booked-by'),
+            status: document.getElementById('edit-job-status'),
+            dateOfBookingEmail: document.getElementById('edit-booking-email-date'),
+            locumPaymentStatus: document.getElementById('edit-locum-payment-status'),
+            dateOfInvoiceEmail: document.getElementById('edit-invoice-email-date'),
+            source: document.getElementById('edit-payment-source'),
+            sourceCommissionDate: document.getElementById('edit-commission-date')
+        };
 
         function notify(message) {
             if (window.rsToast) {
@@ -264,6 +395,51 @@
             counter.textContent = count === 0 ? 'No jobs selected' : count + (count === 1 ? ' job selected' : ' jobs selected');
             counter.classList.toggle('is-empty', count === 0);
         }
+
+        function closeEditDialog() {
+            if (typeof editDialog.close === 'function') {
+                editDialog.close();
+            } else {
+                editDialog.removeAttribute('open');
+            }
+        }
+
+        function openEditDialog(button) {
+            editForm.action = button.getAttribute('data-action');
+            editTitle.textContent = button.getAttribute('data-title');
+            Object.keys(editFields).forEach(function (key) {
+                editFields[key].value = button.dataset[key] || '';
+            });
+            var note = button.closest('tr').querySelector('.job-full-note').textContent.trim();
+            editNotes.textContent = note || 'No additional notes';
+            if (typeof editDialog.showModal === 'function') {
+                editDialog.showModal();
+            } else {
+                editDialog.setAttribute('open', '');
+            }
+            editFields.companyName.focus();
+        }
+
+        table.addEventListener('click', function (event) {
+            var shiftButton = event.target.closest('[data-shift-details]');
+            if (shiftButton) {
+                var template = document.getElementById(shiftButton.getAttribute('data-template'));
+                shiftDialogTitle.textContent = shiftButton.getAttribute('data-title');
+                shiftDialogBody.replaceChildren(template.content.cloneNode(true));
+                shiftDialog.showModal ? shiftDialog.showModal() : shiftDialog.setAttribute('open', '');
+                return;
+            }
+            var button = event.target.closest('.job-edit-trigger');
+            if (button) openEditDialog(button);
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-job-dialog-close]'), function (button) {
+            button.addEventListener('click', closeEditDialog);
+        });
+        editDialog.addEventListener('click', function (event) {
+            if (event.target === editDialog) closeEditDialog();
+        });
+        document.querySelector('[data-shift-dialog-close]').addEventListener('click', function () { shiftDialog.close(); });
+        shiftDialog.addEventListener('click', function (event) { if (event.target === shiftDialog) shiftDialog.close(); });
 
         // Keep the selected jobs at the top of the list
         function sortTable() {

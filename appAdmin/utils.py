@@ -256,20 +256,10 @@ def generate_tesco_invoice_pdf(jobs, created_date, invoice_number, month, total_
     ]
 
     for idx, job in enumerate(jobs):
-        if job.discrete_dates:
-            days_list = job.discrete_dates.strip('][').split(', ')
-        else:
-            days_list = []
-            current_date = job.start_date
-            while current_date <= job.end_date:
-                days_list.append(current_date.strftime('%d/%m/%Y'))
-                current_date += timedelta(days=1)
-
-        # Append job data for each date in days_list
-        for date in days_list:
+        for day in job.invoice_day_rows:
             job_data_part1.append([
                 idx + 1,
-                date,
+                day['date'],
                 invoice_number,
                 job.locum.gphc_number,
                 f"{job.locum.first_name} {job.locum.last_name}",
@@ -294,23 +284,14 @@ def generate_tesco_invoice_pdf(jobs, created_date, invoice_number, month, total_
     ]
 
     for idx, job in enumerate(jobs):
-        if job.discrete_dates:
-            days_list = job.discrete_dates.strip('][').split(', ')
-        else:
-            days_list = []
-            current_date = job.start_date
-            while current_date <= job.end_date:
-                days_list.append(current_date.strftime('%d/%m/%Y'))
-                current_date += timedelta(days=1)
-
-        for date in days_list:
+        for day in job.invoice_day_rows:
             job_data_part2.append([
                 'Locumsmart Ltd.',
                 '',  # Store Number placeholder
-                job.times_required,
-                f"£{float(job.locum_rate) * float(job.times_required):.2f}",
+                day['hours'],
+                f"£{day['price']:.2f}",
                 ' ',  # VAT placeholder, assuming it might be calculated differently
-                f"£{float(job.locum_rate) * float(job.times_required):.2f}",
+                f"£{day['price']:.2f}",
             ])
 
     job_table_part2 = Table(job_data_part2, colWidths=[50*mm, 30*mm, 30*mm, 40*mm, 30*mm, 40*mm])
