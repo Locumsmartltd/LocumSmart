@@ -12,11 +12,11 @@
                 <div>
                     <span class="section-tag">Locum</span>
                     <h1 class="dash-title">Generate Invoice</h1>
-                    <p class="dash-sub">Enter your bank details and the hours you worked, then download the invoice as a PDF.</p>
+                    <p class="dash-sub">Review the verified shift and recipient details, then enter your payment information and download the invoice.</p>
                     <div class="dash-meta">
                         <span class="dash-chip">Employer <strong>{{ job.pharmacy_name }}</strong></span>
                         <span class="dash-chip">Dates <strong>{{ job.start_date|date:"d M Y" }} – {{ job.end_date|date:"d M Y" }}</strong></span>
-                        <span class="dash-chip">Rate <strong>£{{ job.locum_rate }}/hr</strong></span>
+                        <span class="dash-chip">Candidate pay rate <strong>£{{ job.candidate_pay_rate }}/hr</strong></span>
                     </div>
                 </div>
                 {% if user.is_authenticated %}
@@ -28,6 +28,20 @@
 
             <form method="post" action="{% url 'generate_pdf_receipt' job.id %}" id="invoice-details-form">
                 {% csrf_token %}
+                <div class="dash-card">
+                    <div class="dash-card-head">
+                        <div>
+                            <h2>Invoice recipient</h2>
+                            <p class="dash-card-note">Address your invoice to these details. Contact LocumSmart if they need updating.</p>
+                        </div>
+                    </div>
+                    <div class="dash-fields invoice-recipient-summary">
+                        <div class="dash-field"><span class="muted">Company</span><strong>{{ invoice_recipient.candidate_invoice_company_display }}</strong></div>
+                        <div class="dash-field"><span class="muted">For the attention of</span><strong>{{ invoice_recipient.candidate_invoice_contact_display|default:"—" }}</strong></div>
+                        <div class="dash-field"><span class="muted">Invoice email</span><strong>{{ invoice_recipient.candidate_invoice_email_display }}</strong></div>
+                        <div class="dash-field"><span class="muted">Address</span><strong>{{ invoice_recipient.candidate_invoice_address_display|default:"—"|linebreaksbr }}</strong></div>
+                    </div>
+                </div>
                 <div class="dash-card">
                     <div class="dash-card-head">
                         <div>
@@ -47,9 +61,9 @@
                                 placeholder="00-00-00" autocomplete="off" required>
                         </div>
                         <div class="dash-field">
-                            <label for="invoice_number">Invoice number</label>
+                            <label for="invoice_number">Invoice number <span class="req">*</span></label>
                             <input type="text" class="dash-input" id="invoice_number" name="invoice_number"
-                                placeholder="e.g. INV-001" autocomplete="off">
+                                placeholder="e.g. INV-001" autocomplete="off" required>
                         </div>
                     </div>
                 </div>
@@ -66,8 +80,10 @@
                     <div class="dash-day invoice-shift-day">
                         <div class="dash-day-date">{{ completion.shift_date|date:"d M Y" }}</div>
                         <div><span class="muted">Worked</span><strong>{{ completion.start_time|time:"H:i" }}–{{ completion.end_time|time:"H:i" }}</strong></div>
-                        <div><span class="muted">Break deduction</span><strong>{{ completion.break_minutes }} minutes</strong></div>
-                        <div class="dash-day-subtotal">{{ completion.payable_hours }} hrs · £{{ completion.amount }}</div>
+                        <div><span class="muted">Gross hours</span><strong>{{ completion.gross_hours }} hrs</strong></div>
+                        <div><span class="muted">Unpaid break</span><strong>− {{ completion.break_minutes }} minutes</strong></div>
+                        <div><span class="muted">Payable at £{{ job.candidate_pay_rate }}/hr</span><strong>{{ completion.payable_hours }} hrs</strong></div>
+                        <div class="dash-day-subtotal">£{{ completion.amount }}</div>
                     </div>
                     {% endfor %}
                     {% else %}

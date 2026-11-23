@@ -151,7 +151,7 @@ def generate_fairgreen_invoice_pdf(jobs, created_date, invoice_number, month, to
 
     # Define the table header with the new columns
     table_data = [
-        ["Locum Name", "Role", "Pharmacy", "Days", "Booking Date", "Locum Rate", "Hours/Day", "Amount"]
+        ["Locum Name", "Role", "Pharmacy", "Days", "Booking Date", "Client Rate", "Hours/Day", "Amount"]
     ]
 
     # Add job data to the table
@@ -162,7 +162,7 @@ def generate_fairgreen_invoice_pdf(jobs, created_date, invoice_number, month, to
             job.pharmacy_name,
             job.days,
             job.date_of_booking_email.strftime("%d/%m/%Y") if job.date_of_booking_email else "",
-            f"£{job.locum_rate}",
+            f"£{job.client_billing_rate}",
             job.times_required,
             f"£{job.total_price}"
         ])
@@ -179,7 +179,7 @@ def generate_fairgreen_invoice_pdf(jobs, created_date, invoice_number, month, to
         total_width_available * 0.20,  # Pharmacy
         total_width_available * 0.05,  # Days
         total_width_available * 0.15,  # Booking Date
-        total_width_available * 0.10,  # Locum Rate
+        total_width_available * 0.10,  # Client billing rate
         total_width_available * 0.10,  # Hours/Day
         total_width_available * 0.10   # Amount
     ]

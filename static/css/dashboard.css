@@ -151,6 +151,21 @@
   .rs .admin-shift-metrics { grid-template-columns: 1fr 1fr; }
 }
 
+/* --- Candidate invoice recipient administration --- */
+.rs .invoice-recipient-list { display: flex; flex-direction: column; gap: 18px; }
+.rs .invoice-recipient-row { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1.2fr auto; gap: 14px; align-items: end; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-soft); }
+.rs .invoice-recipient-heading { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; }
+.rs .invoice-recipient-heading strong { font-size: 16px; }
+.rs .invoice-recipient-heading span { color: var(--grey); font-size: 13px; }
+.rs .invoice-recipient-address textarea { min-height: 44px; resize: vertical; }
+@media (max-width: 980px) {
+  .rs .invoice-recipient-row { grid-template-columns: 1fr 1fr; }
+  .rs .invoice-recipient-row .btn { justify-self: start; }
+}
+@media (max-width: 620px) {
+  .rs .invoice-recipient-row { grid-template-columns: 1fr; }
+}
+
 /* --- Invoice form (locum generates an invoice) --- */
 .rs .dash-narrow { max-width: 880px; margin: 0 auto; }
 .rs .dash-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -160,12 +175,14 @@
 .rs .dash-meta { display: flex; gap: 8px 10px; flex-wrap: wrap; margin-top: 12px; }
 .rs .dash-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; font-size: 13px; color: var(--grey); }
 .rs .dash-chip strong { color: var(--charcoal); font-weight: 700; }
-.rs .dash-day { display: grid; grid-template-columns: 150px 1fr 1fr 110px; gap: 14px; align-items: end; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.rs .dash-day { display: grid; grid-template-columns: 130px repeat(4, minmax(95px, 1fr)) 90px; gap: 14px; align-items: end; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .rs .dash-day:first-child { padding-top: 0; }
 .rs .dash-day:last-child { border-bottom: none; padding-bottom: 0; }
 .rs .dash-day-date { font-weight: 700; font-size: 14.5px; padding-bottom: 11px; }
 .rs .dash-day-subtotal { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; padding-bottom: 11px; }
 .rs .invoice-shift-day > div:not(.dash-day-date) { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.rs .invoice-recipient-summary .dash-field { display: flex; flex-direction: column; gap: 5px; overflow-wrap: anywhere; }
+.rs .invoice-recipient-summary .dash-field:last-child { grid-column: 1 / -1; }
 .rs .dash-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; }
 .rs .dash-summary-figures { display: flex; gap: 12px 32px; flex-wrap: wrap; }
 .rs .dash-figure { display: flex; flex-direction: column; }

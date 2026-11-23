@@ -67,17 +67,18 @@
                                         <button type="submit" class="btn btn-primary">Update</button>
                                     </form>
                                     <!-- Approve and Disapprove Buttons -->
-                                    <form action="{% url 'approve_job' job.id %}" method="post">
+                                    <form action="{% url 'approve_job' job.id %}" method="post" onsubmit="return confirm('Approve this employer job request?');">
                                         {% csrf_token %}
-                                        <label for="agency_fee">Agency Fee in £:</label>
+                                        <label for="agency_fee">Hourly agency fee (£):</label>
                                         <input type="number" class="form-control" id="agency_fee" name="agency_fee"
-                                            required>
+                                            min="0" step="0.01" required>
+                                        <small>Client billing rate = candidate pay rate + hourly agency fee.</small>
                                         <label for="branch_no">Branch Number:</label>
                                         <input type="text" class="form-control" id="branch_no" name="branch_no"
                                             required>
                                         <button type="submit" class="btn btn-success btn-approve">Approve</button>
                                     </form>
-                                    <form action="{% url 'disapprove_job' job.id %}" method="post">
+                                    <form action="{% url 'disapprove_job' job.id %}" method="post" onsubmit="return confirm('Decline this employer job request?');">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-danger btn-disapprove">Disapprove</button>
                                     </form>

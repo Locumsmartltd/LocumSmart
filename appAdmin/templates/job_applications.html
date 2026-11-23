@@ -41,11 +41,11 @@
                                 <td>{{ applied_job.job.expenses_offered }}</td>
                                 <td>{{ applied_job.date }}</td>
                                 <td>
-                                    <form method="post" action="{% url 'reject_job' applied_job.id %}">
+                                    <form method="post" action="{% url 'reject_job' applied_job.id %}" onsubmit="return confirm('Decline this application and notify the candidate?');">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-danger">Reject</button>
                                     </form>
-                                    <form method="post" action="{% url 'approveappliedjob' applied_job.id %}">
+                                    <form method="post" action="{% url 'approveappliedjob' applied_job.id %}" onsubmit="return confirm('Approve this application and send the booking confirmations?');">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-success" >Approve</button>
                                     </form>

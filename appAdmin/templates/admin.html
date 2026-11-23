@@ -138,6 +138,22 @@
                                 <a href="{% url 'calander' %}" class="btn btn-primary">Admin Calander</a>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth2.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>Candidate Invoice Recipients</h5>
+                                <br>
+                                <a href="{% url 'candidate_invoice_recipients' %}" class="btn btn-primary">Manage Invoice Details</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="sub-card">
+                                <img src="{% static 'images/admin_auth3.jpg' %}" class="card-img-top" alt="Card Image">
+                                <h5>Booking Confirmation Terms</h5>
+                                <br>
+                                <a href="{% url 'booking_confirmation_terms' %}" class="btn btn-primary">Edit Booking Terms</a>
+                            </div>
+                        </div>
                         {% if user.admin.is_admin %}
                         <div class="col-md-4">
                             <div class="sub-card">

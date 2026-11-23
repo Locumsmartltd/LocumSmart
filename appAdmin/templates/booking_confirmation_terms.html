@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Booking Confirmation Terms{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261120" />
+{% endblock %}
+{% block content %}
+<section class="dash">
+    <div class="container">
+        <div class="dash-head">
+            <div>
+                <span class="section-tag">Admin</span>
+                <h1 class="dash-title">Booking confirmation terms</h1>
+                <p class="dash-sub">These terms are inserted into candidate booking confirmation emails. Changes apply to confirmations sent after you save.</p>
+            </div>
+            <div class="dash-head-actions">
+                <a href="{% url 'admin' %}" class="btn btn-secondary">Back to Admin</a>
+            </div>
+        </div>
+
+        <form method="post" class="dash-card">
+            {% csrf_token %}
+            <div class="dash-card-head">
+                <div>
+                    <h2>Candidate email content</h2>
+                    <p class="dash-card-note">Use plain text. Paragraph breaks are preserved in the email.</p>
+                </div>
+            </div>
+
+            <div class="dash-field">
+                <label for="{{ form.pharmacy_candidate_terms.id_for_label }}">Pharmacy candidate terms</label>
+                <textarea class="dash-input{% if form.pharmacy_candidate_terms.errors %} is-invalid{% endif %}"
+                    id="{{ form.pharmacy_candidate_terms.id_for_label }}"
+                    name="{{ form.pharmacy_candidate_terms.html_name }}" rows="12" required>{{ form.pharmacy_candidate_terms.value|default_if_none:'' }}</textarea>
+                {% for error in form.pharmacy_candidate_terms.errors %}<span class="dash-field-error">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="dash-field" style="margin-top:24px;">
+                <label for="{{ form.primary_care_candidate_terms.id_for_label }}">Primary care candidate terms</label>
+                <textarea class="dash-input{% if form.primary_care_candidate_terms.errors %} is-invalid{% endif %}"
+                    id="{{ form.primary_care_candidate_terms.id_for_label }}"
+                    name="{{ form.primary_care_candidate_terms.html_name }}" rows="12" required>{{ form.primary_care_candidate_terms.value|default_if_none:'' }}</textarea>
+                {% for error in form.primary_care_candidate_terms.errors %}<span class="dash-field-error">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="dash-head-actions" style="margin-top:24px;">
+                <button type="submit" class="btn btn-primary">Save booking terms</button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

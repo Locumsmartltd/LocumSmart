@@ -277,6 +277,38 @@ class AccessRestrictionTests(LedgerTestCase):
         invoice = LocumInvoice.objects.get(locum=self.locum)
         self.assertEqual((invoice.total_amount, invoice.status), (Decimal('675.00'), 'pending'))
 
+    def test_candidate_invoice_page_shows_admin_managed_recipient(self):
+        self.employer.candidate_invoice_company = 'Test Pharmacy Accounts'
+        self.employer.candidate_invoice_contact = 'Finance Team'
+        self.employer.candidate_invoice_email = 'locum-invoices@example.com'
+        self.employer.candidate_invoice_address = '20 Accounts Street, London'
+        self.employer.save()
+
+        response = self.client.get(reverse('generate_receipt_form', args=[self.job.id]))
+
+        self.assertContains(response, 'Test Pharmacy Accounts')
+        self.assertContains(response, 'Finance Team')
+        self.assertContains(response, 'locum-invoices@example.com')
+        self.assertContains(response, '20 Accounts Street, London')
+
+    def test_candidate_invoice_never_uses_agency_fee(self):
+        self.job.agency_fee = Decimal('8.00')
+        self.job.save(update_fields=['agency_fee'])
+        for shift_date in (date(2026, 10, 10), date(2026, 10, 11), date(2026, 10, 12)):
+            ShiftCompletion.objects.create(
+                job=self.job, locum=self.locum, shift_date=shift_date,
+                start_time='09:00', end_time='17:00', break_minutes=30,
+                status=ShiftCompletion.STATUS_APPROVED)
+
+        response = self.client.post(reverse('generate_pdf_receipt', args=[self.job.id]), {
+            'account_number': '12345678', 'sort_code': '00-00-00',
+            'invoice_number': 'CAND-1',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(LocumInvoice.objects.get(invoice_number='CAND-1').total_amount,
+                         Decimal('675.00'))
+
 
 class ShiftCompletionWorkflowTests(LedgerTestCase):
     def test_candidate_calendar_lists_each_confirmed_shift(self):

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Candidate Invoice Recipients{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261119" />
+{% endblock %}
+{% block content %}
+<section class="dash">
+    <div class="container">
+        <div class="dash-head">
+            <div>
+                <span class="section-tag">Admin</span>
+                <h1 class="dash-title">Candidate invoice recipients</h1>
+                <p class="dash-sub">Set the company, contact and email candidates must put on their invoices. These details are separate from LocumSmart's agency invoice recipient.</p>
+            </div>
+            <div class="dash-head-actions">
+                <a href="{% url 'calander' %}" class="btn btn-secondary">Back to Calendar</a>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <div>
+                    <h2>Employer instructions</h2>
+                    <p class="dash-card-note">Leave an override blank to use the employer account value shown beneath it.</p>
+                </div>
+            </div>
+            <div class="invoice-recipient-list">
+                {% for employer in employers %}
+                <form method="post" class="invoice-recipient-row">
+                    {% csrf_token %}
+                    <input type="hidden" name="employer_id" value="{{ employer.id }}">
+                    <div class="invoice-recipient-heading">
+                        <strong>{{ employer.pharmacy_name }}</strong>
+                        <span>{{ employer.email }}</span>
+                    </div>
+                    <div class="dash-field">
+                        <label for="company-{{ employer.id }}">Invoice company</label>
+                        <input class="dash-input" id="company-{{ employer.id }}" name="candidate_invoice_company"
+                            value="{{ employer.candidate_invoice_company }}" placeholder="{{ employer.pharmacy_name }}" maxlength="255">
+                    </div>
+                    <div class="dash-field">
+                        <label for="contact-{{ employer.id }}">FAO / contact name</label>
+                        <input class="dash-input" id="contact-{{ employer.id }}" name="candidate_invoice_contact"
+                            value="{{ employer.candidate_invoice_contact }}" placeholder="{{ employer.manager_name|default:employer.get_full_name }}" maxlength="255">
+                    </div>
+                    <div class="dash-field">
+                        <label for="email-{{ employer.id }}">Invoice email</label>
+                        <input type="email" class="dash-input" id="email-{{ employer.id }}" name="candidate_invoice_email"
+                            value="{{ employer.candidate_invoice_email }}" placeholder="{{ employer.email }}">
+                    </div>
+                    <div class="dash-field invoice-recipient-address">
+                        <label for="address-{{ employer.id }}">Invoice address</label>
+                        <textarea class="dash-input" id="address-{{ employer.id }}" name="candidate_invoice_address" rows="2"
+                            placeholder="{{ employer.candidate_invoice_address_display }}">{{ employer.candidate_invoice_address }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Save details</button>
+                </form>
+                {% empty %}
+                <p class="dash-empty-copy">No employers are registered yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

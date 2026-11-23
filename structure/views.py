@@ -32,6 +32,10 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import EmailMultiAlternatives
 from collections import defaultdict
+import logging
+
+
+logger = logging.getLogger('django.notifications')
 
 # Create your views here.
 
@@ -352,6 +356,13 @@ class JobDetailsView(View):
         # Assuming user is logged in as Locum
         locum = Locum.objects.filter(customuser_ptr_id=request.user.id).first()
         if locum:
+            if job.applied_status:
+                messages.error(request, 'This job has already been filled and is no longer accepting applications.')
+                return redirect('locumjobs')
+            if AppliedJob.objects.filter(job=job, locum=locum).exists():
+                messages.warning(request, 'You have already applied for this job.')
+                return redirect('locumjobs')
+
             additional_info = request.POST.get('additional_info', '').strip()
 
             # Create an instance of AppliedJob
@@ -389,25 +400,30 @@ class JobDetailsView(View):
             }
 
             # Confirmation to the locum, with the post code masked
-            send_branded_email('job_application_locum', subject, [locum.email], {
-                **context,
-                'jobs_url': SITE_URL + reverse('locumjobs'),
-                'details': [('City/County', job.county),
-                            ('Post Code', mask_post_code(job.post_code))] + offer_rows,
-            })
+            try:
+                send_branded_email('job_application_locum', subject, [locum.email], {
+                    **context,
+                    'jobs_url': SITE_URL + reverse('locumjobs'),
+                    'details': [('City/County', job.county),
+                                ('Post Code', mask_post_code(job.post_code))] + offer_rows,
+                })
 
-            # The employer alert (emails/job_application_employer.html) is not sent yet:
-            # awaiting the client's decision on emailing employers when a locum applies.
-
-            # Admin copy, with the full post code
-            send_branded_email('job_application_admin', subject, [settings.EMAIL_HOST_USER], {
-                **context,
-                'applications_url': SITE_URL + reverse('job_applications'),
-                'details': [('Pharmacy Name', job.pharmacy_name), ('Company Name', job.company_name),
-                            ('City/County', job.county), ('Post Code', job.post_code)] + offer_rows,
-            })
-
-            # Optionally, you can add further logic based on the application
+                # The employer alert is intentionally not sent until that workflow is enabled.
+                send_branded_email('job_application_admin', subject, [settings.EMAIL_HOST_USER], {
+                    **context,
+                    'applications_url': SITE_URL + reverse('job_applications'),
+                    'details': [('Pharmacy Name', job.pharmacy_name), ('Company Name', job.company_name),
+                                ('City/County', job.county), ('Post Code', job.post_code)] + offer_rows,
+                })
+            except Exception:
+                logger.exception('Application notification failed for application %s', applied_job.id)
+                messages.error(
+                    request,
+                    'Your application was saved, but the confirmation email could not be sent. The LocumSmart team can still review it.')
+            else:
+                messages.success(
+                    request,
+                    f'Your application for {job.pharmacy_name} was submitted successfully.')
 
             return redirect('locumjobs')
         else:

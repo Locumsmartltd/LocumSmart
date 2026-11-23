@@ -1,11 +1,12 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 
 from appAdmin.models import Admin, Employer
-from locum.models import Job
+from locum.models import AppliedJob, Job, Locum
 
 
 class PublicJobListingTests(TestCase):
@@ -83,3 +84,21 @@ class PublicJobListingTests(TestCase):
         response = self.client.get(reverse('check_login', args=[job.id]) + '?action=delete')
         self.assertRedirects(response, reverse('job_details', args=[job.id]))
         self.assertTrue(Job.objects.filter(pk=job.id).exists())
+
+    @patch('structure.views.send_branded_email')
+    def test_job_application_shows_success_toast_and_prevents_duplicates(self, send_email):
+        job = self.create_job('Application Job', approved=True)
+        locum = Locum.objects.create(
+            email='candidate@example.com', first_name='Casey', last_name='Candidate',
+            date_of_birth=date(1990, 1, 1), user_type='Pharmacist')
+        self.client.force_login(locum)
+
+        response = self.client.post(
+            reverse('job_details', args=[job.id]), {'additional_info': 'Available.'},
+            follow=True)
+        self.assertContains(response, 'Your application for Application Job was submitted successfully.')
+        self.assertEqual(AppliedJob.objects.filter(job=job, locum=locum).count(), 1)
+
+        response = self.client.post(reverse('job_details', args=[job.id]), follow=True)
+        self.assertContains(response, 'You have already applied for this job.')
+        self.assertEqual(AppliedJob.objects.filter(job=job, locum=locum).count(), 1)

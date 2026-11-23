@@ -188,6 +188,17 @@ class Job(models.Model):
     discrete_dates = models.TextField(blank=True, null=True)
 
     @property
+    def candidate_pay_rate(self):
+        """Hourly rate payable to the candidate."""
+        return self.locum_rate
+
+    @property
+    def client_billing_rate(self):
+        """Hourly rate billed to the client by LocumSmart."""
+        return (self.locum_rate + (self.agency_fee or Decimal('0.00'))).quantize(
+            Decimal('0.01'))
+
+    @property
     def shift_count(self):
         """Return the number of scheduled work dates represented by this job."""
         from .ledger import job_day_count

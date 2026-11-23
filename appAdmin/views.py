@@ -54,6 +54,7 @@ import logging
 from urllib.parse import urlencode
 
 from .search import prefix_search
+from .forms import BookingConfirmationTermsForm, CandidateInvoiceRecipientForm
 
 # Text columns shown in the locum and locum request tables (plus the name)
 LOCUM_SEARCH_FIELDS = ['Email', 'telephone', 'gphc_number', 'gmc_number', 'nmc_number', 'user_type', 'county']
@@ -70,6 +71,46 @@ class StaffRequiredMixin:
                 pk=request.user.pk).exists():
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
+
+
+class CandidateInvoiceRecipientsView(StaffRequiredMixin, View):
+    """Let staff maintain the recipient candidates must address invoices to."""
+
+    template_name = 'candidate_invoice_recipients.html'
+
+    def get(self, request):
+        employers = Employer.objects.order_by('pharmacy_name', 'email')
+        return render(request, self.template_name, {'employers': employers})
+
+    def post(self, request):
+        employer = get_object_or_404(Employer, pk=request.POST.get('employer_id'))
+        form = CandidateInvoiceRecipientForm(request.POST, instance=employer)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f'Candidate invoice recipient updated for {employer.pharmacy_name}.')
+        else:
+            messages.error(request, 'Enter a valid invoice recipient email address.')
+        return redirect('candidate_invoice_recipients')
+
+
+class BookingConfirmationTermsView(StaffRequiredMixin, View):
+    template_name = 'booking_confirmation_terms.html'
+
+    def get(self, request):
+        form = BookingConfirmationTermsForm(instance=BookingConfirmationTerms.current())
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = BookingConfirmationTermsForm(
+            request.POST, instance=BookingConfirmationTerms.current())
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Booking confirmation terms updated successfully.')
+            return redirect('booking_confirmation_terms')
+        messages.error(request, 'Please correct the highlighted booking terms.')
+        return render(request, self.template_name, {'form': form})
 
 
 class AdminMediaView(View):
@@ -202,7 +243,7 @@ class AdminView(View):
 
 
 @method_decorator(login_required, name='dispatch')
-class EmployerRequestsView(View):
+class EmployerRequestsView(StaffRequiredMixin, View):
     template_name = 'seeEmployerRequest.html'
 
     def get(self, request):
@@ -222,10 +263,11 @@ class EmployerRequestsView(View):
         job.locum_rate = request.POST.get('locum_rate')
         job.any_other_information = request.POST.get('any_other_information')
         job.save()
+        messages.success(request, f'{job.pharmacy_name} request updated successfully.')
         return redirect('employerRequests')
 
 
-class ApproveJobView(View):
+class ApproveJobView(StaffRequiredMixin, View):
     def post(self, request, job_id):
         job = Job.objects.get(pk=job_id)
         job.approved = True
@@ -234,6 +276,8 @@ class ApproveJobView(View):
         job.agency_fee = request.POST.get('agency_fee')
         job.branch_no = request.POST.get('branch_no')
         job.save()
+
+        messages.success(request, f'{job.pharmacy_name} job request approved.')
 
         employer_email = job.employer.email
         admin_email = settings.EMAIL_HOST_USER
@@ -288,11 +332,13 @@ class ApproveJobView(View):
 
 
 
-class DisapproveJobView(View):
+class DisapproveJobView(StaffRequiredMixin, View):
     def post(self, request, job_id):
         job = Job.objects.get(pk=job_id)
         job.rejected = True
         job.save()
+
+        messages.success(request, f'{job.pharmacy_name} job request declined.')
 
         employer_email = job.employer.email
         admin_email = settings.EMAIL_HOST_USER
@@ -396,17 +442,23 @@ class DeleteLocum(View):
 
         if locum_ids:
             # Bulk delete based on IDs
-            Locum.objects.filter(id__in=locum_ids).delete()
+            locums = Locum.objects.filter(id__in=locum_ids)
+            account_count = locums.count()
+            locums.delete()
+            messages.success(request, f'{account_count} locum account(s) deleted.')
             return redirect('locumRequests')  # Redirect to the delete locum page
 
         elif email and telephone and user_type:
             # Individual deletion based on specific details
             locum = get_object_or_404(Locum, email=email, telephone=telephone, user_type=user_type)
+            locum_label = str(locum)
             locum.delete()
+            messages.success(request, f'{locum_label} was deleted.')
             return redirect('locumRequests')  # Redirect to the delete locum page
 
         else:
             # Handle the case where neither method is valid
+            messages.error(request, 'Select a locum or enter all account details before deleting.')
             return redirect('seeLocum')  # Redirect to the delete locum page
     
 
@@ -775,8 +827,12 @@ class StaffListView(View):
 
             if action == 'grant_permission':
                 staff.user_permissions.add(permission)
+                messages.success(request, f'{permission.name} granted to {staff.get_full_name() or staff.email}.')
             elif action == 'revoke_permission':
                 staff.user_permissions.remove(permission)
+                messages.success(request, f'{permission.name} removed from {staff.get_full_name() or staff.email}.')
+        else:
+            messages.error(request, 'The permission update was incomplete. Please try again.')
 
         return redirect('staffList')
 
@@ -794,11 +850,16 @@ def job_applications(request):
     return render(request, 'job_applications.html', context)
 
 
+@require_POST
+@login_required
 def approveappliedjob(request, applied_job_id):
+    if not Admin.objects.filter(pk=request.user.pk).exists():
+        raise PermissionDenied
     applied_job = get_object_or_404(AppliedJob, id=applied_job_id)
 
     # Check if the applied job has a related Job
     if not applied_job.job:
+        messages.error(request, 'This application is no longer linked to a job.')
         return redirect('job_applications')
 
     # Mark the applied job as approved
@@ -833,55 +894,80 @@ def approveappliedjob(request, applied_job_id):
         pharmacy_details.append(('GPhC', locum.gphc_number))
     pharmacy_details += booking_rows
     subject = f"LocumSmart Ltd: Booking Confirmation - {datetime.now().strftime('%B')} - {job.pharmacy_name}"
+    booking_terms = BookingConfirmationTerms.current()
 
-    # Employer (copied to admin): the booking and the employer's cancellation terms
-    send_branded_email('booking_employer', subject, [job.employer.email, settings.EMAIL_HOST_USER],
-                       {'job': job, 'details': pharmacy_details})
-
-    # Locum: the booking and the locum's own terms, by type of work
-    if locum.user_type.lower() in ['pharmacist', 'technician', 'dispenser']:
-        send_branded_email('booking_locum_pharmacy', subject, [applied_job.locum.email],
+    try:
+        # Employer (copied to admin): the booking and the employer's cancellation terms
+        send_branded_email('booking_employer', subject, [job.employer.email, settings.EMAIL_HOST_USER],
                            {'job': job, 'details': pharmacy_details})
-    else:
-        send_branded_email('booking_locum_primary_care', 'Booking Confirmation', [applied_job.locum.email], {
-            'job': job,
-            'details': [
-                ('Name', locum_name),
-                ('Role', locum.user_type),
-                ('NMC pin', locum.nmc_number),
-                ('Date', job.start_date.strftime('%d-%m-%Y')),
-                ('Rate', f'£{job.locum_rate}/hr'),
-                ('Timings/Session', f'{job.times_required} hours per day'),
-                ('Address', job.county),
-                ('Post Code', job.post_code),
-                ('Additional Information', job.any_other_information),
-            ],
-        })
+
+        # Locum: the booking and the current admin-managed terms, by type of work
+        if locum.user_type.lower() in ['pharmacist', 'technician', 'dispenser']:
+            send_branded_email('booking_locum_pharmacy', subject, [applied_job.locum.email], {
+                'job': job, 'details': pharmacy_details,
+                'booking_terms': booking_terms.pharmacy_candidate_terms,
+            })
+        else:
+            send_branded_email('booking_locum_primary_care', 'Booking Confirmation', [applied_job.locum.email], {
+                'job': job,
+                'booking_terms': booking_terms.primary_care_candidate_terms,
+                'details': [
+                    ('Name', locum_name),
+                    ('Role', locum.user_type),
+                    ('NMC pin', locum.nmc_number),
+                    ('Date', job.start_date.strftime('%d-%m-%Y')),
+                    ('Rate', f'£{job.locum_rate}/hr'),
+                    ('Timings/Session', f'{job.times_required} hours per day'),
+                    ('Address', job.county),
+                    ('Post Code', job.post_code),
+                    ('Additional Information', job.any_other_information),
+                ],
+            })
+    except Exception:
+        logger.exception('Booking confirmation email failed for application %s', applied_job.id)
+        messages.error(
+            request,
+            'The application was approved, but a booking confirmation email could not be sent. Please retry the email manually.')
+        return redirect('job_applications')
+
+    messages.success(
+        request,
+        f'{locum_name} was booked for {job.pharmacy_name}; confirmation emails were sent.')
 
     return redirect('job_applications')
 
 
+@require_POST
+@login_required
 def reject_job(request, applied_job_id):
+    if not Admin.objects.filter(pk=request.user.pk).exists():
+        raise PermissionDenied
     applied_job = get_object_or_404(AppliedJob, pk=applied_job_id)
     applied_job.rejected = True
     applied_job.save()
 
     # Send rejection email to the locum
     job = applied_job.job
-    send_branded_email(
-        'application_declined',
-        f"LocumSmart Ltd: Job Application Declined – {job.pharmacy_name}",
-        [applied_job.locum.email],
-        {
-            'job': job,
-            'locum': applied_job.locum,
-            'jobs_url': SITE_URL + reverse('locumjobs'),
-            'details': [
-                ('Role', applied_job.locum.user_type),
-                ('Rate', f'£{job.locum_rate}/hr'),
-                ('Location', f'{job.county}, {job.post_code}'),
-            ],
-        })
+    try:
+        send_branded_email(
+            'application_declined',
+            f"LocumSmart Ltd: Job Application Declined – {job.pharmacy_name}",
+            [applied_job.locum.email],
+            {
+                'job': job,
+                'locum': applied_job.locum,
+                'jobs_url': SITE_URL + reverse('locumjobs'),
+                'details': [
+                    ('Role', applied_job.locum.user_type),
+                    ('Rate', f'£{job.locum_rate}/hr'),
+                    ('Location', f'{job.county}, {job.post_code}'),
+                ],
+            })
+    except Exception:
+        logger.exception('Application decline email failed for application %s', applied_job.id)
+        messages.error(request, 'The application was declined, but the notification email could not be sent.')
+    else:
+        messages.success(request, f'Application from {applied_job.locum} was declined and the candidate was notified.')
 
     # Redirect to job applications page
     return redirect('job_applications')
@@ -966,8 +1052,9 @@ class JobListView(ListView):
         else:
             invoice_no = random.randint(10000000, 99999999)
         
-        # Initialize total_amount to 0
-        total_amount = 0.0
+        # Agency invoices bill the client rate. Candidate invoices use
+        # Job.candidate_pay_rate separately in the locum workflow.
+        total_amount = Decimal('0.00')
 
         # Process jobs to calculate the number of days and total prices
         for job in jobs:
@@ -987,21 +1074,27 @@ class JobListView(ListView):
                 job.working_dates = ', '.join(job.discrete_dates_list)
                 job.invoice_day_rows = [
                     {'date': report.shift_date.strftime('%d/%m/%Y'),
-                     'hours': report.payable_hours, 'price': report.amount}
+                     'hours': report.payable_hours,
+                     'price': (job.client_billing_rate * report.payable_hours).quantize(
+                         Decimal('0.01'))}
                     for report in sorted(approved_reports.values(), key=lambda item: item.shift_date)
                 ]
                 total_hours = sum(
                     (report.payable_hours for report in approved_reports.values()), Decimal('0'))
                 job.times_required = f'{total_hours / job.days:.2f}'
-                job.per_day_price = float(job.locum_rate * (total_hours / job.days))
-                job.total_price = float(job.locum_rate * total_hours)
+                job.per_day_price = (job.client_billing_rate * (total_hours / job.days)).quantize(
+                    Decimal('0.01'))
+                job.total_price = (job.client_billing_rate * total_hours).quantize(
+                    Decimal('0.01'))
                 job.days_list = job.discrete_dates_list
                 total_amount += job.total_price
                 continue
 
             try:
-                hours_per_day = float(job.times_required)
-            except (TypeError, ValueError):
+                hours_per_day = Decimal(str(job.times_required))
+                if not hours_per_day.is_finite() or hours_per_day <= 0:
+                    raise ValueError
+            except (TypeError, ValueError, ArithmeticError):
                 messages.error(
                     request,
                     f'Cannot invoice the {job.pharmacy_name} job: Hours/Day "{job.times_required}" is not a number.')
@@ -1022,15 +1115,16 @@ class JobListView(ListView):
 
             job.invoice_day_rows = [
                 {'date': day, 'hours': job.times_required,
-                 'price': Decimal(str(job.locum_rate)) * Decimal(str(hours_per_day))}
+                 'price': (job.client_billing_rate * hours_per_day).quantize(Decimal('0.01'))}
                 for day in job.discrete_dates_list
             ]
 
             # Calculate per_day_price
-            job.per_day_price = float(job.locum_rate) * hours_per_day
+            job.per_day_price = (job.client_billing_rate * hours_per_day).quantize(
+                Decimal('0.01'))
 
             # Calculate total_price for all days combined
-            job.total_price = job.per_day_price * job.days
+            job.total_price = (job.per_day_price * job.days).quantize(Decimal('0.01'))
 
             # Process jobs to create an array of days
             job.days_list = job.discrete_dates_list
@@ -1515,42 +1609,61 @@ def mark_agency_invoice_paid(request, invoice_id):
         invoice.paid_at = timezone.now()
         invoice.save()
         messages.success(request, f'Invoice #{invoice.invoice_no} marked as paid.')
+    else:
+        messages.info(request, f'Invoice #{invoice.invoice_no} was already marked as paid.')
 
     return redirect('email_tracking_log')
     
 
+@require_POST
+@login_required
 def send_email_to_locums(request, job_id):
-    if request.method == "POST":
-        selected_locums = request.POST.getlist('selected_locums')
-        job = get_object_or_404(Job, id=job_id)
-        job_url = f'https://locumsmart.co.uk/login/?next=/job/{job_id}/'
+    if not Admin.objects.filter(pk=request.user.pk).exists():
+        raise PermissionDenied
 
-        sent_emails = set()  # To keep track of unique emails
+    selected_locums = request.POST.getlist('selected_locums')
+    job = get_object_or_404(Job, id=job_id)
+    if not selected_locums:
+        messages.error(request, 'Select at least one candidate before sending a job alert.')
+        return redirect('job_details', job_id=job_id)
 
-        # Deserialize discrete_dates if necessary
-        if isinstance(job.discrete_dates, str):
-            discrete_dates = json.loads(job.discrete_dates)
-        else:
-            discrete_dates = job.discrete_dates
+    job_url = f'https://locumsmart.co.uk/login/?next=/job/{job_id}/'
 
-        # Determine the job date details
-        if discrete_dates:
-            job_dates = ', '.join(discrete_dates)
-            job_dates_message = f'The job is scheduled on the following days: {job_dates}.'
-        else:
-            job_dates_message = f'The job starts on {job.start_date} and ends on {job.end_date}.'
+    sent_emails = set()  # To keep track of unique emails
+    failed_emails = set()
 
-        for locum_id in selected_locums:
-            locum = Locum.objects.get(id=locum_id)
-            if locum.Email not in sent_emails:
+    # Deserialize discrete_dates if necessary
+    if isinstance(job.discrete_dates, str):
+        discrete_dates = json.loads(job.discrete_dates)
+    else:
+        discrete_dates = job.discrete_dates
+
+    # Determine the job date details
+    if discrete_dates:
+        job_dates = ', '.join(discrete_dates)
+        job_dates_message = f'The job is scheduled on the following days: {job_dates}.'
+    else:
+        job_dates_message = f'The job starts on {job.start_date} and ends on {job.end_date}.'
+
+    for locum in Locum.objects.filter(id__in=selected_locums):
+        if locum.Email not in sent_emails:
+            try:
                 send_branded_email('job_opportunity', 'LocumSmart Ltd: Job Opportunity', [locum.Email], {
                     'locum': locum,
                     'job_url': job_url,
                     'job_dates_message': job_dates_message,
                 })
-                sent_emails.add(locum.Email)  # Add the email to the set after sending
+            except Exception:
+                logger.exception('Job alert email failed for locum %s and job %s', locum.id, job.id)
+                failed_emails.add(locum.Email)
+            else:
+                sent_emails.add(locum.Email)
 
-        # Redirect to the job details page after sending the emails
-        return redirect('job_details', job_id=job_id)
+    if sent_emails:
+        messages.success(request, f'Job alert sent to {len(sent_emails)} candidate(s).')
+    if failed_emails:
+        messages.error(request, f'{len(failed_emails)} job alert(s) could not be sent. Please try again.')
+    if not sent_emails and not failed_emails:
+        messages.error(request, 'None of the selected candidates could be found.')
 
-    return redirect('seeLocums')  # Redirect back if not POST
+    return redirect('job_details', job_id=job_id)

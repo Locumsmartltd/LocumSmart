@@ -18,6 +18,7 @@
                 <p class="dash-sub">Tick the jobs to invoice in the job list, then generate the invoice or email it to the pharmacy.</p>
             </div>
             <div class="dash-head-actions">
+                <a href="{% url 'candidate_invoice_recipients' %}" class="btn btn-secondary">Candidate Invoice Details</a>
                 <a href="{% url 'email_tracking_log' %}" class="btn btn-secondary">Invoice Tracking</a>
             </div>
         </div>
@@ -162,8 +163,8 @@
                                 <span class="job-cell-sub">{{ job.locum.user_type|default:"Type not set" }}</span>
                             </td>
                             <td data-label="Pay" class="num">
-                                <span class="job-primary">£{{ job.locum_rate }}/hr</span>
-                                <span class="job-cell-sub">£{{ job.expenses_offered }} expenses · £{{ job.agency_fee|default_if_none:"—" }} fee</span>
+                                <span class="job-primary">Candidate £{{ job.candidate_pay_rate }}/hr</span>
+                                <span class="job-cell-sub">Client £{{ job.client_billing_rate }}/hr · £{{ job.agency_fee|default_if_none:"0.00" }}/hr agency fee</span>
                             </td>
                             <td data-label="Status">
                                 <span class="job-status-stack">

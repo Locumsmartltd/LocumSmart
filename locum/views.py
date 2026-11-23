@@ -6,9 +6,12 @@ from locum.models import *
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.template.loader import get_template
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_RIGHT
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from datetime import datetime
 from django.http import JsonResponse
 import json
@@ -34,6 +37,7 @@ import threading
 from django.core.mail import get_connection
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
+from xml.sax.saxutils import escape
 
 # 'django.*' loggers are written to the error log file configured in settings.LOGGING
 logger = logging.getLogger('django.registration')
@@ -432,7 +436,11 @@ class EmployerRequestView(View):
             gp_required=GP_required,
             optometrist_required=Optometrist_required,
             do_required=DO_required,
-            employer=employer
+            employer=employer,
+            # A staff member posting from Employer List is already performing
+            # the approval step. Public employer submissions still enter the
+            # normal pending-review queue.
+            approved=bool(employer_id),
         )
 
         if date_type == 'discrete':
@@ -462,21 +470,24 @@ class EmployerRequestView(View):
                 'details': request_rows + [('Rate', f'£{job.locum_rate}/hr')] + date_rows,
             })
 
-        send_branded_email('employer_request_admin', subject, [settings.EMAIL_HOST_USER], {
-            'job': job,
-            'requests_url': SITE_URL + reverse('employerRequests'),
-            'details': request_rows + [('Rate', f'£{job.locum_rate:.0f}/hr')] + date_rows + [
-                ('Expenses Offered', f'£{job.expenses_offered:.0f}'),
-                ('Time Required Per Day', f'{job.times_required} hrs'),
-                ('Additional Information', job.any_other_information.strip() or 'None'),
-            ],
-        })
+        # Only public submissions need an admin approval notification. A job
+        # posted from Employer List is published by the admin who created it.
+        if not employer_id:
+            send_branded_email('employer_request_admin', subject, [settings.EMAIL_HOST_USER], {
+                'job': job,
+                'requests_url': SITE_URL + reverse('employerRequests'),
+                'details': request_rows + [('Rate', f'£{job.locum_rate:.0f}/hr')] + date_rows + [
+                    ('Expenses Offered', f'£{job.expenses_offered:.0f}'),
+                    ('Time Required Per Day', f'{job.times_required} hrs'),
+                    ('Additional Information', job.any_other_information.strip() or 'None'),
+                ],
+            })
 
         # Save the Job object
         job.save()
 
         if employer_id:
-            messages.success(request, 'Job created successfully for this employer.')
+            messages.success(request, 'Job created and published successfully. It is now visible in Jobs.')
             return redirect('employer_jobs', employer_id=employer_id)
         else:
             messages.success(request, "Your request has been submitted successfully. You will be notified via email, if your request is approved by LocumSmart!")
@@ -1197,6 +1208,7 @@ def generate_receipt_form(request, job_id):
     invoice_ready = bool(scheduled_dates) and approved_dates == scheduled_dates
     context = {
         'job': job,
+        'invoice_recipient': job.employer,
         'approved_completions': approved_completions,
         'invoice_ready': invoice_ready,
         'approved_total_hours': sum(
@@ -1221,143 +1233,131 @@ def generate_pdf_receipt(request, job_id):
         if not scheduled_dates or {item.shift_date for item in completions} != scheduled_dates:
             messages.error(request, 'Every shift must be approved before this job can be invoiced.')
             return redirect('generate_receipt_form', job_id=job.id)
-        account_number = request.POST.get('account_number')
-        sort_code = request.POST.get('sort_code')
-        current_date = datetime.now()
+        account_number = (request.POST.get('account_number') or '').strip()
+        sort_code = (request.POST.get('sort_code') or '').strip()
+        invoice_number = (request.POST.get('invoice_number') or '').strip()
+        if not account_number or not sort_code or not invoice_number:
+            messages.error(request, 'Account number, sort code and invoice number are required.')
+            return redirect('generate_receipt_form', job_id=job.id)
+        current_date = timezone.localdate()
         formatted_date = current_date.strftime('%d %B %Y')
-        invoice_number = request.POST.get('invoice_number', ' ')
 
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="receipt_{job_id}.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="invoice_{job_id}.pdf"'
 
-        p = canvas.Canvas(response, pagesize=letter)
-        width, height = letter
+        styles = getSampleStyleSheet()
+        body_style = ParagraphStyle(
+            'InvoiceBody', parent=styles['BodyText'], fontSize=9,
+            leading=12, spaceAfter=2)
+        small_style = ParagraphStyle(
+            'InvoiceSmall', parent=body_style, fontSize=8, leading=10)
+        total_style = ParagraphStyle(
+            'InvoiceTotal', parent=styles['Heading2'], alignment=TA_RIGHT,
+            fontSize=14, leading=18)
 
-        # Set up left and right box positions
-        left_box_width = width // 2 - 50
-        right_box_start_x = width // 2 + 50
+        def pdf_text(value, style=body_style):
+            return Paragraph(escape(str(value or '—')).replace('\n', '<br/>'), style)
 
-        # Header and Details (Centered and Larger)
-        p.setFont("Helvetica-Bold", 16)
-        p.drawCentredString(width // 2, height - 50,
-                            "Invoice for Locum Services")
-
-        # Left Box - Locum and Bank Details
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, height - 100, "Locum Details:")
-        p.drawString(50, height - 120,
-                     f"Name: {locum.firstname} {locum.lastname}")
-        p.drawString(50, height - 140, f"GPhC Number: {locum.gphc_number}")
-        p.drawString(50, height - 160, f"Locum Address: {locum.county}")
-        p.drawString(50, height - 180, f"Contact Details: {locum.telephone}")
-
-        p.drawString(50, height - 220, "Bank Details:")
-        p.drawString(50, height - 240, f"Account no: {account_number}")
-        p.drawString(50, height - 260, f"Sort Code: {sort_code}")
-
-        # Right Box - Pharmacy and Invoice Details
-        p.drawString(right_box_start_x, height - 100, "Pharmacy Details:")
-        p.drawString(right_box_start_x, height - 120,
-                     f"Business: {job.company_name}")
-        p.drawString(right_box_start_x, height - 140, "FAO:")
-        p.drawString(right_box_start_x, height - 160,
-                     f"Pharmacy Address: {job.county}")
-        p.drawString(right_box_start_x, height - 180,
-                     f"Contact Details: {job.telephone}")
-
-        # Add one-line space before Invoice Number and Date
-        p.drawString(right_box_start_x, height - 210, "")  # Spacer line
-
-        p.drawString(right_box_start_x, height - 230,
-                     f"Invoice Number: {invoice_number}")
-        p.drawString(right_box_start_x, height -
-                     250, f"Date: {formatted_date}")
-
-        # Table Headers
-        table_y_position = height - 320
-        headers = ["Date", "Worked", "Gross", "Break", "Payable", "Subtotal"]
-        col_widths = [82, 86, 70, 70, 78, 88]
-
-        x_position = 50
-        for header, width in zip(headers, col_widths):
-            p.rect(x_position, table_y_position, width, 20, fill=1)
-            p.setFillColor(colors.white)
-            p.drawString(x_position + 5, table_y_position + 5, header)
-            p.setFillColor(colors.black)
-            x_position += width
-
-        # Table Entries
-        table_y_position -= 20
-        total_cost = Decimal('0.00')
-        for completion in completions:
-            entries = [
-                completion.shift_date.strftime('%d/%m/%Y'),
-                f'{completion.start_time:%H:%M}-{completion.end_time:%H:%M}',
-                f'{completion.gross_hours}h', f'{completion.break_minutes}m',
-                f'{completion.payable_hours}h', f'£{completion.amount}',
-            ]
-            x_position = 50
-            for entry, column_width in zip(entries, col_widths):
-                p.rect(x_position, table_y_position, column_width, 20)
-                p.drawString(x_position + 5, table_y_position + 5, str(entry))
-                x_position += column_width
-            total_cost += completion.amount
-            table_y_position -= 20
-
-        # Additional Services Section
-        additional_services = [
-            ("Additional Services", "Price", "Quantity", "Subtotal"),
-            ("", "", "", ""),  # Empty row 1
-            ("", "", "", ""),  # Empty row 2
-            ("", "", "", "")   # Empty row 3
+        recipient = job.employer
+        document = SimpleDocTemplate(
+            response, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm,
+            topMargin=16 * mm, bottomMargin=16 * mm,
+            title=f'Locum invoice {invoice_number}')
+        story = [
+            Paragraph('Invoice for Locum Services', styles['Title']),
+            Spacer(1, 5 * mm),
         ]
 
-        # Position for Additional Services Table
-        additional_table_y_position = table_y_position
-        # Adjusted column widths for additional services
-        additional_col_widths = [220, 120, 100, 100]
+        sender_lines = [
+            '<b>From</b>',
+            escape(f'{locum.firstname} {locum.lastname}'),
+            f'GPhC: {escape(str(locum.gphc_number or "—"))}',
+            escape(str(locum.county or '—')),
+            escape(str(locum.telephone or '—')),
+            '',
+            '<b>Payment details</b>',
+            f'Account number: {escape(account_number)}',
+            f'Sort code: {escape(sort_code)}',
+        ]
+        recipient_lines = [
+            '<b>Invoice to</b>',
+            escape(recipient.candidate_invoice_company_display),
+            f'FAO: {escape(recipient.candidate_invoice_contact_display or "—")}',
+            escape(recipient.candidate_invoice_address_display or '—').replace('\n', '<br/>'),
+            escape(recipient.candidate_invoice_email_display),
+            '',
+            f'<b>Invoice number:</b> {escape(invoice_number)}',
+            f'<b>Invoice date:</b> {formatted_date}',
+        ]
+        details = Table(
+            [[Paragraph('<br/>'.join(sender_lines), body_style),
+              Paragraph('<br/>'.join(recipient_lines), body_style)]],
+            colWidths=[84 * mm, 84 * mm])
+        details.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#CBD5E1')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.6, colors.HexColor('#CBD5E1')),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 9),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.extend([details, Spacer(1, 6 * mm)])
 
-        # Draw Additional Services Table Header
-        x_position = 50
-        for header, width in zip(additional_services[0], additional_col_widths):
-            p.setFillColor(colors.lightgrey)
-            p.rect(x_position, additional_table_y_position, width, 20, fill=1)
-            p.setFillColor(colors.black)
-            p.drawString(x_position + 5,
-                         additional_table_y_position + 5, header)
-            x_position += width
+        shift_rows = [[pdf_text(value, small_style) for value in
+                       ('Date', 'Worked', 'Gross', 'Unpaid break',
+                        'Payable', 'Candidate rate', 'Subtotal')]]
+        total_cost = Decimal('0.00')
+        for completion in completions:
+            shift_rows.append([pdf_text(value, small_style) for value in (
+                completion.shift_date.strftime('%d/%m/%Y'),
+                f'{completion.start_time:%H:%M}–{completion.end_time:%H:%M}',
+                f'{completion.gross_hours} hrs',
+                f'{completion.break_minutes} min',
+                f'{completion.payable_hours} hrs',
+                f'£{job.candidate_pay_rate}/hr',
+                f'£{completion.amount:.2f}',
+            )])
+            total_cost += completion.amount
 
-        # Draw Additional Services Table Entries
-        for service in additional_services[1:]:
-            additional_table_y_position -= 20
-            x_position = 50
-            for entry, width in zip(service, additional_col_widths):
-                p.rect(x_position, additional_table_y_position, width, 20)
-                p.drawString(x_position + 5,
-                             additional_table_y_position + 5, entry)
-                x_position += width
-        # Additional Information Section
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, additional_table_y_position -
-                     60, "Additional Information:")
-        p.drawString(right_box_start_x + col_widths[-1] + 20,
-                     additional_table_y_position - 60, f"Total: £{total_cost:.2f}")
-        p.drawRightString(letter[0] - 40, additional_table_y_position - 80,
-                          f"Payment Terms: {INVOICE_PAYMENT_TERMS}")
-        # Finalize and Return PDF
-        p.showPage()
-        p.save()
+        shifts_table = Table(
+            shift_rows, repeatRows=1,
+            colWidths=[22 * mm, 31 * mm, 20 * mm, 23 * mm, 21 * mm, 27 * mm, 24 * mm])
+        shifts_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#236C64')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+             [colors.white, colors.HexColor('#F8FAFC')]),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.extend([
+            shifts_table,
+            Spacer(1, 5 * mm),
+            Paragraph(f'Invoice total: £{total_cost:.2f}', total_style),
+            Paragraph(f'Payment terms: {escape(INVOICE_PAYMENT_TERMS)}',
+                      ParagraphStyle('Terms', parent=body_style, alignment=TA_RIGHT)),
+        ])
+        document.build(story)
 
         # Track the invoice; regenerating the same invoice number keeps its status
         LocumInvoice.objects.update_or_create(
-            job=job, locum=locum, invoice_number=invoice_number.strip(),
+            job=job, locum=locum, invoice_number=invoice_number,
             defaults={'total_amount': total_cost.quantize(Decimal('0.01'))},
         )
         return response
 
     # For GET requests, show the data entry form
     return render(request, 'generate_receipt_form.html', {
-        'job': job, 'payment_terms': INVOICE_PAYMENT_TERMS})
+        'job': job, 'invoice_recipient': job.employer,
+        'payment_terms': INVOICE_PAYMENT_TERMS})
 
 
 @locum_required
@@ -1451,12 +1451,17 @@ def avail_added(request, user_id):
         date = request.POST.get('Date')  # Get the date from form data
         timings = request.POST.get('Timings')  # Get the timings from form data
 
+        if not date or not timings:
+            messages.error(request, 'Choose a date and enter your available times.')
+            return redirect('locum_calander', user_id=user_id)
+
         # Create LocumAvailability object
         LocumAvailability.objects.create(
             locum=locum,
             date=date,
             timings=timings
         )
+        messages.success(request, 'Availability added successfully.')
 
         # Redirect back to the calendar page
         return redirect('locum_calander', user_id=user_id)

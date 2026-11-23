@@ -278,7 +278,7 @@
                         <th>Pharmacy</th>
                         <th>Days</th>
                         <th>Email Booking Date</th>
-                        <th>Locum Rate</th>
+                        <th>Client Billing Rate</th>
                         <th>Hours/Day</th>
                         <th>Amount</th>
                     </tr>
@@ -291,7 +291,7 @@
                         <td>{{ job.pharmacy_name }}</td>
                         <td>{{ job.days }}</td>
                         <td>{{ job.date_of_booking_email|date:"d/m/Y" }}</td>
-                        <td>£{{ job.locum_rate }}</td>
+                        <td>£{{ job.client_billing_rate }}</td>
                         <td>{{ job.times_required }}</td>
                         <td>
                             £{{ job.total_price }}

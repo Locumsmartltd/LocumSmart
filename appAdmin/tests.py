@@ -1,11 +1,12 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 
-from appAdmin.models import Admin, Employer
-from locum.models import Job, Locum
+from appAdmin.models import Admin, BookingConfirmationTerms, EmailTrackingLog, Employer
+from locum.models import AppliedJob, Job, Locum, ShiftCompletion
 
 
 def make_job(employer, **overrides):
@@ -91,6 +92,130 @@ class AdminCalendarJobListTests(TestCase):
         self.assertEqual(self.job.source, 'Direct')
         self.assertEqual(self.job.source_commission_date, date(2026, 12, 10))
 
+    def test_agency_invoice_uses_client_rate_not_candidate_pay_rate(self):
+        self.job.agency_fee = Decimal('5.00')
+        self.job.save(update_fields=['agency_fee'])
+
+        response = self.client.post(reverse('calander'), {
+            'action': 'generate_invoice',
+            'job_ids': [str(self.job.id)],
+            'pharmacy': 'Gorgemead',
+            'invoice_no': 'AG-100',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.job.candidate_pay_rate, Decimal('35.00'))
+        self.assertEqual(self.job.client_billing_rate, Decimal('40.00'))
+        self.assertEqual(response.context['total_amount'], '720.00')
+        self.assertEqual(EmailTrackingLog.objects.get(invoice_no='AG-100').total_amount,
+                         Decimal('720.00'))
+
+    def test_approved_breaks_reduce_client_invoice_hours(self):
+        self.job.agency_fee = Decimal('5.00')
+        self.job.save(update_fields=['agency_fee'])
+        for shift_date in (date(2026, 12, 1), date(2026, 12, 2), date(2026, 12, 3)):
+            ShiftCompletion.objects.create(
+                job=self.job, locum=self.locum, shift_date=shift_date,
+                start_time='09:00', end_time='17:00', break_minutes=30,
+                status=ShiftCompletion.STATUS_APPROVED)
+
+        response = self.client.post(reverse('calander'), {
+            'action': 'generate_invoice',
+            'job_ids': [str(self.job.id)],
+            'pharmacy': 'Gorgemead',
+            'invoice_no': 'AG-101',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_amount'], '900.00')
+
+
+class CandidateInvoiceRecipientAdminTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Admin.objects.create(
+            email='recipient-admin@example.com', first_name='Admin', last_name='User')
+        cls.employer = Employer.objects.create(
+            email='owner@example.com', first_name='Ava', last_name='Owner',
+            pharmacy_name='Green Pharmacy', manager_name='Original Manager',
+            phone_number='07123456789', post_code='M1 1AA', city='Manchester')
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_staff_can_manage_candidate_invoice_recipient_separately(self):
+        response = self.client.post(reverse('candidate_invoice_recipients'), {
+            'employer_id': self.employer.id,
+            'candidate_invoice_company': 'Green Pharmacy Accounts Ltd',
+            'candidate_invoice_contact': 'Accounts Payable',
+            'candidate_invoice_email': 'candidate-invoices@green.example',
+            'candidate_invoice_address': '1 Billing Road\nManchester M2 2BB',
+        })
+
+        self.assertRedirects(response, reverse('candidate_invoice_recipients'))
+        self.employer.refresh_from_db()
+        self.assertEqual(self.employer.candidate_invoice_company,
+                         'Green Pharmacy Accounts Ltd')
+        self.assertEqual(self.employer.candidate_invoice_email,
+                         'candidate-invoices@green.example')
+        self.assertEqual(self.employer.email, 'owner@example.com')
+
+    def test_blank_overrides_fall_back_to_employer_account(self):
+        self.assertEqual(self.employer.candidate_invoice_company_display, 'Green Pharmacy')
+        self.assertEqual(self.employer.candidate_invoice_contact_display, 'Original Manager')
+        self.assertEqual(self.employer.candidate_invoice_email_display, 'owner@example.com')
+
+    def test_employer_cannot_access_recipient_admin(self):
+        self.client.force_login(self.employer)
+        self.assertEqual(self.client.get(reverse('candidate_invoice_recipients')).status_code, 403)
+
+
+class BookingConfirmationTermsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Admin.objects.create(
+            email='terms-admin@example.com', first_name='Admin', last_name='User')
+        cls.employer = Employer.objects.create(
+            email='terms-owner@example.com', first_name='Ava', last_name='Owner',
+            pharmacy_name='Terms Pharmacy', phone_number='07123456789',
+            post_code='M1 1AA', city='Manchester')
+        cls.locum = Locum.objects.create(
+            email='terms-locum@example.com', first_name='Sam', last_name='Locum',
+            date_of_birth=date(1990, 1, 1), user_type='Pharmacist')
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_staff_can_update_candidate_booking_terms(self):
+        response = self.client.post(reverse('booking_confirmation_terms'), {
+            'pharmacy_candidate_terms': 'Updated pharmacy terms.',
+            'primary_care_candidate_terms': 'Updated primary care terms.',
+        }, follow=True)
+
+        self.assertContains(response, 'Booking confirmation terms updated successfully.')
+        terms = BookingConfirmationTerms.current()
+        self.assertEqual(terms.pharmacy_candidate_terms, 'Updated pharmacy terms.')
+        self.assertEqual(terms.primary_care_candidate_terms, 'Updated primary care terms.')
+
+    @patch('appAdmin.views.send_branded_email')
+    def test_approval_email_uses_current_pharmacy_terms(self, send_email):
+        terms = BookingConfirmationTerms.current()
+        terms.pharmacy_candidate_terms = 'Use these current candidate terms.'
+        terms.save()
+        job = make_job(self.employer, approved=True)
+        application = AppliedJob.objects.create(job=job, locum=self.locum)
+
+        response = self.client.post(
+            reverse('approveappliedjob', args=[application.id]), follow=True)
+
+        self.assertContains(response, 'confirmation emails were sent')
+        candidate_call = next(
+            call for call in send_email.call_args_list
+            if call.args[0] == 'booking_locum_pharmacy')
+        self.assertEqual(
+            candidate_call.args[3]['booking_terms'],
+            'Use these current candidate terms.')
+
 
 class EmployerJobManagementTests(TestCase):
     @classmethod
@@ -142,6 +267,8 @@ class EmployerJobManagementTests(TestCase):
         self.assertEqual(created.email, self.employer.email)
         self.assertEqual(created.post_code, self.employer.post_code)
         self.assertTrue(created.gp_required)
+        self.assertTrue(created.approved)
+        self.assertFalse(created.rejected)
 
     def test_edit_updates_job_but_company_data_remains_authoritative(self):
         response = self.client.post(

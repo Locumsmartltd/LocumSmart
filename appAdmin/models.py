@@ -76,6 +76,30 @@ class Employer(CustomUser):
     post_code = models.CharField(max_length=20, null=True, blank=True, db_index=True)
     city = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     street_address = models.CharField(max_length=100, null=True, blank=True)
+    # The address a candidate must use on their own invoice can differ from the
+    # contact details LocumSmart uses for its agency invoice.
+    candidate_invoice_company = models.CharField(max_length=255, blank=True)
+    candidate_invoice_contact = models.CharField(max_length=255, blank=True)
+    candidate_invoice_email = models.EmailField(blank=True)
+    candidate_invoice_address = models.TextField(blank=True)
+
+    @property
+    def candidate_invoice_company_display(self):
+        return self.candidate_invoice_company or self.pharmacy_name
+
+    @property
+    def candidate_invoice_contact_display(self):
+        return self.candidate_invoice_contact or self.manager_name or self.get_full_name()
+
+    @property
+    def candidate_invoice_email_display(self):
+        return self.candidate_invoice_email or self.email
+
+    @property
+    def candidate_invoice_address_display(self):
+        if self.candidate_invoice_address:
+            return self.candidate_invoice_address
+        return ', '.join(filter(None, (self.street_address, self.city, self.post_code)))
 
     def __str__(self):
         return self.email
@@ -109,6 +133,43 @@ class Employer(CustomUser):
         base_username = f"{self.first_name.lower()} {self.last_name.lower()}"
         username = base_username
         return username
+
+
+DEFAULT_PHARMACY_BOOKING_TERMS = """Please note any cancellation within 72 hours prior to the booking may result in the pharmacy claiming loss of earnings if the shift is not covered. Cancellations made because a better offer was received elsewhere are not acceptable once a booking has been confirmed.
+
+If you are offered further bookings directly by the pharmacy, you must inform a LocumSmart coordinator and must not book directly, in line with the terms agreed during registration.
+
+Sundays and bank holidays are not included in the notice period. Notice hours are Monday to Friday, 9am to 5pm, and Saturday, 9am to 3pm. Cancellation notice must be provided by email.
+
+While on the pharmacy premises, locums are expected to use their time responsibly and complete the duties normally expected of their role."""
+
+DEFAULT_PRIMARY_CARE_BOOKING_TERMS = """Please arrive 10 minutes before the scheduled start time.
+
+Our normal invoice payment schedule is two to four weeks, depending on payment from the surgery or practice. Do not discuss hourly rates with practice staff. Further bookings offered directly by the surgery or practice must be reported to LocumSmart, and payment discussions must be made with LocumSmart only.
+
+Locum doctors, physician associates and practice nurses must make their compliance documents available to the practice and LocumSmart on request, and must notify LocumSmart of any changes. LocumSmart carries out periodic compliance checks. The practice must confirm the accuracy of supplied information before an assignment begins.
+
+Cancellation within 72 hours of a confirmed booking may result in the surgery claiming loss of earnings unless there is a verifiable emergency. Cancelling because a better offer was received elsewhere is considered unprofessional and may result in a complaint to the relevant registration body."""
+
+
+class BookingConfirmationTerms(models.Model):
+    """Singleton content used in booking-confirmation emails to candidates."""
+
+    pharmacy_candidate_terms = models.TextField(default=DEFAULT_PHARMACY_BOOKING_TERMS)
+    primary_care_candidate_terms = models.TextField(default=DEFAULT_PRIMARY_CARE_BOOKING_TERMS)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def current(cls):
+        terms, _created = cls.objects.get_or_create(pk=1)
+        return terms
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return 'Booking confirmation terms'
 
 
 class EmailTrackingLog(models.Model):
