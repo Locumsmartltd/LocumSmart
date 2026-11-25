@@ -10,7 +10,7 @@ from django.views import View
 from django.contrib import messages
 from locum.models import *
 from locum import ledger
-from locum.staffing_workflow import check_application_booking, pilot_employers, record_event, reserved_job_position
+from locum.staffing_workflow import check_application_booking, record_event, reserved_job_position
 from django.core.mail import send_mail, EmailMessage
 from appAdmin.models import *
 from structure.models import Testimonial
@@ -240,7 +240,6 @@ class AdminView(View):
             'technician_count': technician_count,
             'nurse_count': nurse_count,
             'gp_count': gp_count,
-            'montu_portal_enabled': pilot_employers().filter(staffingmanager__isnull=False).exists(),
         }
         return render(request, self.template_name, context)
 

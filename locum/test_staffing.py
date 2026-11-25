@@ -139,6 +139,19 @@ class StaffingPortalTests(TestCase):
                      'ACD – Accuracy Checking Dispenser', 'ACT – Accuracy Checking Technician'):
             self.assertContains(response, role)
 
+    def test_admin_and_staff_can_open_montu_portal_before_manager_provisioning(self):
+        StaffingManager.objects.filter(employer=self.employer).delete()
+        for is_admin in (True, False):
+            with self.subTest(is_admin=is_admin):
+                self.staff.is_admin = is_admin
+                self.staff.save(update_fields=['is_admin'])
+                dashboard = self.staff_client.get(reverse('admin'))
+                self.assertContains(dashboard, 'Montu Staffing Portal Handling')
+                portal = self.staff_client.get(reverse('staffing_staff_index'), follow=True)
+                self.assertContains(portal, self.employer.pharmacy_name)
+                self.assertContains(portal, '+ Add branch')
+        self.assertEqual(self.client.get(reverse('staffing_calendar')).status_code, 404)
+
     def test_linked_application_requires_manager_approval_then_uses_normal_booking(self):
         self.request_positions(2)
         first, second = StaffingPosition.objects.order_by('pk')

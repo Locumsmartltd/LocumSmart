@@ -117,7 +117,7 @@ class StaffingStaffMixin:
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated or not Admin.objects.filter(pk=request.user.pk).exists():
             raise PermissionDenied
-        self.employers = pilot_employers().filter(staffingmanager__isnull=False).distinct()
+        self.employers = pilot_employers()
         if 'employer_id' in kwargs:
             self.employer = get_object_or_404(self.employers, pk=kwargs['employer_id'])
         return super().dispatch(request, *args, **kwargs)
