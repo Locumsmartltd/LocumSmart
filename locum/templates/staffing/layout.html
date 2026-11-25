@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/staffing.css' %}?v=5">
+{% endblock %}
+{% block content %}
+<div class="staffing">
+  {% block staffing_content %}{% endblock %}
+</div>
+{% endblock %}

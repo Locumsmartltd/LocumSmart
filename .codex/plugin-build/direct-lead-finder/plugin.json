@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "direct-lead-finder",
+  "version": "0.1.0",
+  "description": "Find qualified public-web freelance leads and draft personalized outreach in the International Leads Google Sheet.",
+  "author": {
+    "name": "Muhammad Azeem"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Direct Lead Finder",
+        "shortDescription": "Find qualified direct leads",
+        "longDescription": "Researches public-web signals for founders, agency owners, Odoo partners, and people actively seeking developers; checks recency and fit; avoids duplicates; and adds qualified leads with tailored outreach drafts to the Direct Leads tab of the International Leads Google Sheet.",
+        "developerName": "Muhammad Azeem",
+        "category": "Business & Operations",
+        "capabilities": ["Interactive"],
+        "defaultPrompt": [
+          "Find direct leads.",
+          "Find up to 10 direct leads in the UK, EU, Saudi Arabia, and UAE.",
+          "Find direct leads and prioritize recent active requests."
+        ]
+      }
+    }
+  }
+}

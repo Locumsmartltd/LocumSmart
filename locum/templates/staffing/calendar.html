@@ -1,0 +1,215 @@
+{% extends 'staffing/layout.html' %}
+{% load static %}
+{% block title %}{{ employer.pharmacy_name }} staffing | LocumSmart{% endblock %}
+{% block staffing_content %}
+<div id="staffing-calendar-content">
+<div class="staffing-heading">
+  <div>
+    <span class="staffing-kicker">{% if staff %}Portal Handling{% else %}Staffing calendar{% endif %}</span>
+    <h1>{{ employer.pharmacy_name }}</h1>
+  </div>
+  <div class="staffing-actions staffing-no-print">
+    {% if staff %}
+      <a class="staffing-button" href="{% url 'staffing_staff_index' %}">Staffing portals</a>
+      <a class="staffing-button" href="{% url 'admin' %}">Back to admin</a>
+    {% else %}
+      <a class="staffing-button" href="{% url 'staffing_export' %}?{{ query }}">Export attendance</a>
+      <button type="button" class="staffing-button" data-print>Print rota</button>
+      {% if branches %}<a class="staffing-button primary" data-request-staff href="?{{ query }}&amp;request=1#staff-request">+ Request staff</a>{% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if staff and queue %}
+<section class="staffing-card staffing-no-print">
+  <h2>Needs staff action</h2>
+  <div class="staffing-daily">
+    {% for position in queue %}
+      <div class="staffing-daily-item">
+        <div><b>{{ position.request.branch.name }}</b><p class="staffing-muted">{{ position.request.shift_date|date:"D j M" }}</p></div>
+        {% include 'staffing/slot.html' %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="staffing-card staffing-no-print staffing-setup">
+  <div class="staffing-toolbar">
+    <div><h2>Client setup</h2><p class="staffing-muted">View staffing for one site or across all Montu branches.</p></div>
+    <nav class="staffing-actions" aria-label="Calendar view">
+      <a data-rota-view class="staffing-button{% if mode == 'single' %} active{% endif %}" {% if mode == 'single' %}aria-current="true"{% endif %} href="?{{ view_query }}&amp;mode=single">Single site</a>
+      <a data-rota-view class="staffing-button{% if mode == 'multi' %} active{% endif %}" {% if mode == 'multi' %}aria-current="true"{% endif %} href="?{{ view_query }}&amp;mode=multi">Multiple branches</a>
+    </nav>
+  </div>
+  <div class="staffing-setup-grid">
+    <label>Client name <input value="{{ employer.pharmacy_name }}" readonly></label>
+    {% if mode == 'multi' and branches %}
+    {% if staff %}{% url 'staffing_staff' employer.pk as filter_url %}{% else %}{% url 'staffing_calendar' as filter_url %}{% endif %}
+    <form method="get" action="{{ filter_url }}" class="staffing-location-form" data-rota-filter>
+      <input type="hidden" name="week" value="{{ first|date:'Y-m-d' }}">
+      <input type="hidden" name="day" value="{{ selected_day|date:'Y-m-d' }}">
+      <input type="hidden" name="mode" value="multi">
+      <label>Location
+        <select name="branch">
+          <option value="">All branches</option>
+          {% for branch in view_branches %}
+            <option value="{{ branch.pk }}" {% if branch_filter == branch.pk|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="staffing-button">Filter</button>
+    </form>
+    {% else %}
+    <label>Location <input value="{{ primary_branch.name|default:'No branches' }}" readonly></label>
+    {% endif %}
+    {% if staff %}
+    <div class="staffing-actions">
+      <button class="staffing-button" type="button" data-branch-editor>+ Add branch</button>
+      <button class="staffing-button" type="button" data-branch-editor data-branch="{{ selected_branch.pk }}" data-branch-name="{{ selected_branch.name }}" {% if not selected_branch %}disabled{% endif %}>Rename branch</button>
+    </div>
+    {% endif %}
+  </div>
+  <p class="staffing-muted">{% if selected_branch %}Showing {{ selected_branch.name }}.{% elif branches %}Showing all {{ branches|length }} branch{{ branches|length|pluralize:"es" }}.{% endif %}</p>
+</section>
+
+<div class="staffing-stats">
+  {% for label, count in summary %}<div><strong>{{ count }}</strong><span>{{ label }}</span></div>{% endfor %}
+</div>
+
+<section class="staffing-card">
+  <div class="staffing-toolbar">
+    <div>
+      <h2>Weekly staffing rota</h2>
+      <p class="staffing-muted">Select a booking to view its details or record an update.</p>
+    </div>
+    <div class="staffing-actions staffing-no-print">
+      <a data-rota-view class="staffing-button" href="?week={{ previous_week|date:'Y-m-d' }}&amp;branch={{ branch_filter }}&amp;mode={{ mode }}">← Previous</a>
+      <strong class="staffing-week">{{ first|date:"j M" }} – {{ days|last|date:"j M Y" }}</strong>
+      <a data-rota-view class="staffing-button" href="?week={{ next_week|date:'Y-m-d' }}&amp;branch={{ branch_filter }}&amp;mode={{ mode }}">Next →</a>
+    </div>
+    <span class="staffing-print-only">{{ first|date:"j M" }} – {{ days|last|date:"j M Y" }}</span>
+  </div>
+  {% if rows %}
+    <div class="staffing-legend" aria-label="Booking status legend">
+      <span class="requested">Staff needed</span><span class="proposed">Awaiting approval</span>
+      <span class="approved">Manager approved</span><span class="booked">Booked</span>
+      <span class="attended">Attended</span><span class="issue">No-show / issue</span>
+    </div>
+    <div class="staffing-table-wrap" tabindex="0" aria-label="Weekly staffing rota">
+      <table class="staffing-table">
+        <thead><tr><th scope="col">Location</th>{% for day in days %}<th scope="col">{{ day|date:"D j M" }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for branch, cells in rows %}
+            <tr><th scope="row">{{ branch.name }}</th>
+              {% for day, positions in cells %}
+                <td><div class="staffing-day-cell">
+                  {% for position in positions %}
+                    {% include 'staffing/slot.html' %}
+                  {% empty %}<span class="staffing-muted staffing-empty">No requests</span>{% endfor %}
+                  {% if not staff and day >= today %}
+                    <a data-request-staff data-branch="{{ branch.pk }}" data-day="{{ day|date:'Y-m-d' }}" class="staffing-add staffing-no-print" aria-label="Request staff for {{ branch.name }} on {{ day|date:'j M' }}" href="?week={{ first|date:'Y-m-d' }}&amp;day={{ day|date:'Y-m-d' }}&amp;branch={{ branch.pk }}&amp;mode={{ mode }}&amp;request=1#staff-request">+ Add staff</a>
+                  {% endif %}
+                </div></td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="staffing-muted">No branches have been set up yet.</p>
+  {% endif %}
+</section>
+
+<section class="staffing-card staffing-no-print">
+  <div class="staffing-toolbar">
+    <div><h2>Daily staffing &amp; attendance</h2><p class="staffing-muted">Attendance opens on the shift date once LocumSmart confirms the booking.</p></div>
+    <form method="get" data-rota-filter>
+      <input type="hidden" name="week" value="{{ first|date:'Y-m-d' }}">
+      <input type="hidden" name="branch" value="{{ branch_filter }}">
+      <input type="hidden" name="mode" value="{{ mode }}">
+      <label>Select day
+        <select name="day">
+          {% for day in days %}<option value="{{ day|date:'Y-m-d' }}" {% if day == selected_day %}selected{% endif %}>{{ day|date:"l j M" }}</option>{% endfor %}
+        </select>
+      </label>
+      <noscript><button class="staffing-button" type="submit">Show day</button></noscript>
+    </form>
+  </div>
+  <div class="staffing-daily">
+    {% for position in daily_positions %}
+      <div class="staffing-daily-item">
+        <div><b>{{ position.request.get_role_display }} · {{ position.candidate_name|default:"Not yet allocated" }}</b>
+          <p class="staffing-muted">{{ position.request.branch.name }} · {{ position.request.start_time|time:"H:i" }}–{{ position.request.end_time|time:"H:i" }}{% if position.client_rate %} · £{{ position.client_rate }}/hr{% endif %}{% if position.paid_hours %} · {{ position.paid_hours }} paid hours{% endif %}</p>
+        </div>
+        <div class="staffing-actions">
+          <span class="staffing-status {{ position.status }}">{{ position.get_status_display }}</span>
+          {% include 'staffing/slot.html' with compact=True %}
+        </div>
+      </div>
+    {% empty %}<p class="staffing-muted">No positions on this day.</p>{% endfor %}
+  </div>
+</section>
+
+{% if staff %}
+<dialog class="staffing-dialog" id="staffing-branch" aria-labelledby="staffing-branch-title">
+  <div class="staffing-dialog-heading"><h2 id="staffing-branch-title">Add branch</h2><button type="button" class="staffing-button" data-close-dialog>× Close</button></div>
+  <form method="post" data-calendar-form>
+    {% csrf_token %}
+    <input type="hidden" name="branch">
+    <label>Branch name <input name="name" maxlength="120" required></label>
+    <button class="staffing-button primary" type="submit">Save branch</button>
+  </form>
+</dialog>
+{% elif branches %}
+<dialog class="staffing-dialog" id="staff-request" aria-labelledby="staff-request-title" {% if request.GET.request or form.errors %}open data-show-dialog{% endif %}>
+  <div class="staffing-dialog-heading">
+    <div><h2 id="staff-request-title">New staffing request</h2><p class="staffing-muted">Use the same role, shift time and headcount for one or more dates.</p></div>
+    <button type="button" class="staffing-button" data-close-dialog>× Close</button>
+  </div>
+  <form method="post" action="?{{ query }}" data-calendar-form>
+    {% csrf_token %}
+    {{ form.submission_id }}{{ form.non_field_errors }}
+    <div class="staffing-request-grid">
+      <div>{% include 'staffing/field.html' with field=form.branch %}</div>
+      <div>{% include 'staffing/field.html' with field=form.role %}</div>
+      <div>{% include 'staffing/field.html' with field=form.quantity %}</div>
+      <div>{% include 'staffing/field.html' with field=form.budget %}</div>
+      <fieldset class="staffing-time-fieldset">
+        <legend>Shift time</legend>
+        <div class="staffing-time-fields">
+          <div>{% include 'staffing/field.html' with field=form.start_time %}</div>
+          <div>{% include 'staffing/field.html' with field=form.end_time %}</div>
+        </div>
+      </fieldset>
+      <fieldset class="staffing-date-fieldset">
+        <legend>Shift dates</legend>
+        <div data-shift-dates data-max-dates="{{ max_request_dates }}">
+          {% for value in form.shift_dates.value %}
+            {% include 'staffing/date_input.html' %}
+          {% empty %}
+            {% include 'staffing/date_input.html' %}
+          {% endfor %}
+        </div>
+        {{ form.shift_dates.errors }}
+        <template data-date-template>{% include 'staffing/date_input.html' with value='' %}</template>
+        <button type="button" class="staffing-button staffing-small" data-add-date>+ Add another date</button>
+      </fieldset>
+    </div>
+    <p class="staffing-note">Requesting 2 dispensers on 3 dates creates 6 positions. Each position has its own booking and attendance.</p>
+    <div class="staffing-actions">
+      <button type="submit" class="staffing-button primary">Create request</button>
+      <button type="button" class="staffing-button" data-close-dialog>Cancel</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+</div>
+<dialog class="staffing-dialog" id="staffing-booking" aria-labelledby="staffing-booking-title">
+  <div class="staffing-dialog-heading"><div><h2 id="staffing-booking-title">Staffing booking</h2><p class="staffing-muted" data-booking-subtitle></p></div><button type="button" class="staffing-button" data-close-dialog>× Close</button></div>
+  <div data-booking-body></div>
+</dialog>
+<div class="staffing-feedback" role="status" aria-live="polite"></div>
+<script src="{% static 'js/staffing.js' %}?v=4" defer></script>
+{% endblock %}

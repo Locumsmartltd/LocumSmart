@@ -1,0 +1,6 @@
+{% if not staff and position.status == 'booked' and position.request.shift_date <= today %}
+<div class="staffing-actions staffing-attendance-links staffing-no-print{% if in_grid %} in-grid{% endif %}">
+  <a class="staffing-button staffing-small" data-booking data-focus="hours" href="{{ position_url }}">Mark attended</a>
+  <a class="staffing-button staffing-small" data-booking data-focus="no-show" href="{{ position_url }}">Mark no-show</a>
+</div>
+{% endif %}

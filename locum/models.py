@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from datetime import date
 from decimal import Decimal
 
+from .staffing_models import StaffingBranch, StaffingEvent, StaffingManager, StaffingPosition, StaffingRequest
+
 
 @deconstructible
 class UserDocumentPath:

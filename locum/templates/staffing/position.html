@@ -1,0 +1,156 @@
+{% extends 'staffing/layout.html' %}
+{% block title %}Staffing position | LocumSmart{% endblock %}
+{% block staffing_content %}
+<div class="staffing-heading">
+  <div>
+    <span class="staffing-kicker">{{ position.request.branch.name }}</span>
+    <h1>{{ position.request.get_role_display }}</h1>
+  </div>
+  {% if staff %}
+    {% url 'staffing_staff' employer.pk as rota_url %}
+  {% else %}
+    {% url 'staffing_calendar' as rota_url %}
+  {% endif %}
+  <a class="staffing-button" href="{{ rota_url }}?week={{ position.request.shift_date|date:'Y-m-d' }}&amp;day={{ position.request.shift_date|date:'Y-m-d' }}&amp;branch={{ position.request.branch_id }}">Back to rota</a>
+</div>
+
+<div id="staffing-position-content" data-subtitle="{{ position.request.branch.name }} · {{ position.request.shift_date|date:'D j M' }}">
+<section class="staffing-card staffing-profile">
+  <div class="staffing-toolbar">
+    <h2>Position details</h2>
+    <span class="staffing-status {{ position.status }}">{{ position.get_status_display }}</span>
+  </div>
+  <dl class="staffing-details">
+    <div><dt>Staff role</dt><dd>{{ position.request.get_role_display }}</dd></div>
+    <div><dt>Candidate name</dt><dd>{{ position.candidate_name|default:"Not yet allocated" }}</dd></div>
+    <div><dt>Shift time</dt><dd>{{ position.request.start_time|time:"H:i" }}–{{ position.request.end_time|time:"H:i" }}</dd></div>
+    {% if position.request.budget %}<div><dt>Requested budget</dt><dd>£{{ position.request.budget }} per hour</dd></div>{% endif %}
+    {% if position.client_rate %}<div><dt>{% if position.status == 'proposed' %}Proposed{% else %}Agreed{% endif %} client rate</dt><dd>£{{ position.client_rate }} per hour</dd></div>{% endif %}
+    {% if position.paid_hours %}<div><dt>Paid hours</dt><dd>{{ position.paid_hours }}</dd></div>{% endif %}
+    {% if position.attendance_note %}<div><dt>Attendance note</dt><dd>{{ position.attendance_note }}</dd></div>{% endif %}
+    {% if position.change_request %}<div><dt>Open change request</dt><dd>{{ position.change_request }}</dd></div>{% endif %}
+    {% if change_resolution %}<div><dt>Latest change response</dt><dd>{{ change_resolution.detail }}</dd></div>{% endif %}
+    {% if staff and position.application_id %}<div><dt>Application</dt><dd>#{{ position.application_id }}</dd></div>{% endif %}
+  </dl>
+  {% if not staff and position.status == 'approved' %}
+    <p class="staffing-muted">LocumSmart still needs to confirm this booking before you can record attendance.</p>
+  {% elif not staff and position.status == 'booked' and position.request.shift_date > today %}
+    <p class="staffing-muted">You can record attendance on or after {{ position.request.shift_date|date:"j F Y" }}.</p>
+  {% endif %}
+
+  {% if position.status == 'requested' %}
+    {% if staff %}
+      <form method="post" class="staffing-action-form">
+        {% csrf_token %}
+        <h3>Propose a candidate</h3>
+        <div class="staffing-form-grid">
+          <label>Offline candidate name <input name="candidate_name" maxlength="160"></label>
+          <label>Or select a Montu job application
+            <select name="application">
+              <option value="">Select an application</option>
+              {% for application in applications %}
+                <option value="{{ application.pk }}">{{ application.locum.get_full_name|default:application.locum.username }} · Job #{{ application.job_id }} · {{ application.locum.user_type }}</option>
+              {% empty %}
+                <option disabled>No matching single-day applications</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Proposed client rate (£ per hour, optional)
+            <input name="client_rate" type="number" min="0.01" max="999999.99" step="0.01">
+          </label>
+        </div>
+        <button class="staffing-button primary" type="submit" name="action" value="propose">Propose candidate</button>
+      </form>
+    {% endif %}
+    <form method="post" class="staffing-action-form">
+      {% csrf_token %}
+      <button class="staffing-button danger" type="submit" name="action" value="cancel">Cancel unfilled position</button>
+    </form>
+  {% elif position.status == 'proposed' and not staff %}
+    <form method="post" class="staffing-actions staffing-action-form">
+      {% csrf_token %}
+      <button class="staffing-button primary" type="submit" name="action" value="approve">Approve proposal</button>
+      <button class="staffing-button" type="submit" name="action" value="decline">Decline proposal</button>
+    </form>
+  {% elif position.status == 'approved' and staff %}
+    {% if position.application_id %}
+      <form method="post" action="{% url 'approveappliedjob' position.application_id %}" class="staffing-action-form">
+        {% csrf_token %}
+        <input type="hidden" name="source" value="staffing">
+        <button class="staffing-button primary" type="submit">Book and send confirmations</button>
+      </form>
+    {% elif position.from_application %}
+      <p class="staffing-muted">The linked application is unavailable. Withdraw this proposal to select a replacement.</p>
+    {% else %}
+      <form method="post" class="staffing-action-form">
+        {% csrf_token %}
+        <button class="staffing-button primary" type="submit" name="action" value="book">Confirm offline booking</button>
+      </form>
+    {% endif %}
+  {% endif %}
+
+  {% if staff and position.status == 'proposed' or staff and position.status == 'approved' %}
+    <form method="post" class="staffing-action-form">
+      {% csrf_token %}
+      <button class="staffing-button" type="submit" name="action" value="withdraw">Withdraw proposal</button>
+    </form>
+  {% endif %}
+
+  {% if position.status == 'booked' and position.request.shift_date <= today or staff and position.status == 'attended' or staff and position.status == 'issue' %}
+    <form method="post" class="staffing-action-form">
+      {% csrf_token %}
+      <h3>{% if position.status == 'booked' %}Record attendance{% else %}Correct attendance{% endif %}</h3>
+      <div class="staffing-form-grid">
+        <label>Actual paid hours <input type="number" name="paid_hours" min="0.01" max="24" step="0.01" {% if position.paid_hours %}value="{{ position.paid_hours|stringformat:'.2f' }}"{% endif %}></label>
+        <label>{% if position.status == 'booked' %}Attendance note{% else %}Reason for correction{% endif %}
+          <textarea name="note" maxlength="500" rows="2"></textarea>
+        </label>
+      </div>
+      <div class="staffing-actions">
+        <button class="staffing-button primary" type="submit" name="action" value="attended">Mark attended</button>
+        <button class="staffing-button" type="submit" name="action" value="issue">Mark no-show / issue</button>
+      </div>
+    </form>
+  {% endif %}
+
+  {% if staff and position.change_request %}
+    <form method="post" class="staffing-action-form">
+      {% csrf_token %}
+      <label>How the change request was resolved <textarea name="note" maxlength="500" rows="2" required></textarea></label>
+      <button class="staffing-button" type="submit" name="action" value="resolve_change">Mark resolved</button>
+    </form>
+  {% elif not staff and not position.change_request %}
+    {% if position.status == 'proposed' or position.status == 'approved' or position.status == 'booked' %}
+      <details class="staffing-action-form">
+        <summary>Request a change or cancellation</summary>
+        <form method="post">
+          {% csrf_token %}
+          <label>Details <textarea name="note" maxlength="500" rows="2" required></textarea></label>
+          <button class="staffing-button" type="submit" name="action" value="request_change">Send request</button>
+        </form>
+      </details>
+    {% endif %}
+  {% endif %}
+  {% if staff and position.status == 'booked' and not position.from_application %}
+    <details class="staffing-action-form">
+      <summary>Cancel offline booking</summary>
+      <form method="post">
+        {% csrf_token %}
+        <label>Reason for cancellation <textarea name="note" maxlength="500" rows="2" required></textarea></label>
+        <button class="staffing-button danger" type="submit" name="action" value="cancel_booking">Cancel booking</button>
+      </form>
+    </details>
+  {% endif %}
+</section>
+{% if events %}
+<section class="staffing-card staffing-profile">
+  <h2>Position activity</h2>
+  <ul>
+    {% for event in events %}
+      <li>{{ event.created_at|date:"j M Y H:i" }} · {{ event.actor.get_full_name|default:event.actor.email }} · {{ event.action }}{% if event.detail %} · {{ event.detail }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+</div>
+{% endblock %}

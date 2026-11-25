@@ -5,10 +5,12 @@ from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import DetailView, UpdateView
 from django.db.models import Q, Count
+from django.db import transaction
 from django.views import View
 from django.contrib import messages
 from locum.models import *
 from locum import ledger
+from locum.staffing_workflow import check_application_booking, pilot_employers, record_event, reserved_job_position
 from django.core.mail import send_mail, EmailMessage
 from appAdmin.models import *
 from structure.models import Testimonial
@@ -46,7 +48,7 @@ import os
 import mimetypes
 from collections import deque
 from django.http import Http404, FileResponse
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.utils._os import safe_join
@@ -238,6 +240,7 @@ class AdminView(View):
             'technician_count': technician_count,
             'nurse_count': nurse_count,
             'gp_count': gp_count,
+            'montu_portal_enabled': pilot_employers().filter(staffingmanager__isnull=False).exists(),
         }
         return render(request, self.template_name, context)
 
@@ -857,26 +860,36 @@ def approveappliedjob(request, applied_job_id):
         raise PermissionDenied
     applied_job = get_object_or_404(AppliedJob, id=applied_job_id)
 
-    # Check if the applied job has a related Job
-    if not applied_job.job:
-        messages.error(request, 'This application is no longer linked to a job.')
-        return redirect('job_applications')
+    destination = reverse('job_applications')
+    with transaction.atomic():
+        job = get_object_or_404(Job.objects.select_for_update(), pk=applied_job.job_id)
+        applied_job = get_object_or_404(AppliedJob, pk=applied_job.pk, job_id=job.pk)
+        if request.POST.get('source') == 'staffing':
+            linked = reserved_job_position(job)
+            if linked is None or linked.application_id != applied_job.pk:
+                messages.error(request, 'This application is no longer linked to this staffing position.')
+                return redirect('staffing_staff_index')
+            destination = reverse('staffing_staff_position', args=[job.employer_id, linked.pk])
+        try:
+            position = check_application_booking(job, applied_job)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect(destination)
 
-    # Mark the applied job as approved
-    applied_job.approved = True
-    applied_job.save()
-
-    # Update related Job object
-    job = applied_job.job
-    job.applied_status = True
-    job.locum = applied_job.locum
-    job.date_of_booking_email = datetime.now().date()
-    job.save()
+        applied_job.approved = True
+        applied_job.save(update_fields=['approved'])
+        job.applied_status = True
+        job.locum_id = applied_job.locum_id
+        job.date_of_booking_email = datetime.now().date()
+        job.save(update_fields=['applied_status', 'locum', 'date_of_booking_email'])
+        if position is not None:
+            position.status = StaffingPosition.Status.BOOKED
+            position.save(update_fields=['status'])
+            record_event(position, request.user, 'book')
 
     if job.discrete_dates:
         date_rows = [('Discrete Dates', ', '.join(
-            datetime.strptime(date, '%Y-%m-%d').strftime('%d-%m-%Y')
-            for date in json.loads(job.discrete_dates)))]
+            day.strftime('%d-%m-%Y') for day in ledger.job_shift_dates(job)))]
     else:
         date_rows = [('Start Date', job.start_date.strftime('%d-%m-%Y')),
                      ('End Date', job.end_date.strftime('%d-%m-%Y'))]
@@ -928,13 +941,13 @@ def approveappliedjob(request, applied_job_id):
         messages.error(
             request,
             'The application was approved, but a booking confirmation email could not be sent. Please retry the email manually.')
-        return redirect('job_applications')
+        return redirect(destination)
 
     messages.success(
         request,
         f'{locum_name} was booked for {job.pharmacy_name}; confirmation emails were sent.')
 
-    return redirect('job_applications')
+    return redirect(destination)
 
 
 @require_POST
@@ -943,8 +956,14 @@ def reject_job(request, applied_job_id):
     if not Admin.objects.filter(pk=request.user.pk).exists():
         raise PermissionDenied
     applied_job = get_object_or_404(AppliedJob, pk=applied_job_id)
-    applied_job.rejected = True
-    applied_job.save()
+    with transaction.atomic():
+        job = get_object_or_404(Job.objects.select_for_update(), pk=applied_job.job_id)
+        position = reserved_job_position(job)
+        if position is not None and position.application_id == applied_job.pk:
+            messages.error(request, 'Withdraw the candidate proposal in Portal Handling before rejecting this application.')
+            return redirect('job_applications')
+        applied_job.rejected = True
+        applied_job.save(update_fields=['rejected'])
 
     # Send rejection email to the locum
     job = applied_job.job

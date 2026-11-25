@@ -1,0 +1,12 @@
+{% extends 'staffing/layout.html' %}
+{% block title %}Employer profile | LocumSmart{% endblock %}
+{% block staffing_content %}
+<div class="staffing-heading">
+  <div><span class="staffing-kicker">Employer profile</span><h1>{{ employer.pharmacy_name }}</h1></div>
+</div>
+<section class="staffing-card staffing-profile">
+  <h2>Staffing portal</h2>
+  <p>Request staff, review proposed candidates, and record attendance on your weekly rota.</p>
+  <a class="staffing-button primary" href="{% url 'staffing_calendar' %}">Open Staffing Portal</a>
+</section>
+{% endblock %}

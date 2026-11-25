@@ -30,8 +30,11 @@ class RoleBasedAccessMiddleware:
         if request.path.startswith('/appAdmin/locums/') and request.path.endswith('/edit/'):
             if not request.user.is_authenticated:
                 return redirect('login')  # Redirect to login if not logged in
-            else:  # Allow both roles
-                return self.get_response(request)
+            if not (hasattr(request.user, 'admin') or
+                    request.path == f'/appAdmin/locums/{request.user.pk}/edit/'
+                    and hasattr(request.user, 'locum')):
+                raise PermissionDenied
+            return self.get_response(request)
 
         for path, role in restricted_paths.items():
             if request.path.startswith(path):

@@ -1,0 +1,12 @@
+{% extends 'staffing/layout.html' %}
+{% block title %}Portal Handling | LocumSmart{% endblock %}
+{% block staffing_content %}
+<div class="staffing-heading"><h1>Portal Handling</h1><a class="staffing-button" href="{% url 'admin' %}">Back to admin</a></div>
+<section class="staffing-card">
+  {% for employer in employers %}
+    <p><a href="{% url 'staffing_staff' employer.pk %}">{{ employer.pharmacy_name }}</a></p>
+  {% empty %}
+    <p>No staffing portal has been set up yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}

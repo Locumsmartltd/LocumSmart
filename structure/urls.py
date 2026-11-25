@@ -2,6 +2,9 @@ from django.urls import path
 from django.views.generic import TemplateView
 from structure.views import *
 from . import views
+from locum.staffing_views import (
+    StaffingCalendarView, StaffingExportView, StaffingPositionView, StaffingProfileView,
+)
 urlpatterns = [
     path('for-pharmacists/', TemplateView.as_view(template_name='for_pharmacists.html'), name='for_pharmacists'),
     path('primary-care/',    TemplateView.as_view(template_name='primary_care.html'),    name='primary_care'),
@@ -12,6 +15,10 @@ urlpatterns = [
     path('privacypolicy/', privacypolicyView.as_view(), name='privacypolicy'),
     path('cookiesPolicy/', CookiesView.as_view(), name='cookiespolicy'),
     path('login/', LoginpageView.as_view(), name='login'),
+    path('staffing/profile/', StaffingProfileView.as_view(), name='staffing_profile'),
+    path('staffing/', StaffingCalendarView.as_view(), name='staffing_calendar'),
+    path('staffing/export/', StaffingExportView.as_view(), name='staffing_export'),
+    path('staffing/positions/<int:position_id>/', StaffingPositionView.as_view(), name='staffing_position'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('locumjobs/', LocumJobs.as_view(), name='locumjobs'),
     path('job/<int:job_id>/', views.JobDetailsView.as_view(), name='job_details'),

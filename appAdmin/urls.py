@@ -2,10 +2,15 @@ from django.urls import path
 from appAdmin.views import *
 from locum.views import *
 from . import views
+from locum.staffing_views import StaffingStaffIndexView, StaffingStaffPositionView, StaffingStaffView
 
 urlpatterns = [
     # REMOVE IT ITS JUST dummy
     path('admin/', AdminView.as_view(), name='admin'),
+    path('staffing/', StaffingStaffIndexView.as_view(), name='staffing_staff_index'),
+    path('staffing/<int:employer_id>/', StaffingStaffView.as_view(), name='staffing_staff'),
+    path('staffing/<int:employer_id>/positions/<int:position_id>/',
+         StaffingStaffPositionView.as_view(), name='staffing_staff_position'),
     path('employerRequests/', EmployerRequestsView.as_view(),
          name='employerRequests'),
     path('approve-job/<int:job_id>/',

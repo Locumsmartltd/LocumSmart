@@ -1,0 +1,22 @@
+{% if staff %}
+  {% url 'staffing_staff_position' employer.pk position.pk as position_url %}
+{% else %}
+  {% url 'staffing_position' position.pk as position_url %}
+{% endif %}
+{% if compact %}
+{% if not staff and position.status == 'proposed' %}
+<a class="staffing-button staffing-small" data-booking data-focus="approve" href="{{ position_url }}">Approve</a>
+{% endif %}
+{% include 'staffing/attendance_links.html' %}
+<a class="staffing-button staffing-small" data-booking href="{{ position_url }}">Details</a>
+{% else %}
+<a class="staffing-slot {{ position.status }}" data-booking href="{{ position_url }}">
+  <strong>{{ position.request.get_role_display }}</strong>
+  <span>{{ position.candidate_name|default:"Unfilled position" }}</span>
+  <small>{{ position.get_status_display }}</small>
+  {% if position.client_rate %}<small>£{{ position.client_rate }}/hr</small>{% endif %}
+  {% if position.paid_hours %}<small>{{ position.paid_hours }} paid hours</small>{% endif %}
+  {% if position.change_request %}<small>Change requested</small>{% endif %}
+</a>
+{% include 'staffing/attendance_links.html' with in_grid=True %}
+{% endif %}

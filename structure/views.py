@@ -4,7 +4,10 @@ import json
 from datetime import datetime
 from django.views.generic import DetailView
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from locum.models import Locum, Job, AppliedJob, LocumAvailability
+from locum.staffing_models import StaffingManager
+from locum.staffing_workflow import pilot_employers
 from appAdmin.models import Admin
 from django.utils.text import capfirst
 from django.contrib.auth import login, logout
@@ -36,6 +39,13 @@ import logging
 
 
 logger = logging.getLogger('django.notifications')
+
+
+def staffing_login_user(email):
+    manager = StaffingManager.objects.select_related('user').filter(
+        employer__in=pilot_employers(), user__email__iexact=(email or '').strip(),
+        user__is_active=True).first()
+    return manager.user if manager else None
 
 # Create your views here.
 
@@ -158,6 +168,8 @@ class LoginpageView(LoginView):
         elif locum_role in ['Admin', 'Staff']:
             # Check AppAdmin table for Admin or Staff role
             user = Admin.objects.filter(email=email).first()
+        elif locum_role == 'EmployerManager':
+            user = staffing_login_user(email)
 
         else:
             # Invalid locum_role provided
@@ -174,9 +186,13 @@ class LoginpageView(LoginView):
                 messages.error(request, 'Please set your password first, using the link in your approval email or "Forgot password?" below.', extra_tags='modal')
                 return redirect('login')
             # User authenticated successfully, log the user in
-            if user.check_password(password):
+            if user.is_active and user.check_password(password or ''):
 
                 login(request, user)
+
+                if locum_role == 'EmployerManager':
+                    request.session.pop('job_id', None)
+                    return redirect('staffing_profile')
 
                 if self.request.session.get('job_id'):
                     job_id = self.request.session.get('job_id')
@@ -295,6 +311,11 @@ class LocumJobs(View):
 
 @method_decorator(login_required, name='dispatch')
 class JobDetailsView(View):
+    def dispatch(self, request, *args, **kwargs):
+        if hasattr(request.user, 'staffing_manager'):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, job_id):
         job = get_object_or_404(Job, pk=job_id)
 
@@ -591,6 +612,17 @@ class FPEmailView(View):
         elif locum_role in ['Admin', 'Staff']:
             # Check AppAdmin table for Admin or Staff role
             user = Admin.objects.filter(email=email).first()
+        elif locum_role == 'EmployerManager':
+            user = staffing_login_user(email)
+            if user:
+                reset_url = request.build_absolute_uri(reverse('forgot_password', kwargs={
+                    'uidb64': urlsafe_base64_encode(force_bytes(user.pk)),
+                    'token': default_token_generator.make_token(user),
+                }))
+                send_branded_email('password_reset', 'LocumSmart password setup', [user.email],
+                                   {'reset_password_url': reset_url})
+            messages.success(request, 'If the manager account exists, check your email for a password link.')
+            return redirect('fpEmail')
 
         else:
             # Invalid locum_role provided

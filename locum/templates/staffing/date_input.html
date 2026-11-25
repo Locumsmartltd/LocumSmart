@@ -1,0 +1,4 @@
+<div class="staffing-date-row">
+  <input type="date" name="shift_dates" aria-label="Shift date" min="{{ today|date:'Y-m-d' }}" value="{{ value|default:'' }}" required>
+  <button type="button" class="staffing-button staffing-small" data-remove-date>Remove date</button>
+</div>

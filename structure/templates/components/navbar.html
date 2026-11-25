@@ -23,6 +23,8 @@
         {% if user.is_authenticated %}
           {% if user.admin %}
             <a href="{% url 'admin' %}">Profile</a>
+          {% elif user.staffing_manager %}
+            <a href="{% url 'staffing_profile' %}">Profile</a>
           {% else %}
             <a href="{% url 'locumProfile' %}">Profile</a>
           {% endif %}

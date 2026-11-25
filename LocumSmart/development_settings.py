@@ -14,6 +14,7 @@ DATABASES = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+STAFFING_PILOT_EMPLOYER_EMAIL = 'demo.montu.employer@locumsmart.test'
 
 LOGGING = {
     'version': 1,
