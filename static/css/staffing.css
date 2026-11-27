@@ -130,6 +130,10 @@ body:has(#staffing-calendar-content) { background: #eef5f5; }
 }
 .staffing textarea, .staffing-form-grid input, .staffing-form-grid select { display: block; width: 100%; }
 .staffing-form-grid { margin: 10px 0 14px; }
+.staffing-span-full { grid-column: 1 / -1; }
+.staffing-hours { display: block; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.staffing-action-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.staffing-action-form legend { font-weight: 700; }
 .staffing-action-form { margin-top: 16px; border-top: 1px solid var(--staffing-line); padding-top: 12px; }
 .staffing-action-form textarea { margin: 6px 0 10px; }
 .staffing .errorlist { color: #a3212a; margin: 4px 0; padding-left: 16px; font-size: 13px; }

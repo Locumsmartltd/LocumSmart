@@ -26,12 +26,30 @@
     <div><dt>Shift time</dt><dd>{{ position.request.start_time|time:"H:i" }}–{{ position.request.end_time|time:"H:i" }}</dd></div>
     {% if position.request.budget %}<div><dt>Requested budget</dt><dd>£{{ position.request.budget }} per hour</dd></div>{% endif %}
     {% if position.client_rate %}<div><dt>{% if position.status == 'proposed' %}Proposed{% else %}Agreed{% endif %} client rate</dt><dd>£{{ position.client_rate }} per hour</dd></div>{% endif %}
-    {% if position.paid_hours %}<div><dt>Paid hours</dt><dd>{{ position.paid_hours }}</dd></div>{% endif %}
-    {% if position.attendance_note %}<div><dt>Attendance note</dt><dd>{{ position.attendance_note }}</dd></div>{% endif %}
+    {% if position.proposal_note %}<div><dt>Note from LocumSmart</dt><dd>{{ position.proposal_note|linebreaksbr }}</dd></div>{% endif %}
     {% if position.change_request %}<div><dt>Open change request</dt><dd>{{ position.change_request }}</dd></div>{% endif %}
     {% if change_resolution %}<div><dt>Latest change response</dt><dd>{{ change_resolution.detail }}</dd></div>{% endif %}
     {% if staff and position.application_id %}<div><dt>Application</dt><dd>#{{ position.application_id }}</dd></div>{% endif %}
+    {% if position.replacement_for_id %}<div><dt>Replacement for</dt><dd>{{ position.replacement_for.candidate_name }}</dd></div>{% endif %}
+    {% if position.replacement %}<div><dt>Replacement status</dt><dd>{{ position.replacement.get_status_display }}</dd></div>{% endif %}
   </dl>
+  {% if position.status == 'attended' or position.status == 'issue' %}
+    <section class="staffing-action-form" aria-labelledby="staffing-recorded-attendance">
+      <h3 id="staffing-recorded-attendance">{% if staff %}Attendance recorded by Montu{% else %}Recorded attendance{% endif %}</h3>
+      <dl class="staffing-details">
+        <div><dt>Attendance status</dt><dd>{{ position.get_status_display }}</dd></div>
+        {% if position.actual_start is not None %}
+          <div><dt>Actual shift</dt><dd>{{ position.actual_start|time:"H:i" }}–{{ position.actual_end|time:"H:i" }}{% if position.actual_end < position.actual_start %} (next day){% endif %}</dd></div>
+          <div><dt>Hours on duty</dt><dd>{{ position.gross_hours }} h</dd></div>
+          <div><dt>Unpaid break</dt><dd>{{ position.break_minutes }} min</dd></div>
+        {% endif %}
+        {% if position.paid_hours %}<div><dt>Paid hours</dt><dd>{{ position.paid_hours }} h</dd></div>{% endif %}
+        {% if position.attendance_note %}<div><dt>Attendance note</dt><dd>{{ position.attendance_note }}</dd></div>{% endif %}
+      </dl>
+    </section>
+  {% elif staff and position.status == 'booked' %}
+    <p class="staffing-muted">Awaiting attendance from Montu.</p>
+  {% endif %}
   {% if not staff and position.status == 'approved' %}
     <p class="staffing-muted">LocumSmart still needs to confirm this booking before you can record attendance.</p>
   {% elif not staff and position.status == 'booked' and position.request.shift_date > today %}
@@ -44,20 +62,19 @@
         {% csrf_token %}
         <h3>Propose a candidate</h3>
         <div class="staffing-form-grid">
-          <label>Offline candidate name <input name="candidate_name" maxlength="160"></label>
+          <div>{% include 'staffing/field.html' with field=proposal_form.candidate_name %}</div>
           <label>Or select a Montu job application
             <select name="application">
               <option value="">Select an application</option>
               {% for application in applications %}
-                <option value="{{ application.pk }}">{{ application.locum.get_full_name|default:application.locum.username }} · Job #{{ application.job_id }} · {{ application.locum.user_type }}</option>
+                <option value="{{ application.pk }}" {% if proposal_form.application.value|stringformat:"s" == application.pk|stringformat:"s" %}selected{% endif %}>{{ application.locum.get_full_name|default:application.locum.username }} · Job #{{ application.job_id }} · {{ application.locum.user_type }}</option>
               {% empty %}
                 <option disabled>No matching single-day applications</option>
               {% endfor %}
             </select>
           </label>
-          <label>Proposed client rate (£ per hour, optional)
-            <input name="client_rate" type="number" min="0.01" max="999999.99" step="0.01">
-          </label>
+          <div>{% include 'staffing/field.html' with field=proposal_form.client_rate %}</div>
+          <div class="staffing-span-full">{% include 'staffing/field.html' with field=proposal_form.proposal_note %}</div>
         </div>
         <button class="staffing-button primary" type="submit" name="action" value="propose">Propose candidate</button>
       </form>
@@ -96,20 +113,34 @@
     </form>
   {% endif %}
 
-  {% if position.status == 'booked' and position.request.shift_date <= today or staff and position.status == 'attended' or staff and position.status == 'issue' %}
+  {% if can_edit_attendance %}
+    <form method="post" class="staffing-action-form" data-attendance-form>
+      {% csrf_token %}
+      <fieldset>
+        <legend>{% if position.status == 'booked' %}Record attendance{% else %}Update attendance{% endif %}</legend>
+        <p class="staffing-muted">Check the actual times and enter unpaid break minutes. Use 0 for no unpaid break.</p>
+        <div class="staffing-form-grid">
+          <div>{% include 'staffing/field.html' with field=attendance_form.actual_start %}</div>
+          <div>{% include 'staffing/field.html' with field=attendance_form.actual_end %}</div>
+          <div>{% include 'staffing/field.html' with field=attendance_form.break_minutes %}</div>
+          <div><strong>Calculated paid hours</strong><output class="staffing-hours" data-paid-hours aria-live="polite">—</output></div>
+          <div class="staffing-span-full">{% include 'staffing/field.html' with field=attendance_form.note %}</div>
+        </div>
+      </fieldset>
+      <div class="staffing-actions">
+        <button class="staffing-button primary" type="submit" name="action" value="attended">{% if position.status == 'attended' %}Save attendance details{% else %}Mark attended{% endif %}</button>
+        {% if position.status == 'booked' %}
+        <button class="staffing-button" type="submit" name="action" value="issue" formnovalidate>Mark no-show / issue</button>
+        {% endif %}
+      </div>
+    </form>
+  {% endif %}
+
+  {% if not staff and position.status == 'issue' and not position.replacement %}
     <form method="post" class="staffing-action-form">
       {% csrf_token %}
-      <h3>{% if position.status == 'booked' %}Record attendance{% else %}Correct attendance{% endif %}</h3>
-      <div class="staffing-form-grid">
-        <label>Actual paid hours <input type="number" name="paid_hours" min="0.01" max="24" step="0.01" {% if position.paid_hours %}value="{{ position.paid_hours|stringformat:'.2f' }}"{% endif %}></label>
-        <label>{% if position.status == 'booked' %}Attendance note{% else %}Reason for correction{% endif %}
-          <textarea name="note" maxlength="500" rows="2"></textarea>
-        </label>
-      </div>
-      <div class="staffing-actions">
-        <button class="staffing-button primary" type="submit" name="action" value="attended">Mark attended</button>
-        <button class="staffing-button" type="submit" name="action" value="issue">Mark no-show / issue</button>
-      </div>
+      <p class="staffing-muted">Ask LocumSmart to find cover for this shift.</p>
+      <button class="staffing-button primary" type="submit" name="action" value="request_replacement">Request replacement</button>
     </form>
   {% endif %}
 

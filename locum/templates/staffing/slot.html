@@ -17,6 +17,7 @@
   {% if position.client_rate %}<small>£{{ position.client_rate }}/hr</small>{% endif %}
   {% if position.paid_hours %}<small>{{ position.paid_hours }} paid hours</small>{% endif %}
   {% if position.change_request %}<small>Change requested</small>{% endif %}
+  {% if position.replacement_for_id %}<small>Replacement cover</small>{% endif %}
 </a>
 {% include 'staffing/attendance_links.html' with in_grid=True %}
 {% endif %}

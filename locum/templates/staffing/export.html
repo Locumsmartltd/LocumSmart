@@ -1,0 +1,11 @@
+{% extends 'staffing/layout.html' %}
+{% block title %}Export attendance | LocumSmart{% endblock %}
+{% block staffing_content %}
+<section class="staffing-card staffing-profile">
+  <div class="staffing-toolbar">
+    <h1>Export attendance</h1>
+    <a class="staffing-button" href="{% url 'staffing_calendar' %}?{{ query }}">Back to rota</a>
+  </div>
+  {% include 'staffing/export_form.html' %}
+</section>
+{% endblock %}

@@ -1,4 +1,5 @@
 import csv
+from calendar import monthrange
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
@@ -78,10 +79,13 @@ class RequestForm(forms.Form):
 
 
 class ProposalForm(forms.Form):
-    candidate_name = forms.CharField(max_length=160, required=False)
+    candidate_name = forms.CharField(label='Offline candidate name', max_length=160, required=False)
     application = forms.IntegerField(min_value=1, required=False)
-    client_rate = forms.DecimalField(required=False, min_value=Decimal('0.01'),
+    client_rate = forms.DecimalField(label='Proposed client rate (£ per hour, optional)',
+                                     required=False, min_value=Decimal('0.01'),
                                      max_digits=8, decimal_places=2)
+    proposal_note = forms.CharField(label='Note for Montu (optional)', max_length=500, required=False,
+                                   widget=forms.Textarea(attrs={'rows': 2}))
 
     def clean(self):
         cleaned = super().clean()
@@ -91,9 +95,42 @@ class ProposalForm(forms.Form):
 
 
 class AttendanceForm(forms.Form):
+    actual_start = forms.TimeField(label='Actual start', required=False, widget=TIME_INPUT)
+    actual_end = forms.TimeField(label='Actual finish', required=False, widget=TIME_INPUT)
+    break_minutes = forms.IntegerField(label='Unpaid break (minutes)', required=False, min_value=0, max_value=1439)
     paid_hours = forms.DecimalField(required=False, min_value=Decimal('0.01'),
                                     max_value=Decimal('24'), max_digits=4, decimal_places=2)
-    note = forms.CharField(max_length=500, required=False)
+    note = forms.CharField(label='Attendance note (optional)', max_length=500, required=False,
+                           widget=forms.Textarea(attrs={'rows': 2}))
+
+
+class AttendanceExportForm(forms.Form):
+    period = forms.ChoiceField(choices=[
+        ('day', 'Daily'), ('week', 'Weekly'), ('month', 'Monthly'), ('range', 'Custom date range'),
+    ])
+    start = forms.DateField(label='Date', required=False,
+                            widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}))
+    end = forms.DateField(label='End date (custom range only)', required=False,
+                          widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}))
+
+    def clean(self):
+        data = super().clean()
+        start, end = data.get('start'), data.get('end')
+        if not start or not 1 < start.year < 9999:
+            self.add_error('start', 'Choose a valid date for the report.')
+        elif data.get('period') == 'range' and (not end or end < start):
+            self.add_error('end', 'Choose an end date on or after the start date.')
+        return data
+
+    def date_range(self):
+        start = self.cleaned_data['start']
+        period = self.cleaned_data['period']
+        if period == 'month':
+            return start.replace(day=1), start.replace(day=monthrange(start.year, start.month)[1])
+        if period == 'week':
+            monday = start - timedelta(days=start.weekday())
+            return monday, monday + timedelta(days=6)
+        return start, self.cleaned_data['end'] if period == 'range' else start
 
 
 @method_decorator(never_cache, name='dispatch')
@@ -174,10 +211,12 @@ class CalendarMixin:
         counts = Counter(p.status for p in positions)
         return {
             'employer': self.employer, 'staff': self.staff,
-            'today': today, 'first': first, 'days': days, 'selected_day': selected_day,
+            'today': today, 'yesterday': today - timedelta(days=1), 'first': first,
+            'days': days, 'selected_day': selected_day,
             'max_request_dates': MAX_REQUEST_DATES,
             'previous_week': first - timedelta(days=7), 'next_week': first + timedelta(days=7),
             'branches': branches, 'primary_branch': primary_branch, 'view_branches': view_branches,
+            'shown_branches': shown_branches,
             'branch_filter': branch_filter, 'query': query,
             'mode': mode, 'view_query': urlencode(view_query),
             'selected_branch': selected_branches[0] if selected_branches else None,
@@ -194,13 +233,17 @@ class CalendarMixin:
 
 class StaffingCalendarView(CalendarMixin, ManagerView):
     def get(self, request):
-        context = self.calendar_context(request)
+        return render(request, 'staffing/calendar.html', self.calendar_context(request))
+
+    def calendar_context(self, request):
+        context = super().calendar_context(request)
         context['form'] = RequestForm(self.employer, single_site=context['mode'] == 'single', initial={
             'shift_dates': [max(context['today'], context['selected_day']).isoformat()],
             'branch': context['selected_branch'] or context['primary_branch'],
             'start_time': '09:00', 'end_time': '17:00',
         })
-        return render(request, 'staffing/calendar.html', context)
+        context['export_form'] = AttendanceExportForm(initial={'period': 'week', 'start': context['selected_day']})
+        return context
 
     def post(self, request):
         form = RequestForm(self.employer, request.POST, single_site=request.GET.get('mode') == 'single')
@@ -249,6 +292,7 @@ class StaffingStaffView(StaffingStaffMixin, CalendarMixin, View):
         context = self.calendar_context(request)
         context['queue'] = StaffingPosition.objects.filter(request__branch__employer=self.employer).filter(
             Q(status__in=(Status.REQUESTED, Status.APPROVED), request__shift_date__gte=context['today'])
+            | Q(status__in=(Status.REQUESTED, Status.APPROVED), replacement_for__isnull=False)
             | ~Q(change_request=''),
         ).select_related('request__branch').order_by('request__shift_date', 'pk')[:25]
         return render(request, 'staffing/calendar.html', context)
@@ -289,17 +333,30 @@ class PositionMixin:
     def positions(self):
         return StaffingPosition.objects.filter(request__branch__employer=self.employer)
 
-    def detail(self, request, position):
+    def detail(self, request, position, *, attendance_form=None, proposal_form=None, status=200):
         applications = None
         if self.staff and position.status == Status.REQUESTED:
             applications = eligible_applications(position).select_related('locum', 'job').order_by('job_id', 'pk')
+        shift = position.request
+        today = timezone.localdate(timezone=LONDON)
+        can_edit_attendance = not self.staff and shift.shift_date <= today and position.status in (
+            Status.BOOKED, Status.ATTENDED,
+        )
+        if can_edit_attendance and attendance_form is None:
+            attendance_form = AttendanceForm(initial={
+                'actual_start': position.actual_start or shift.start_time,
+                'actual_end': position.actual_end or shift.end_time,
+                'break_minutes': position.break_minutes if position.break_minutes is not None else 0,
+                'note': position.attendance_note,
+            })
         return render(request, 'staffing/position.html', {
             'position': position, 'employer': self.employer, 'staff': self.staff,
-            'applications': applications, 'today': timezone.localdate(timezone=LONDON),
+            'applications': applications, 'today': today, 'can_edit_attendance': can_edit_attendance,
+            'attendance_form': attendance_form, 'proposal_form': proposal_form or ProposalForm(),
             'events': position.events.select_related('actor').order_by('-created_at', '-pk') if self.staff else (),
             'change_resolution': position.events.filter(action__in=('resolve_change', 'cancel_booking')).order_by('-pk').first()
             if not self.staff and not position.change_request else None,
-        })
+        }, status=status)
 
     def get(self, request, position_id, **kwargs):
         position = get_object_or_404(self.positions().select_related('request__branch'), pk=position_id)
@@ -307,7 +364,10 @@ class PositionMixin:
 
     def post(self, request, position_id, **kwargs):
         action = request.POST.get('action')
+        if self.staff and action in ('attended', 'issue'):
+            raise PermissionDenied
         proposal = ProposalForm(request.POST) if self.staff and action == 'propose' else None
+        attendance = AttendanceForm(request.POST) if action in ('attended', 'issue') else None
         try:
             with transaction.atomic():
                 if proposal is not None and proposal.is_valid() and proposal.cleaned_data['application']:
@@ -317,18 +377,20 @@ class PositionMixin:
                     ).values_list('pk', flat=True).first()
                     get_object_or_404(Job.objects.select_for_update(), pk=job_id)
                 position = get_object_or_404(self.positions().select_for_update(), pk=position_id)
-                detail = self.apply_action(request, position, action, proposal)
+                detail = self.apply_action(request, position, action, proposal, attendance)
                 position.save()
                 record_event(position, request.user, action, detail)
             messages.success(request, 'Staffing position updated.')
         except ValidationError as exc:
             for error in exc.messages:
                 messages.error(request, error)
+            position = get_object_or_404(self.positions().select_related('request__branch'), pk=position_id)
+            return self.detail(request, position, attendance_form=attendance, proposal_form=proposal, status=400)
         if self.staff:
             return redirect('staffing_staff_position', employer_id=self.employer.pk, position_id=position_id)
         return redirect('staffing_position', position_id=position_id)
 
-    def apply_action(self, request, position, action, proposal):
+    def apply_action(self, request, position, action, proposal, attendance):
         if action == 'approve' and not self.staff and position.status == Status.PROPOSED:
             position.status = Status.APPROVED
         elif (action == 'decline' and not self.staff and position.status == Status.PROPOSED
@@ -337,6 +399,7 @@ class PositionMixin:
             position.status = Status.REQUESTED
             position.candidate_name = ''
             position.client_rate = None
+            position.proposal_note = ''
             position.application_id = None
             position.from_application = False
             return name
@@ -355,8 +418,15 @@ class PositionMixin:
             return note
         elif action in ('attended', 'issue') and (
                 position.status == Status.BOOKED
-                or self.staff and position.status in (Status.ATTENDED, Status.ISSUE)):
-            return self.attendance(request, position, action)
+                or action == 'attended' and position.status == Status.ATTENDED):
+            return self.attendance(position, action, attendance)
+        elif action == 'request_replacement' and not self.staff and position.status == Status.ISSUE:
+            replacement, created = StaffingPosition.objects.get_or_create(
+                replacement_for=position, defaults={'request': position.request},
+            )
+            if not created:
+                raise ValidationError('A replacement request already exists for this booking.')
+            return f'Replacement position #{replacement.pk}'
         elif action == 'request_change' and not self.staff and position.status in (
                 Status.PROPOSED, Status.APPROVED, Status.BOOKED):
             note = request.POST.get('note', '').strip()
@@ -393,23 +463,38 @@ class PositionMixin:
         position.from_application = bool(application_id)
         position.candidate_name = name
         position.client_rate = client_rate
+        position.proposal_note = form.cleaned_data['proposal_note']
         position.status = Status.PROPOSED
         return name
 
-    def attendance(self, request, position, action):
-        form = AttendanceForm(request.POST)
+    def attendance(self, position, action, form):
         if position.request.shift_date > timezone.localdate(timezone=LONDON):
             raise ValidationError('Attendance can be recorded on or after the shift date.')
-        if not form.is_valid():
-            raise ValidationError([error for errors in form.errors.values() for error in errors])
-        hours = form.cleaned_data['paid_hours']
-        note = form.cleaned_data['note']
-        if action == 'attended' and hours is None:
-            raise ValidationError('Enter actual paid hours for an attended shift.')
-        if position.status in (Status.ATTENDED, Status.ISSUE) and not note:
-            raise ValidationError('Enter a note explaining the attendance correction.')
+        if action == 'issue':
+            # No-show recording only uses the note, even if time fields are incomplete.
+            note = form.fields['note'].clean(form.data.get('note', ''))
+            start = end = break_minutes = hours = None
+        else:
+            if not form.is_valid():
+                raise ValidationError('Check the attendance details below.')
+            data = form.cleaned_data
+            note = data['note']
+            start, end, break_minutes = data['actual_start'], data['actual_end'], data['break_minutes']
+            hours = data['paid_hours']
+            if start is not None or end is not None or break_minutes is not None or hours is None:
+                if start is None or end is None:
+                    raise ValidationError('Enter both the actual start and finish times.')
+                if break_minutes is None:
+                    raise ValidationError('Enter unpaid break minutes, or 0 if there was no unpaid break.')
+                duration = position.shift_minutes(start, end)
+                if duration <= break_minutes:
+                    raise ValidationError('The shift time must be longer than the unpaid break.')
+                hours = ((duration - break_minutes) / 60).quantize(Decimal('0.01'))
+                if not hours:
+                    raise ValidationError('Enter a shift with at least one minute of paid time.')
         position.status = action
-        position.paid_hours = hours if action == 'attended' else None
+        position.actual_start, position.actual_end = start, end
+        position.break_minutes, position.paid_hours = break_minutes, hours
         position.attendance_note = note
         return note
 
@@ -429,14 +514,32 @@ def csv_cell(value):
 class StaffingExportView(CalendarMixin, ManagerView):
     def get(self, request):
         context = self.calendar_context(request)
+        if 'choose' in request.GET:
+            context['export_form'] = AttendanceExportForm(initial={'period': 'week', 'start': context['selected_day']})
+            return render(request, 'staffing/export.html', context)
+        if 'period' in request.GET:
+            form = AttendanceExportForm(request.GET)
+            if not form.is_valid():
+                context['export_form'] = form
+                return render(request, 'staffing/export.html', context, status=400)
+            first, last = form.date_range()
+        else:
+            first, last = context['first'], context['days'][-1]
         response = HttpResponse('\ufeff', content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="staffing-attendance-{context["first"]}.csv"'
+        response['Content-Disposition'] = f'attachment; filename="staffing-attendance-{first}-to-{last}.csv"'
         writer = csv.writer(response)
-        writer.writerow(['Branch', 'Date', 'Role', 'Candidate', 'Attendance', 'Paid hours'])
-        for position in context['positions']:
-            if position.status in (Status.ATTENDED, Status.ISSUE):
-                shift = position.request
-                writer.writerow([csv_cell(shift.branch.name), shift.shift_date, shift.get_role_display(),
-                                 csv_cell(position.candidate_name), position.get_status_display(),
-                                 position.paid_hours])
+        writer.writerow(['Branch', 'Date', 'Role', 'Candidate', 'Attendance', 'Scheduled start',
+                         'Scheduled finish', 'Actual start', 'Actual finish', 'Unpaid break (minutes)',
+                         'Hours on duty', 'Paid hours', 'Attendance note'])
+        positions = StaffingPosition.objects.filter(
+            request__branch__in=context['shown_branches'], request__shift_date__range=(first, last),
+            status__in=(Status.ATTENDED, Status.ISSUE),
+        ).select_related('request__branch').order_by('request__shift_date', 'request__start_time', 'pk')
+        for position in positions.iterator():
+            shift = position.request
+            writer.writerow([csv_cell(shift.branch.name), shift.shift_date, shift.get_role_display(),
+                             csv_cell(position.candidate_name), position.get_status_display(),
+                             shift.start_time, shift.end_time, position.actual_start, position.actual_end,
+                             position.break_minutes, position.gross_hours, position.paid_hours,
+                             csv_cell(position.attendance_note)])
         return response

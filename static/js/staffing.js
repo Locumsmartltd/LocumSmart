@@ -16,7 +16,7 @@
     if (!response.ok && response.status !== 400) {
       throw new Error('This action could not be completed. Refresh the rota and try again.');
     }
-    return {page, url: response.url, notices};
+    return {page, url: response.url, notices, invalid: response.status === 400};
   }
 
   function showRequestErrors() {
@@ -51,9 +51,36 @@
     heading.textContent = content.dataset.subtitle;
     const notice = document.createElement('p');
     notice.className = 'staffing-dialog-notice';
-    notice.setAttribute('role', 'status');
+    notice.setAttribute('role', result.invalid ? 'alert' : 'status');
     notice.textContent = result.notices.join(' ');
     body.replaceChildren(notice, content);
+    const form = body.querySelector('[data-attendance-form]');
+    if (form) updatePaidHours(form);
+    if (result.invalid) {
+      notice.tabIndex = -1;
+      notice.focus();
+    }
+  }
+
+  function updatePaidHours(form) {
+    function minutes(value) {
+      if (!value) return NaN;
+      const [hours, mins, seconds = 0] = value.split(':').map(Number);
+      return hours * 60 + mins + seconds / 60;
+    }
+    const start = minutes(form.elements.actual_start.value);
+    const end = minutes(form.elements.actual_end.value);
+    const breaks = form.elements.break_minutes.valueAsNumber;
+    const duration = end - start + (end < start ? 1440 : 0);
+    const paid = duration - breaks;
+    form.querySelector('[data-paid-hours]').value = breaks >= 0 && paid > 0 ? `${(paid / 60).toFixed(2)} h` : '—';
+  }
+
+  function updateExportEnd(form) {
+    const custom = form.elements.period.value === 'range';
+    form.querySelector('[data-export-end]').hidden = !custom;
+    form.elements.end.disabled = !custom;
+    form.elements.end.required = custom;
   }
 
   async function openBooking(link) {
@@ -67,7 +94,7 @@
       const result = await load(bookingUrl);
       if (booking.open && loadId === bookingLoad) {
         renderBooking(result);
-        const target = {approve: '[value="approve"]', hours: '[name="paid_hours"]',
+        const target = {approve: '[value="approve"]', hours: '[name="actual_start"]',
           'no-show': '[value="issue"]'}[link.dataset.focus];
         if (target) body.querySelector(target)?.focus();
       }
@@ -110,6 +137,14 @@
       window.print();
       return;
     }
+    const exportLink = event.target.closest('[data-attendance-export]');
+    if (exportLink && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      const exportDialog = document.querySelector('#staffing-export');
+      updateExportEnd(exportDialog.querySelector('form'));
+      exportDialog.showModal();
+      return;
+    }
     const branchEditor = event.target.closest('[data-branch-editor]');
     if (branchEditor) {
       const editor = document.querySelector('#staffing-branch');
@@ -140,8 +175,15 @@
   });
 
   document.addEventListener('change', event => {
+    const exportForm = event.target.closest('[data-attendance-export-form]');
+    if (exportForm && event.target.name === 'period') updateExportEnd(exportForm);
     const form = event.target.closest('[data-rota-filter]');
     if (form && event.target.matches('select')) form.requestSubmit();
+  });
+
+  document.addEventListener('input', event => {
+    const form = event.target.closest('[data-attendance-form]');
+    if (form) updatePaidHours(form);
   });
 
   document.addEventListener('submit', async event => {
@@ -174,7 +216,7 @@
         const loadId = bookingLoad;
         const result = await load(form.hasAttribute('action') ? form.action : bookingUrl, options);
         if (booking.open && loadId === bookingLoad) renderBooking(result);
-        await refreshRota(location.href, undefined, true);
+        if (!result.invalid) await refreshRota(location.href, undefined, true);
       } else {
         await refreshRota(form.hasAttribute('action') ? form.action : location.href, options, true);
       }

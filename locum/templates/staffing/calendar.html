@@ -13,12 +13,22 @@
       <a class="staffing-button" href="{% url 'staffing_staff_index' %}">Staffing portals</a>
       <a class="staffing-button" href="{% url 'admin' %}">Back to admin</a>
     {% else %}
-      <a class="staffing-button" href="{% url 'staffing_export' %}?{{ query }}">Export attendance</a>
+      <a class="staffing-button" href="{% url 'staffing_export' %}?{{ query }}&amp;choose=1" data-attendance-export>Export attendance</a>
       <button type="button" class="staffing-button" data-print>Print rota</button>
       {% if branches %}<a class="staffing-button primary" data-request-staff href="?{{ query }}&amp;request=1#staff-request">+ Request staff</a>{% endif %}
     {% endif %}
   </div>
 </div>
+
+{% if not staff %}
+<dialog class="staffing-dialog staffing-no-print" id="staffing-export" aria-labelledby="staffing-export-title">
+  <div class="staffing-dialog-heading">
+    <h2 id="staffing-export-title">Export attendance</h2>
+    <button type="button" class="staffing-button" data-close-dialog>× Close</button>
+  </div>
+  {% include 'staffing/export_form.html' %}
+</dialog>
+{% endif %}
 
 {% if staff and queue %}
 <section class="staffing-card staffing-no-print">
@@ -125,6 +135,10 @@
 <section class="staffing-card staffing-no-print">
   <div class="staffing-toolbar">
     <div><h2>Daily staffing &amp; attendance</h2><p class="staffing-muted">Attendance opens on the shift date once LocumSmart confirms the booking.</p></div>
+    <div class="staffing-actions">
+    {% if not staff %}
+      <a data-rota-view class="staffing-button" href="?week={{ yesterday|date:'Y-m-d' }}&amp;day={{ yesterday|date:'Y-m-d' }}&amp;branch={{ branch_filter }}&amp;mode={{ mode }}">Yesterday</a>
+    {% endif %}
     <form method="get" data-rota-filter>
       <input type="hidden" name="week" value="{{ first|date:'Y-m-d' }}">
       <input type="hidden" name="branch" value="{{ branch_filter }}">
@@ -136,6 +150,7 @@
       </label>
       <noscript><button class="staffing-button" type="submit">Show day</button></noscript>
     </form>
+    </div>
   </div>
   <div class="staffing-daily">
     {% for position in daily_positions %}
@@ -211,5 +226,5 @@
   <div data-booking-body></div>
 </dialog>
 <div class="staffing-feedback" role="status" aria-live="polite"></div>
-<script src="{% static 'js/staffing.js' %}?v=4" defer></script>
+<script src="{% static 'js/staffing.js' %}?v=5" defer></script>
 {% endblock %}

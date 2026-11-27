@@ -1,5 +1,7 @@
-from datetime import date, timedelta
+import csv
+from datetime import date, time, timedelta
 from decimal import Decimal
+from io import StringIO
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -131,6 +133,115 @@ class StaffingPortalTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(StaffingRequest.objects.count(), 0)
         self.assertEqual(StaffingPosition.objects.count(), 0)
+
+    def test_proposal_note_and_next_morning_attendance_are_visible_to_both_roles(self):
+        self.request_positions()
+        position = StaffingPosition.objects.get()
+        StaffingRequest.objects.filter(pk=position.request_id).update(shift_date=self.today - timedelta(days=1))
+        self.staff_action(position, 'propose', candidate_name='Casey', proposal_note='Available for this shift.')
+        detail = reverse('staffing_position', args=[position.pk])
+        self.assertContains(self.client.get(detail), 'Available for this shift.')
+        self.manager_action(position, 'approve')
+        self.staff_action(position, 'book')
+        rejected = self.manager_action(position, 'attended', actual_start='22:00', actual_end='06:00',
+                                       break_minutes='480')
+        self.assertContains(rejected, 'shift time must be longer than the unpaid break', status_code=400)
+        self.manager_action(position, 'attended', actual_start='22:00', actual_end='06:00',
+                            break_minutes='30', note='Overnight cover')
+        position.refresh_from_db()
+        self.assertEqual(position.gross_hours, Decimal('8.00'))
+        self.assertEqual(position.paid_hours, Decimal('7.50'))
+        self.manager_action(position, 'attended', actual_start='22:00', actual_end='06:00', break_minutes='45')
+        position.refresh_from_db()
+        self.assertEqual(position.paid_hours, Decimal('7.25'))
+        admin = self.staff_client.get(reverse('staffing_staff_position', args=[self.employer.pk, position.pk]))
+        self.assertContains(admin, 'Attendance recorded by Montu')
+        self.assertContains(admin, '45 min')
+        self.assertContains(admin, '(next day)')
+        self.assertNotContains(admin, 'data-attendance-form')
+        self.assertEqual(self.staff_action(position, 'attended', paid_hours='3', note='Edit attempt').status_code, 403)
+        self.assertEqual(self.staff_action(position, 'issue', note='Edit attempt').status_code, 403)
+        position.refresh_from_db()
+        self.assertEqual(position.paid_hours, Decimal('7.25'))
+        export = self.client.get(reverse('staffing_export'), {'period': 'day', 'start': position.request.shift_date})
+        self.assertContains(export, '22:00:00,06:00:00,45,8.00,7.25')
+
+    def test_manager_records_multiple_shifts_for_the_same_candidate_and_exports_each(self):
+        yesterday = self.today - timedelta(days=1)
+        shifts = ((yesterday, '09:00', '17:00', '30', '7.50'), (self.today, '10:00', '16:00', '15', '5.75'))
+        for day, start, finish, breaks, _ in shifts:
+            self.request_positions()
+            position = StaffingPosition.objects.latest('pk')
+            StaffingRequest.objects.filter(pk=position.request_id).update(shift_date=day)
+            self.staff_action(position, 'propose', candidate_name='Casey Demo')
+            self.manager_action(position, 'approve')
+            self.staff_action(position, 'book')
+            staff_booking = self.staff_client.get(
+                reverse('staffing_staff_position', args=[self.employer.pk, position.pk]))
+            self.assertContains(staff_booking, 'Awaiting attendance from Montu.')
+            self.assertNotContains(staff_booking, 'data-attendance-form')
+            self.assertEqual(self.staff_action(position, 'issue').status_code, 403)
+            response = self.manager_action(position, 'attended', actual_start=start, actual_end=finish,
+                                           break_minutes=breaks)
+            self.assertEqual(response.status_code, 302)
+
+        response = self.client.get(reverse('staffing_export'), {
+            'period': 'range', 'start': yesterday.isoformat(), 'end': self.today.isoformat(),
+        })
+        rows = list(csv.DictReader(StringIO(response.content.decode('utf-8-sig'))))
+        self.assertEqual(len(rows), 2)
+        for row, (day, start, finish, breaks, hours) in zip(rows, shifts):
+            self.assertEqual(
+                (row['Candidate'], row['Date'], row['Actual start'], row['Actual finish'],
+                 row['Unpaid break (minutes)'], row['Paid hours']),
+                ('Casey Demo', day.isoformat(), f'{start}:00', f'{finish}:00', breaks, hours),
+            )
+
+    def test_no_show_replacement_keeps_original_attendance_and_is_queued(self):
+        self.request_positions()
+        position = StaffingPosition.objects.get()
+        self.staff_action(position, 'propose', candidate_name='Original')
+        self.manager_action(position, 'approve')
+        self.staff_action(position, 'book')
+        StaffingRequest.objects.filter(pk=position.request_id).update(shift_date=self.today - timedelta(days=1))
+        self.manager_action(position, 'issue', note='Did not arrive')
+        self.assertContains(self.client.get(reverse('staffing_position', args=[position.pk])), 'Request replacement')
+        self.manager_action(position, 'request_replacement')
+        duplicate = self.manager_action(position, 'request_replacement')
+        self.assertEqual(duplicate.status_code, 400)
+        position.refresh_from_db()
+        self.assertEqual(position.status, StaffingPosition.Status.ISSUE)
+        self.assertEqual(position.attendance_note, 'Did not arrive')
+        replacement = StaffingPosition.objects.get(replacement_for=position)
+        self.assertEqual(replacement.request_id, position.request_id)
+        self.assertEqual(replacement.status, StaffingPosition.Status.REQUESTED)
+        rota = self.staff_client.get(reverse('staffing_staff', args=[self.employer.pk]))
+        self.assertIn(replacement, rota.context['queue'])
+
+    def test_export_periods_filter_by_date_and_branch(self):
+        other_branch = StaffingBranch.objects.create(employer=self.employer, name='North Branch')
+        for name, day, branch in (
+            ('MonCandidate', date(2026, 1, 26), self.branch),
+            ('SatCandidate', date(2026, 1, 31), self.branch),
+            ('SunCandidate', date(2026, 2, 1), self.branch),
+            ('NorthCandidate', date(2026, 1, 31), other_branch),
+        ):
+            shift = StaffingRequest.objects.create(
+                branch=branch, requested_by=self.manager, shift_date=day,
+                start_time=time(9), end_time=time(17), role='dispenser')
+            StaffingPosition.objects.create(request=shift, candidate_name=name, status=StaffingPosition.Status.ATTENDED)
+        url = reverse('staffing_export')
+        params = {'mode': 'multi', 'branch': self.branch.pk, 'start': '2026-01-31'}
+        for period, included in {
+            'day': ('SatCandidate',), 'week': ('MonCandidate', 'SatCandidate', 'SunCandidate'),
+            'month': ('MonCandidate', 'SatCandidate'), 'range': ('SatCandidate', 'SunCandidate'),
+        }.items():
+            result = self.client.get(url, {**params, 'period': period, 'end': '2026-02-01'})
+            for name in ('MonCandidate', 'SatCandidate', 'SunCandidate', 'NorthCandidate'):
+                with self.subTest(period=period, candidate=name):
+                    (self.assertContains if name in included else self.assertNotContains)(result, name)
+        invalid = self.client.get(url, {**params, 'period': 'range', 'end': '2026-01-30'})
+        self.assertContains(invalid, 'Choose an end date on or after the start date.', status_code=400)
 
     def test_request_form_includes_clinical_and_montu_specific_roles(self):
         response = self.client.get(reverse('staffing_calendar'))

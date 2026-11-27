@@ -1,4 +1,6 @@
 import uuid
+from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -70,9 +72,28 @@ class StaffingPosition(models.Model):
         related_name='staffing_position')
     from_application = models.BooleanField(default=False)
     client_rate = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+    proposal_note = models.CharField(max_length=500, blank=True)
+    actual_start = models.TimeField(blank=True, null=True)
+    actual_end = models.TimeField(blank=True, null=True)
+    break_minutes = models.PositiveSmallIntegerField(blank=True, null=True)
     paid_hours = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
     attendance_note = models.CharField(max_length=500, blank=True)
     change_request = models.CharField(max_length=500, blank=True)
+    replacement_for = models.OneToOneField(
+        'self', on_delete=models.PROTECT, related_name='replacement', blank=True, null=True)
+
+    @staticmethod
+    def shift_minutes(start, end):
+        day = datetime.min.date()
+        elapsed = datetime.combine(day, end) - datetime.combine(day, start)
+        if elapsed < timedelta(0):
+            elapsed += timedelta(days=1)
+        return Decimal(str(elapsed.total_seconds())) / 60
+
+    @property
+    def gross_hours(self):
+        if self.actual_start is not None and self.actual_end is not None:
+            return (self.shift_minutes(self.actual_start, self.actual_end) / 60).quantize(Decimal('0.01'))
 
 
 class StaffingEvent(models.Model):

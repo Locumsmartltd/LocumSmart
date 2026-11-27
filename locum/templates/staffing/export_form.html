@@ -1,0 +1,17 @@
+<form method="get" action="{% url 'staffing_export' %}" data-attendance-export-form>
+  <input type="hidden" name="branch" value="{{ branch_filter }}">
+  <input type="hidden" name="mode" value="{{ mode }}">
+  <input type="hidden" name="week" value="{{ first|date:'Y-m-d' }}">
+  <input type="hidden" name="day" value="{{ selected_day|date:'Y-m-d' }}">
+  <p class="staffing-muted">Location: {{ selected_branch.name|default:"All branches" }}</p>
+  {{ export_form.non_field_errors }}
+  <div class="staffing-form-grid">
+    <div>{% include 'staffing/field.html' with field=export_form.period %}</div>
+    <div>
+      {% include 'staffing/field.html' with field=export_form.start %}
+      <p class="staffing-muted">Pick any date in the week or month you want.</p>
+    </div>
+    <div data-export-end>{% include 'staffing/field.html' with field=export_form.end %}</div>
+  </div>
+  <button type="submit" class="staffing-button primary">Download CSV</button>
+</form>
